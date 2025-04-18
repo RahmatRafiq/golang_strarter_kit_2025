@@ -1,0 +1,31 @@
+services:
+  app:
+    build: .
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "${APP_FORWARDER_PORT:-8080}:8080"
+    volumes:
+      - .:/app
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_PASS}"
+      MYSQL_DATABASE: "${MYSQL_DB}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASS}"
+    ports:
+      - "${DB_FORWARDER_PORT:-3306}:3306"
+    volumes:
+      - ./starter.sql:/docker-entrypoint-initdb.d/starter.sql
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:
