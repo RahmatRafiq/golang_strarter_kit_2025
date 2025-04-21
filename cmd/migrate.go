@@ -90,3 +90,18 @@ var MigrateAllCommand = &cli.Command{
 		return nil
 	},
 }
+
+var RollbackAllCommand = &cli.Command{
+	Name:  "rollback:all",
+	Usage: "Rollback all migrations",
+	Action: func(c *cli.Context) error {
+		fmt.Println("🔄 Menjalankan rollback untuk semua migrasi...")
+
+		if err := database.RunAllRollbacks(); err != nil {
+			log.Fatal("❌ Gagal menjalankan rollback untuk semua migrasi:", err)
+		}
+
+		fmt.Println("✅ Semua rollback berhasil!")
+		return nil
+	},
+}

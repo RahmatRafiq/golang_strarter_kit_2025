@@ -124,3 +124,23 @@ func RunAllMigrations() error {
 
 	return nil
 }
+
+// RunAllRollbacks menjalankan semua rollback yang ada di folder migrations
+func RunAllRollbacks() error {
+	migrationPath := "app/database/migrations/"
+	files, err := ioutil.ReadDir(migrationPath)
+	if err != nil {
+		return fmt.Errorf("gagal membaca folder migrasi: %v", err)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".down.sql") {
+			filename := strings.TrimSuffix(file.Name(), ".down.sql")
+			if err := RollbackMigration(filename); err != nil {
+				return fmt.Errorf("gagal menjalankan rollback %s: %v", filename, err)
+			}
+		}
+	}
+
+	return nil
+}
