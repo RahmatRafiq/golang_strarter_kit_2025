@@ -3,8 +3,10 @@ package bootstrap
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"golang_strarter_kit_2025/app/helpers"
+	"golang_strarter_kit_2025/cmd"
 	"golang_strarter_kit_2025/docs"
 	"golang_strarter_kit_2025/facades"
 	"golang_strarter_kit_2025/routes"
@@ -14,6 +16,7 @@ import (
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/urfave/cli/v2"
 )
 
 func Init() {
@@ -22,13 +25,39 @@ func Init() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+	// Inisialisasi koneksi database
+	facades.ConnectDB()
+	defer facades.CloseDB()
 
+	// Inisialisasi aplikasi CLI
+	app := &cli.App{
+		Name:  "Golang Starter Kit",
+		Usage: "CLI tool for managing migrations",
+		Commands: []*cli.Command{
+			cmd.MakeMigrationCommand, // pastikan ada di sini
+			cmd.MigrationCommand,     // pastikan ada di sini
+			cmd.RollbackCommand,      // pastikan ada di sini
+			cmd.MigrateAllCommand,
+			cmd.RollbackAllCommand,
+		},
+	}
+
+	// Jalankan aplikasi CLI jika ada argumen
+	if len(os.Args) > 1 {
+		if err := app.Run(os.Args); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	// Jalankan server jika tidak ada argumen CLI
+	r := gin.Default()
 	// Inisialisasi koneksi facades
 	facades.ConnectDB()
 
 	defer facades.CloseDB()
 
-	r := Router()
+	r = Router()
 	fmt.Println("Server is running on port 8080")
 	r.Run(":8080")
 }
