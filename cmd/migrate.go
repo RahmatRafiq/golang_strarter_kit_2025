@@ -76,3 +76,17 @@ var MakeMigrationCommand = &cli.Command{
 		return nil
 	},
 }
+var MigrateAllCommand = &cli.Command{
+	Name:  "migrate:all",
+	Usage: "Run all migrations",
+	Action: func(c *cli.Context) error {
+		fmt.Println("🚀 Menjalankan semua migrasi...")
+
+		if err := database.RunAllMigrations(); err != nil {
+			log.Fatal("❌ Gagal menjalankan semua migrasi:", err)
+		}
+
+		fmt.Println("✅ Semua migrasi berhasil dijalankan!")
+		return nil
+	},
+}

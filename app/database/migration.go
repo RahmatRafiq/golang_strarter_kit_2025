@@ -104,3 +104,23 @@ func parseSQLStatements(content string) []string {
 
 	return cleaned
 }
+
+// RunAllMigrations menjalankan semua migrasi yang ada di folder migrations
+func RunAllMigrations() error {
+	migrationPath := "app/database/migrations/"
+	files, err := ioutil.ReadDir(migrationPath)
+	if err != nil {
+		return fmt.Errorf("gagal membaca folder migrasi: %v", err)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".up.sql") {
+			filename := strings.TrimSuffix(file.Name(), ".up.sql")
+			if err := RunMigration(filename); err != nil {
+				return fmt.Errorf("gagal menjalankan migrasi %s: %v", filename, err)
+			}
+		}
+	}
+
+	return nil
+}

@@ -37,6 +37,7 @@ func Init() {
 			cmd.MakeMigrationCommand, // pastikan ada di sini
 			cmd.MigrationCommand,     // pastikan ada di sini
 			cmd.RollbackCommand,      // pastikan ada di sini
+			cmd.MigrateAllCommand,
 		},
 	}
 
