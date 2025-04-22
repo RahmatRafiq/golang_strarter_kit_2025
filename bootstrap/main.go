@@ -34,11 +34,12 @@ func Init() {
 		Name:  "Golang Starter Kit",
 		Usage: "CLI tool for managing migrations",
 		Commands: []*cli.Command{
-			cmd.MakeMigrationCommand, // pastikan ada di sini
-			cmd.MigrationCommand,     // pastikan ada di sini
-			cmd.RollbackCommand,      // pastikan ada di sini
+			cmd.MakeMigrationCommand,
+			cmd.MigrationCommand, // pastikan ada di sini
+			cmd.RollbackCommand,  // pastikan ada di sini
 			cmd.MigrateAllCommand,
 			cmd.RollbackAllCommand,
+			cmd.RollbackBatchCommand,
 		},
 	}
 
