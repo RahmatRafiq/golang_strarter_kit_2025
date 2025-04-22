@@ -50,6 +50,7 @@ func CreateMigrationFile(name string) error {
 	rootPath, _ := os.Getwd()
 	migrationPath := fmt.Sprintf("%s/app/database/migrations", rootPath)
 
+	// Buat folder jika belum ada
 	if _, err := os.Stat(migrationPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(migrationPath, 0755); err != nil {
 			return fmt.Errorf("gagal membuat folder migrations: %v", err)
@@ -59,8 +60,14 @@ func CreateMigrationFile(name string) error {
 	upFile := fmt.Sprintf("%s/%s.up.sql", migrationPath, filename)
 	downFile := fmt.Sprintf("%s/%s.down.sql", migrationPath, filename)
 
-	writeTemplate(upFile, "-- +++ Write your UP migration here\n")
-	writeTemplate(downFile, "-- --- Write your DOWN migration here\n")
+	upTemplate, downTemplate := getMigrationTemplate(name)
+
+	if err := writeTemplate(upFile, upTemplate); err != nil {
+		return err
+	}
+	if err := writeTemplate(downFile, downTemplate); err != nil {
+		return err
+	}
 
 	fmt.Println("Migration files created:")
 	fmt.Println(" -", upFile)
@@ -69,17 +76,85 @@ func CreateMigrationFile(name string) error {
 	return nil
 }
 
-func writeTemplate(path, content string) {
-	f, err := os.Create(path)
-	if err != nil {
-		log.Fatalf("gagal membuat file %s: %v", path, err)
-	}
-	defer f.Close()
+func getMigrationTemplate(name string) (string, string) {
+	switch {
+	case strings.HasPrefix(name, "create_"):
+		table := extractTableName(name, "create_")
+		up := fmt.Sprintf(`-- +++ UP Migration
+-- Contoh struktur CREATE TABLE:
 
-	_, err = f.WriteString(content)
-	if err != nil {
-		log.Fatalf("gagal menulis ke file %s: %v", path, err)
+--CREATE TABLE %s (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    reference VARCHAR(255) UNIQUE,
+--    store_id BIGINT,
+--    category_id BIGINT,
+--    name VARCHAR(255),
+--    description TEXT,
+--    price DECIMAL(10, 2),
+--    margin DECIMAL(10, 2),
+--    stock INT,
+--    sold INT,
+--    images JSON,
+--    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--    deleted_at TIMESTAMP NULL,
+--    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+--);
+`, table)
+
+		down := fmt.Sprintf(`-- --- DOWN Migration
+-- Contoh untuk rollback (DROP TABLE):
+
+--DROP TABLE IF EXISTS %s;
+`, table)
+
+		return up, down
+
+	case strings.HasPrefix(name, "alter_"):
+		table := extractTableName(name, "alter_")
+		up := fmt.Sprintf(`-- +++ UP Migration
+-- Contoh penambahan kolom di tabel %s:
+
+--ALTER TABLE %s ADD COLUMN nama_kolom TIPE_DATA;
+`, table, table)
+
+		down := fmt.Sprintf(`-- --- DOWN Migration
+-- Contoh rollback ALTER TABLE:
+
+--ALTER TABLE %s DROP COLUMN nama_kolom;
+`, table)
+
+		return up, down
+
+	default:
+		return "-- +++ UP Migration\n", "-- --- DOWN Migration\n"
 	}
+}
+
+func extractTableName(name string, prefix string) string {
+	trimmed := strings.TrimPrefix(name, prefix)
+	parts := strings.Split(trimmed, "_")
+	for i, part := range parts {
+		if part == "table" {
+			return strings.Join(parts[:i], "_")
+		}
+	}
+	return trimmed
+}
+
+func writeTemplate(filePath string, content string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("gagal membuat file %s: %v", filePath, err)
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		return fmt.Errorf("gagal menulis ke file %s: %v", filePath, err)
+	}
+
+	return nil
 }
 
 func RunMigration(filename string) error {
@@ -119,18 +194,39 @@ func RollbackMigration(filename string) error {
 }
 
 func parseSQLStatements(content string) []string {
-	rawStatements := strings.Split(content, ";")
-	cleaned := []string{}
+	lines := strings.Split(content, "\n")
+	cleanedLines := []string{}
 
-	for _, stmt := range rawStatements {
-		s := strings.TrimSpace(stmt)
-		if s == "" || strings.HasPrefix(s, "--") || strings.HasPrefix(s, "#") {
-			continue
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Hapus komentar inline "--" atau "#" jika ada
+		if idx := strings.Index(line, "--"); idx != -1 {
+			line = line[:idx]
 		}
-		cleaned = append(cleaned, s)
+		if idx := strings.Index(line, "#"); idx != -1 {
+			line = line[:idx]
+		}
+
+		line = strings.TrimSpace(line)
+		if line != "" {
+			cleanedLines = append(cleanedLines, line)
+		}
 	}
 
-	return cleaned
+	// Gabungkan kembali menjadi satu string lalu split per ";"
+	cleanedContent := strings.Join(cleanedLines, " ")
+	rawStatements := strings.Split(cleanedContent, ";")
+
+	finalStatements := []string{}
+	for _, stmt := range rawStatements {
+		s := strings.TrimSpace(stmt)
+		if s != "" {
+			finalStatements = append(finalStatements, s)
+		}
+	}
+
+	return finalStatements
 }
 
 func RunAllMigrations() error {
