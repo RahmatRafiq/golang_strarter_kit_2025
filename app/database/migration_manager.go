@@ -128,7 +128,6 @@ func getMigrationTemplate(name string) (string, string) {
 		return up, down
 
 	default:
-		// Template default
 		return "-- +++ UP Migration\n", "-- --- DOWN Migration\n"
 	}
 }
@@ -195,18 +194,39 @@ func RollbackMigration(filename string) error {
 }
 
 func parseSQLStatements(content string) []string {
-	rawStatements := strings.Split(content, ";")
-	cleaned := []string{}
+	lines := strings.Split(content, "\n")
+	cleanedLines := []string{}
 
-	for _, stmt := range rawStatements {
-		s := strings.TrimSpace(stmt)
-		if s == "" || strings.HasPrefix(s, "--") || strings.HasPrefix(s, "#") {
-			continue
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Hapus komentar inline "--" atau "#" jika ada
+		if idx := strings.Index(line, "--"); idx != -1 {
+			line = line[:idx]
 		}
-		cleaned = append(cleaned, s)
+		if idx := strings.Index(line, "#"); idx != -1 {
+			line = line[:idx]
+		}
+
+		line = strings.TrimSpace(line)
+		if line != "" {
+			cleanedLines = append(cleanedLines, line)
+		}
 	}
 
-	return cleaned
+	// Gabungkan kembali menjadi satu string lalu split per ";"
+	cleanedContent := strings.Join(cleanedLines, " ")
+	rawStatements := strings.Split(cleanedContent, ";")
+
+	finalStatements := []string{}
+	for _, stmt := range rawStatements {
+		s := strings.TrimSpace(stmt)
+		if s != "" {
+			finalStatements = append(finalStatements, s)
+		}
+	}
+
+	return finalStatements
 }
 
 func RunAllMigrations() error {
