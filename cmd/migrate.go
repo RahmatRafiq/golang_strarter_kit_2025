@@ -105,3 +105,20 @@ var RollbackAllCommand = &cli.Command{
 		return nil
 	},
 }
+
+var RollbackBatchCommand = &cli.Command{
+	Name:  "rollback:batch",
+	Usage: "Rollback migrations for a specific batch (default last)",
+	Flags: []cli.Flag{
+		&cli.IntFlag{Name: "batch", Usage: "Batch number to rollback"},
+	},
+	Action: func(c *cli.Context) error {
+		b := c.Int("batch")
+		if b == 0 {
+			fmt.Println("🔄 Rolling back last batch...")
+			return database.RollbackLastBatch()
+		}
+		fmt.Printf("🔄 Rolling back batch %d...\n", b)
+		return database.RollbackBatch(b)
+	},
+}
