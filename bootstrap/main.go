@@ -20,30 +20,28 @@ import (
 )
 
 func Init() {
-	// Memuat variabel lingkungan dari file .env
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	// Inisialisasi koneksi database
 	facades.ConnectDB()
 	defer facades.CloseDB()
 
-	// Inisialisasi aplikasi CLI
 	app := &cli.App{
 		Name:  "Golang Starter Kit",
 		Usage: "CLI tool for managing migrations",
 		Commands: []*cli.Command{
 			cmd.MakeMigrationCommand,
-			cmd.MigrationCommand, // pastikan ada di sini
-			cmd.RollbackCommand,  // pastikan ada di sini
+			cmd.MigrationCommand,
+			cmd.RollbackCommand,
 			cmd.MigrateAllCommand,
 			cmd.RollbackAllCommand,
 			cmd.RollbackBatchCommand,
+			cmd.MakeSeederCommand,
+			cmd.DBSeedCommand,
 		},
 	}
 
-	// Jalankan aplikasi CLI jika ada argumen
 	if len(os.Args) > 1 {
 		if err := app.Run(os.Args); err != nil {
 			log.Fatal(err)
@@ -51,9 +49,7 @@ func Init() {
 		return
 	}
 
-	// Jalankan server jika tidak ada argumen CLI
 	r := gin.Default()
-	// Inisialisasi koneksi facades
 	facades.ConnectDB()
 
 	defer facades.CloseDB()
@@ -64,7 +60,6 @@ func Init() {
 }
 
 func Router() *gin.Engine {
-	// Menginisialisasi Gin Router
 	route := gin.Default()
 
 	route.Use(cors.New(cors.Config{
@@ -73,7 +68,6 @@ func Router() *gin.Engine {
 		AllowHeaders: []string{"*"},
 	}))
 
-	// Daftarkan routes
 	routes.RegisterRoutes(route)
 
 	docs.SwaggerInfo.Title = "Supply Chain Retail API"
