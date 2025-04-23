@@ -71,11 +71,19 @@ func Router() *gin.Engine {
 
 	routes.RegisterRoutes(route)
 
-	docs.SwaggerInfo.Title = "Supply Chain Retail API"
-	docs.SwaggerInfo.Description = "API untuk Supply Chain Retail"
-	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = helpers.GetEnv("SWAGGER_HOST", "localhost:8080")
+	appName := helpers.GetEnv("APP_NAME", "My App")
+	appVersion := helpers.GetEnv("APP_VERSION", "1.0.0")
+	appHost := helpers.GetEnv("APP_HOST", "localhost")
+	appPort := helpers.GetEnv("APP_PORT", "8080")
+	appScheme := helpers.GetEnv("APP_SCHEME", "http")
+	appDescription := helpers.GetEnv("APP_DESCRIPTION", "API untuk Supply Chain Retail")
+
+	docs.SwaggerInfo.Title = appName + " API"
+	docs.SwaggerInfo.Description = appDescription
+	docs.SwaggerInfo.Version = appVersion
+	docs.SwaggerInfo.Host = fmt.Sprintf("%s:%s", appHost, appPort)
 	docs.SwaggerInfo.BasePath = "/"
+	docs.SwaggerInfo.Schemes = []string{appScheme}
 
 	route.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
