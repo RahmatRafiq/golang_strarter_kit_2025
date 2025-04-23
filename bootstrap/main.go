@@ -39,6 +39,7 @@ func Init() {
 			cmd.RollbackBatchCommand,
 			cmd.MakeSeederCommand,
 			cmd.DBSeedCommand,
+			cmd.RollbackSeederCommand,
 		},
 	}
 
