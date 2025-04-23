@@ -12,21 +12,12 @@ import (
 func SeedUserSeeder(db *gorm.DB) error {
 	log.Println("🌱 Seeding UserSeeder...")
 
-	password, err := helpers.HashPasswordArgon2("password123", helpers.DefaultParams)
-	if err != nil {
-		return err
-	}
-	pin, err := helpers.HashPasswordArgon2("123456", helpers.DefaultParams)
-	if err != nil {
-		return err
-	}
-
 	data := models.User{
 		Reference: helpers.GenerateReference("USR"),
 		Username:  "admin",
 		Email:     "admin@example.com",
-		Password:  password,
-		Pin:       pin,
+		Password:  "admin@example.com",
+		Pin:       "",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
