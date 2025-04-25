@@ -41,34 +41,26 @@ var MakeSeederCommand = &cli.Command{
 
 		structName := strings.Title(strings.ReplaceAll(name, "_", " "))
 		structName = strings.ReplaceAll(structName, " ", "")
-		content := fmt.Sprintf(`package seeds
+		content := fmt.Sprintf(`//package seeds
 
 import (
+	"golang_strarter_kit_2025/app/helpers"
+	"golang_strarter_kit_2025/app/models"
 	"log"
-	"yourt_project/app/helpers"
-	"yourt_project/app/models"
 	"time"
+
 	"gorm.io/gorm"
 )
 
-func Seed%s(db *gorm.DB) error {
-	log.Println("🌱 Seeding %s...")
+func SeedUserSeeder(db *gorm.DB) error {
+	log.Println("🌱 Seeding UserSeeder...")
 
-	password, err := helpers.HashPasswordArgon2("password123", helpers.DefaultParams)
-	if err != nil {
-		return err
-	}
-	pin, err := helpers.HashPasswordArgon2("123456", helpers.DefaultParams)
-	if err != nil {
-		return err
-	}
-
-	data := models.%s{
+	data := models.User{
 		Reference: helpers.GenerateReference("USR"),
 		Username:  "admin",
 		Email:     "admin@example.com",
-		Password:  password,
-		Pin:       pin,
+		Password:  "Password",
+		Pin:       "",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -77,7 +69,6 @@ func Seed%s(db *gorm.DB) error {
 	}
 	return nil
 }
-
 func RollbackUserSeeder(db *gorm.DB) error {
 	log.Println("🗑️ Rolling back UserSeeder…")
 	return db.Unscoped().
@@ -85,6 +76,7 @@ func RollbackUserSeeder(db *gorm.DB) error {
 		Delete(&models.User{}).
 		Error
 }
+
 		
 `, structName, name, structName)
 
