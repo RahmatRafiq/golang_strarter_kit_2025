@@ -77,69 +77,55 @@ func CreateMigrationFile(name string) error {
 }
 
 func getMigrationTemplate(name string) (string, string) {
+	// Menentukan apakah migrasi ini untuk membuat atau mengubah tabel
 	switch {
 	case strings.HasPrefix(name, "create_"):
 		table := extractTableName(name, "create_")
 		up := fmt.Sprintf(`-- +++ UP Migration
--- Contoh struktur CREATE TABLE:
+-- Create table for %s:
 
---CREATE TABLE %s (
---    id BIGINT AUTO_INCREMENT PRIMARY KEY,
---    reference VARCHAR(255) UNIQUE,
---    store_id BIGINT,
---    category_id BIGINT,
---    name VARCHAR(255),
---    description TEXT,
---    price DECIMAL(10, 2),
---    margin DECIMAL(10, 2),
---    stock INT,
---    sold INT,
---    images JSON,
---    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
---    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
---    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
---    deleted_at TIMESTAMP NULL,
---    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
---);
-`, table)
+CREATE TABLE %s (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    reference VARCHAR(255) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
+);
+`, table, table)
 
 		down := fmt.Sprintf(`-- --- DOWN Migration
--- Contoh untuk rollback (DROP TABLE):
+-- Drop the %s table
 
---DROP TABLE IF EXISTS %s;
-`, table)
+DROP TABLE IF EXISTS %s;
+`, table, table)
 
 		return up, down
 
 	case strings.HasPrefix(name, "alter_"):
 		table := extractTableName(name, "alter_")
 		up := fmt.Sprintf(`-- +++ UP Migration
--- Contoh penambahan kolom di tabel %s:
+-- Alter table %s to add a new column
 
---ALTER TABLE %s ADD COLUMN nama_kolom TIPE_DATA;
+ALTER TABLE %s ADD COLUMN new_column VARCHAR(255);
 `, table, table)
 
 		down := fmt.Sprintf(`-- --- DOWN Migration
--- Contoh rollback ALTER TABLE:
+-- Revert ALTER TABLE by dropping the new_column
 
---ALTER TABLE %s DROP COLUMN nama_kolom;
+ALTER TABLE %s DROP COLUMN new_column;
 `, table)
 
 		return up, down
 
 	default:
+		// Default template for unknown migration types
 		return "-- +++ UP Migration\n", "-- --- DOWN Migration\n"
 	}
 }
 
 func extractTableName(name string, prefix string) string {
 	trimmed := strings.TrimPrefix(name, prefix)
-	parts := strings.Split(trimmed, "_")
-	for i, part := range parts {
-		if part == "table" {
-			return strings.Join(parts[:i], "_")
-		}
-	}
+	trimmed = strings.TrimSuffix(trimmed, "_table")
 	return trimmed
 }
 
