@@ -9,9 +9,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// MigrationCommand adalah command CLI untuk membuat migrasi dan menjalankan migrasi
-// app/cmd/migration.go
-
 var MigrationCommand = &cli.Command{
 	Name:  "migrate",
 	Usage: "Run migration for given file",
