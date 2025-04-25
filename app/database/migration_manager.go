@@ -50,7 +50,6 @@ func CreateMigrationFile(name string) error {
 	rootPath, _ := os.Getwd()
 	migrationPath := fmt.Sprintf("%s/app/database/migrations", rootPath)
 
-	// Buat folder jika belum ada
 	if _, err := os.Stat(migrationPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(migrationPath, 0755); err != nil {
 			return fmt.Errorf("gagal membuat folder migrations: %v", err)
@@ -77,7 +76,6 @@ func CreateMigrationFile(name string) error {
 }
 
 func getMigrationTemplate(name string) (string, string) {
-	// Menentukan apakah migrasi ini untuk membuat atau mengubah tabel
 	switch {
 	case strings.HasPrefix(name, "create_"):
 		table := extractTableName(name, "create_")
@@ -118,7 +116,6 @@ ALTER TABLE %s DROP COLUMN new_column;
 		return up, down
 
 	default:
-		// Default template for unknown migration types
 		return "-- +++ UP Migration\n", "-- --- DOWN Migration\n"
 	}
 }
@@ -186,7 +183,6 @@ func parseSQLStatements(content string) []string {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Hapus komentar inline "--" atau "#" jika ada
 		if idx := strings.Index(line, "--"); idx != -1 {
 			line = line[:idx]
 		}
@@ -200,7 +196,6 @@ func parseSQLStatements(content string) []string {
 		}
 	}
 
-	// Gabungkan kembali menjadi satu string lalu split per ";"
 	cleanedContent := strings.Join(cleanedLines, " ")
 	rawStatements := strings.Split(cleanedContent, ";")
 
