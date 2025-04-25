@@ -41,7 +41,8 @@ var MakeSeederCommand = &cli.Command{
 
 		structName := strings.Title(strings.ReplaceAll(name, "_", " "))
 		structName = strings.ReplaceAll(structName, " ", "")
-		content := fmt.Sprintf(`//package seeds
+		modelName := strings.TrimSuffix(structName, "Seeder")
+		content := fmt.Sprintf(`package seeds
 
 import (
 	"golang_strarter_kit_2025/app/helpers"
@@ -52,15 +53,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func SeedUserSeeder(db *gorm.DB) error {
-	log.Println("🌱 Seeding UserSeeder...")
+func Seed%[1]s(db *gorm.DB) error {
+	log.Println("🌱 Seeding %[1]s...")
 
-	data := models.User{
+	data := models.%[2]s{
 		Reference: helpers.GenerateReference("USR"),
-		Username:  "admin",
-		Email:     "admin@example.com",
-		Password:  "Password",
-		Pin:       "",
+		// Tambahkan field sesuai model
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -69,16 +67,15 @@ func SeedUserSeeder(db *gorm.DB) error {
 	}
 	return nil
 }
-func RollbackUserSeeder(db *gorm.DB) error {
-	log.Println("🗑️ Rolling back UserSeeder…")
+
+func Rollback%[1]s(db *gorm.DB) error {
+	log.Println("🗑️ Rolling back %[1]s…")
 	return db.Unscoped().
-		Where("username = ?", "admin").
-		Delete(&models.User{}).
+		Where("reference LIKE ?", "USR%%").
+		// Delete(&models.%[2]s{}).
 		Error
 }
-
-		
-`, structName, name, structName)
+`, structName, modelName)
 
 		if err := ioutil.WriteFile(filePath, []byte(content), 0644); err != nil {
 			log.Fatal("❌ Gagal membuat file seeder:", err)

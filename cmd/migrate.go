@@ -3,14 +3,14 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
+	"strings"
+	"time"
 
 	"golang_strarter_kit_2025/app/database"
 
 	"github.com/urfave/cli/v2"
 )
-
-// MigrationCommand adalah command CLI untuk membuat migrasi dan menjalankan migrasi
-// app/cmd/migration.go
 
 var MigrationCommand = &cli.Command{
 	Name:  "migrate",
@@ -67,7 +67,7 @@ var MakeMigrationCommand = &cli.Command{
 			return fmt.Errorf("nama migrasi harus disediakan. Contoh: make:migration create_users_table")
 		}
 
-		err := database.CreateMigrationFile(name)
+		err := CreateMigrationFile(name)
 		if err != nil {
 			log.Fatal("❌ Gagal membuat file migrasi:", err)
 		}
@@ -120,5 +120,121 @@ var RollbackBatchCommand = &cli.Command{
 		}
 		fmt.Printf("🔄 Rolling back batch %d...\n", b)
 		return database.RollbackBatch(b)
+	},
+}
+
+var CreateMigrationFile = func(name string) error {
+	timestamp := time.Now().Format("20060102150405")
+	filename := fmt.Sprintf("%s_%s", timestamp, name)
+
+	rootPath, _ := os.Getwd()
+	migrationPath := fmt.Sprintf("%s/app/database/migrations", rootPath)
+
+	if _, err := os.Stat(migrationPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(migrationPath, 0755); err != nil {
+			return fmt.Errorf("gagal membuat folder migrations: %v", err)
+		}
+	}
+
+	upFile := fmt.Sprintf("%s/%s.up.sql", migrationPath, filename)
+	downFile := fmt.Sprintf("%s/%s.down.sql", migrationPath, filename)
+
+	upTemplate, downTemplate := getMigrationTemplate(name)
+
+	if err := writeTemplate(upFile, upTemplate); err != nil {
+		return err
+	}
+	if err := writeTemplate(downFile, downTemplate); err != nil {
+		return err
+	}
+
+	fmt.Println("Migration files created:")
+	fmt.Println(" -", upFile)
+	fmt.Println(" -", downFile)
+
+	return nil
+}
+
+var getMigrationTemplate = func(name string) (string, string) {
+	switch {
+	case strings.HasPrefix(name, "create_"):
+		table := extractTableName(name, "create_")
+		up := fmt.Sprintf(`-- +++ UP Migration
+-- Create table for %s:
+
+CREATE TABLE %s (
+	id BIGINT AUTO_INCREMENT PRIMARY KEY,
+	reference VARCHAR(255) UNIQUE,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	deleted_at TIMESTAMP NULL
+);
+`, table, table)
+
+		down := fmt.Sprintf(`-- --- DOWN Migration
+-- Drop the %s table
+
+DROP TABLE IF EXISTS %s;
+`, table, table)
+
+		return up, down
+
+	case strings.HasPrefix(name, "alter_"):
+		table := extractTableName(name, "alter_")
+		up := fmt.Sprintf(`-- +++ UP Migration
+-- Alter table %s to add a new column
+
+ALTER TABLE %s ADD COLUMN new_column VARCHAR(255);
+`, table, table)
+
+		down := fmt.Sprintf(`-- --- DOWN Migration
+-- Revert ALTER TABLE by dropping the new_column
+
+ALTER TABLE %s DROP COLUMN new_column;
+`, table)
+
+		return up, down
+
+	default:
+		return "-- +++ UP Migration\n", "-- --- DOWN Migration\n"
+	}
+}
+
+var extractTableName = func(name string, prefix string) string {
+	trimmed := strings.TrimPrefix(name, prefix)
+	trimmed = strings.TrimSuffix(trimmed, "_table")
+	return trimmed
+}
+
+var writeTemplate = func(filePath string, content string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("gagal membuat file %s: %v", filePath, err)
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		return fmt.Errorf("gagal menulis ke file %s: %v", filePath, err)
+	}
+
+	return nil
+}
+
+var MigrateFreshCommand = &cli.Command{
+	Name:  "migrate:fresh",
+	Usage: "Rollback all migrations and re-run them",
+	Action: func(c *cli.Context) error {
+		fmt.Println("🔄 Rolling back all migrations...")
+		if err := database.RunAllRollbacks(); err != nil {
+			log.Fatal("❌ Failed to rollback all migrations:", err)
+		}
+
+		fmt.Println("🚀 Re-running all migrations...")
+		if err := database.RunAllMigrations(); err != nil {
+			log.Fatal("❌ Failed to re-run all migrations:", err)
+		}
+
+		fmt.Println("✅ Fresh migration completed successfully!")
+		return nil
 	},
 }

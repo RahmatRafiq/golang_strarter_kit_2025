@@ -35,6 +35,7 @@ func Init() {
 			cmd.MigrationCommand,
 			cmd.RollbackCommand,
 			cmd.MigrateAllCommand,
+			cmd.MigrateFreshCommand,
 			cmd.RollbackAllCommand,
 			cmd.RollbackBatchCommand,
 			cmd.MakeSeederCommand,
