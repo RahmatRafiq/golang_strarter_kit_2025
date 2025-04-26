@@ -1,4 +1,0 @@
-CREATE TABLE permissions (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    permission VARCHAR(255) NOT NULL
-);
