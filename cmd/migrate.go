@@ -109,10 +109,23 @@ func getMigrationTemplate(name string) (string, string) {
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	deleted_at TIMESTAMP NULL DEFAULT NULL
-);`, tbl) // Assuming the column name is derived from the table name
+);`, tbl)
 		down := fmt.Sprintf("DROP TABLE IF EXISTS %s;", tbl)
 		return up, down
 	}
 
+	if strings.HasPrefix(name, "alter_") {
+		tbl := strings.TrimPrefix(name, "alter_")
+		tbl = strings.TrimSuffix(tbl, "_table")
+		up := fmt.Sprintf(`ALTER TABLE %s 
+-- ADD COLUMN new_column_name DATA_TYPE;
+`, tbl)
+		down := fmt.Sprintf(`ALTER TABLE %s 
+-- DROP COLUMN new_column_name;
+`, tbl)
+		return up, down
+	}
+
+	// Default fallback
 	return "-- up SQL here", "-- down SQL here"
 }
