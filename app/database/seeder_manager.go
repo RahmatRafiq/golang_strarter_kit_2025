@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 
-	"golang_strarter_kit_2025/app/database/seeds"
-	"golang_strarter_kit_2025/facades"
+	"golang_starter_kit_2025/app/database/seeds"
+	"golang_starter_kit_2025/facades"
 
 	"gorm.io/gorm"
 )

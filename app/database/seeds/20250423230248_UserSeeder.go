@@ -1,8 +1,8 @@
 package seeds
 
 import (
-	"golang_strarter_kit_2025/app/helpers"
-	"golang_strarter_kit_2025/app/models"
+	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/models"
 	"log"
 	"time"
 

@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"golang_strarter_kit_2025/app/models"
-	"golang_strarter_kit_2025/app/requests"
-	"golang_strarter_kit_2025/app/services"
+	"golang_starter_kit_2025/app/models"
+	"golang_starter_kit_2025/app/requests"
+	"golang_starter_kit_2025/app/services"
 
 	"github.com/gin-gonic/gin"
 )

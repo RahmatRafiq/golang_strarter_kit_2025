@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"golang_strarter_kit_2025/facades"
+	"golang_starter_kit_2025/facades"
 )
 
 const (

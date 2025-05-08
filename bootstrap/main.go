@@ -5,11 +5,11 @@ import (
 	"log"
 	"os"
 
-	"golang_strarter_kit_2025/app/helpers"
-	"golang_strarter_kit_2025/cmd"
-	"golang_strarter_kit_2025/docs"
-	"golang_strarter_kit_2025/facades"
-	"golang_strarter_kit_2025/routes"
+	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/cmd"
+	"golang_starter_kit_2025/docs"
+	"golang_starter_kit_2025/facades"
+	"golang_starter_kit_2025/routes"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

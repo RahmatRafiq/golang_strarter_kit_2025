@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 
-	"golang_strarter_kit_2025/app/models"
-	"golang_strarter_kit_2025/facades"
+	"golang_starter_kit_2025/app/models"
+	"golang_starter_kit_2025/facades"
 )
 
 type RoleService struct{}

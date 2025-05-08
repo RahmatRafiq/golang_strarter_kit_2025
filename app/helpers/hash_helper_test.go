@@ -1,7 +1,7 @@
 package helpers_test
 
 import (
-	"golang_strarter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/helpers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

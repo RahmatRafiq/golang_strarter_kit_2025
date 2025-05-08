@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"golang_strarter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/helpers"
 
 	"gorm.io/gorm"
 )

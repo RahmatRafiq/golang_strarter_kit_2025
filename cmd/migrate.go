@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"golang_strarter_kit_2025/app/database"
+	"golang_starter_kit_2025/app/database"
 
 	"github.com/urfave/cli/v2"
 )

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"golang_strarter_kit_2025/app/database"
+	"golang_starter_kit_2025/app/database"
 
 	"github.com/urfave/cli/v2"
 )
@@ -45,8 +45,8 @@ var MakeSeederCommand = &cli.Command{
 		content := fmt.Sprintf(`package seeds
 
 import (
-	"golang_strarter_kit_2025/app/helpers"
-	"golang_strarter_kit_2025/app/models"
+	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/models"
 	"log"
 	"time"
 
