@@ -1,6 +1,6 @@
-module golang_strarter_kit_2025
+module golang_starter_kit_2025
 
-go 1.23.1
+go 1.24.3
 
 require (
 	github.com/gin-contrib/cors v1.7.2
@@ -8,11 +8,10 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/onsi/ginkgo v1.16.5
-	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.3
+	github.com/urfave/cli/v2 v2.27.6
 	golang.org/x/crypto v0.31.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.11
@@ -20,20 +19,9 @@ require (
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fsnotify/fsnotify v1.4.9 // indirect
-	github.com/golang-migrate/migrate/v4 v4.18.2 // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/urfave/cli/v2 v2.27.6 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
-	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	gorm.io/datatypes v1.2.2 // indirect
 )
 
 require (
@@ -52,7 +40,7 @@ require (
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.22.0 // indirect
+	github.com/go-playground/validator/v10 v10.22.0
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
