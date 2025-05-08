@@ -8,8 +8,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 
 	// . "github.com/onsi/gomega"
-	"golang_strarter_kit_2025/app/models"
-	"golang_strarter_kit_2025/facades"
+	"golang_starter_kit_2025/app/models"
+	"golang_starter_kit_2025/facades"
 )
 
 var _ = Describe("Login", Ordered, func() {

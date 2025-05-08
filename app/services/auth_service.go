@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"golang_strarter_kit_2025/app/casts"
-	"golang_strarter_kit_2025/app/helpers"
-	"golang_strarter_kit_2025/app/models"
-	"golang_strarter_kit_2025/app/requests"
-	"golang_strarter_kit_2025/facades"
+	"golang_starter_kit_2025/app/casts"
+	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/models"
+	"golang_starter_kit_2025/app/requests"
+	"golang_starter_kit_2025/facades"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"golang_strarter_kit_2025/bootstrap"
+	"golang_starter_kit_2025/bootstrap"
 )
 
 func main() {

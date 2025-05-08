@@ -3,7 +3,7 @@ package casts_test
 import (
 	"time"
 
-	"golang_strarter_kit_2025/app/casts"
+	"golang_starter_kit_2025/app/casts"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"golang_strarter_kit_2025/app/helpers"
-	"golang_strarter_kit_2025/app/services"
+	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

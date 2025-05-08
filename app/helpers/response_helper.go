@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	"golang_strarter_kit_2025/app/casts"
+	"golang_starter_kit_2025/app/casts"
 
 	"github.com/gin-gonic/gin"
 )

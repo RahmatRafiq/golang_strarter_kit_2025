@@ -1,7 +1,7 @@
 package scopes
 
 import (
-	"golang_strarter_kit_2025/app/requests"
+	"golang_starter_kit_2025/app/requests"
 
 	"gorm.io/gorm"
 )
