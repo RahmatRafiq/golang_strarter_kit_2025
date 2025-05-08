@@ -54,17 +54,36 @@ func parseMigrationFile(content string) (upStmts, downStmts []string) {
 }
 
 func RunMigration(filename string) error {
+
+	if err := ensureMigrationsTable(); err != nil {
+		return err
+	}
+
+	last, err := getLastBatch()
+	if err != nil {
+		return err
+	}
+	batch := last + 1
+
 	path := fmt.Sprintf("app/database/migrations/%s.sql", filename)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("gagal membaca file migrasi: %v", err)
 	}
+
 	ups, _ := parseMigrationFile(string(data))
 	for _, sql := range ups {
 		if err := facades.DB.Exec(sql).Error; err != nil {
 			return fmt.Errorf("gagal menjalankan migrasi: %v", err)
 		}
 	}
+
+	if err := facades.DB.Exec(
+		"INSERT INTO migrations(filename,batch) VALUES(?,?)", filename, batch,
+	).Error; err != nil {
+		return fmt.Errorf("gagal mencatat migrasi: %v", err)
+	}
+
 	return nil
 }
 
@@ -84,66 +103,84 @@ func RollbackMigration(filename string) error {
 }
 
 func parseSQLStatements(content string) []string {
-	lines := strings.Split(content, "\n")
-	cleanedLines := []string{}
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-
-		if idx := strings.Index(line, "--"); idx != -1 {
-			line = line[:idx]
-		}
-		if idx := strings.Index(line, "#"); idx != -1 {
-			line = line[:idx]
-		}
-
-		line = strings.TrimSpace(line)
-		if line != "" {
-			cleanedLines = append(cleanedLines, line)
+	var stmts []string
+	for _, s := range strings.Split(content, ";") {
+		if t := strings.TrimSpace(s); t != "" {
+			stmts = append(stmts, t)
 		}
 	}
-
-	cleanedContent := strings.Join(cleanedLines, " ")
-	rawStatements := strings.Split(cleanedContent, ";")
-
-	finalStatements := []string{}
-	for _, stmt := range rawStatements {
-		s := strings.TrimSpace(stmt)
-		if s != "" {
-			finalStatements = append(finalStatements, s)
-		}
-	}
-
-	return finalStatements
+	return stmts
 }
 
 func RunAllMigrations() error {
-	if err := ensureMigrationsTable(); err != nil {
+
+	if err := facades.DB.Exec(`
+        CREATE TABLE IF NOT EXISTS migrations (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            filename VARCHAR(255) NOT NULL,
+            batch INT NOT NULL,
+            migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`).Error; err != nil {
 		return err
 	}
+
+	var lastBatch struct{ Batch int }
+	if err := facades.DB.Raw(
+		"SELECT COALESCE(MAX(batch),0) AS batch FROM migrations",
+	).Scan(&lastBatch).Error; err != nil {
+		return err
+	}
+	batch := lastBatch.Batch + 1
+
 	files, err := ioutil.ReadDir("app/database/migrations")
 	if err != nil {
 		return fmt.Errorf("gagal baca folder: %v", err)
 	}
-	last, _ := getLastBatch()
-	batch := last + 1
 	var toRun []string
 	for _, f := range files {
 		if strings.HasSuffix(f.Name(), ".sql") {
 			name := strings.TrimSuffix(f.Name(), ".sql")
-			if applied, _ := isMigrationApplied(name); !applied {
+			var cnt int64
+			facades.DB.Raw(
+				"SELECT COUNT(*) FROM migrations WHERE filename = ?", name,
+			).Scan(&cnt)
+			if cnt == 0 {
 				toRun = append(toRun, name)
 			}
 		}
 	}
 	sort.Strings(toRun)
+
 	for _, name := range toRun {
 		log.Println("🚀 Running", name)
-		if err := RunMigration(name); err != nil {
-			return err
+
+		data, err := ioutil.ReadFile(
+			fmt.Sprintf("app/database/migrations/%s.sql", name),
+		)
+		if err != nil {
+			return fmt.Errorf("gagal membaca %s: %v", name, err)
 		}
-		facades.DB.Exec("INSERT INTO migrations(filename,batch) VALUES(?,?)", name, batch)
+		parts := strings.Split(
+			string(data), "-- --- DOWN Migration",
+		)
+		up := strings.Replace(
+			parts[0], "-- +++ UP Migration", "", 1,
+		)
+
+		for _, stmt := range parseSQLStatements(up) {
+			if err := facades.DB.Exec(stmt).Error; err != nil {
+				return fmt.Errorf("gagal %s: %v", name, err)
+			}
+		}
+
+		if err := facades.DB.Exec(
+			"INSERT INTO migrations(filename,batch) VALUES(?,?)",
+			name, batch,
+		).Error; err != nil {
+			return fmt.Errorf("gagal mencatat %s: %v", name, err)
+		}
 	}
+
 	log.Printf("✅ Batch %d applied", batch)
 	return nil
 }
