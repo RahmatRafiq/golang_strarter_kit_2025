@@ -1,5 +1,6 @@
+-- +++ UP Migration
 CREATE TABLE products (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+ id BIGINT AUTO_INCREMENT PRIMARY KEY,
     reference VARCHAR(255) UNIQUE ,
     store_id BIGINT,
     category_id BIGINT,
@@ -16,3 +17,5 @@ CREATE TABLE products (
     deleted_at TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
+-- --- DOWN Migration
+DROP TABLE IF EXISTS products;

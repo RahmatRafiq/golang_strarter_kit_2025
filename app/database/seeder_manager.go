@@ -15,7 +15,7 @@ import (
 type Seeder struct {
 	Name     string
 	Run      func(db *gorm.DB) error
-	Rollback func(db *gorm.DB) error // ⬅️ optional rollback func
+	Rollback func(db *gorm.DB) error
 	Batch    int64
 }
 
@@ -99,7 +99,6 @@ func RollbackSeedBatch(batch int64) error {
 		return err
 	}
 
-	// ambil semua filename di batch ini, urut terbalik
 	var rows []struct{ Filename string }
 	if err := facades.DB.
 		Raw("SELECT filename FROM seeds WHERE batch = ? ORDER BY id DESC", batch).
@@ -113,7 +112,6 @@ func RollbackSeedBatch(batch int64) error {
 
 	for _, r := range rows {
 		log.Println("🔄 Rolling back seeder:", r.Filename)
-		// cari definisi seeder di SeederList
 		for _, s := range SeederList {
 			if s.Name == r.Filename {
 				if s.Rollback != nil {
@@ -124,7 +122,6 @@ func RollbackSeedBatch(batch int64) error {
 				break
 			}
 		}
-		// hapus record tracking
 		if err := facades.DB.
 			Exec("DELETE FROM seeds WHERE filename = ? AND batch = ?", r.Filename, batch).
 			Error; err != nil {
@@ -135,7 +132,6 @@ func RollbackSeedBatch(batch int64) error {
 	return nil
 }
 
-// RollbackLastSeedBatch simply calls RollbackSeedBatch on the last batch
 func RollbackLastSeedBatch() error {
 	b, err := getLastSeedBatch()
 	if err != nil {
