@@ -3,10 +3,10 @@ package routes
 import (
 	"net/http"
 
-	"golang_strarter_kit_2025/app/controllers"
-	"golang_strarter_kit_2025/app/middleware"
-	"golang_strarter_kit_2025/app/services"
-	"golang_strarter_kit_2025/facades"
+	"golang_starter_kit_2025/app/controllers"
+	"golang_starter_kit_2025/app/middleware"
+	"golang_starter_kit_2025/app/services"
+	"golang_starter_kit_2025/facades"
 
 	"github.com/gin-gonic/gin"
 )
