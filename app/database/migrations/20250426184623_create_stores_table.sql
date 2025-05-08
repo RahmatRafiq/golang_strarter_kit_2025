@@ -1,4 +1,5 @@
-CREATE TABLE `stores` (
+-- +++ UP Migration
+CREATE TABLE stores (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
   `phone` varchar(255) DEFAULT NULL,
@@ -12,3 +13,5 @@ CREATE TABLE `stores` (
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 );
+-- --- DOWN Migration
+DROP TABLE IF EXISTS stores;
