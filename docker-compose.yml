@@ -27,5 +27,17 @@ services:
       - ./starter.sql:/docker-entrypoint-initdb.d/starter.sql
       - mysql-data:/var/lib/mysql
 
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "${REDIS_FORWARDER_PORT:-6379}:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
 volumes:
   mysql-data:
+  redis-data:
