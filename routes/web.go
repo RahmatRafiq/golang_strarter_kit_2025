@@ -50,17 +50,28 @@ func RegisterRoutes(route *gin.Engine) {
 		productRoutes.DELETE("/:id", productController.Delete) // Delete product by ID
 	}
 
-	// Routes untuk users (protected by AuthMiddleware)
-	userService := services.UserService{}
-	userController := controllers.NewUserController(userService)
-	userRoutes := route.Group("/users", middleware.AuthMiddleware()) // Protect user routes
+	// Routes untuk Queue Management
+	queueController := controllers.NewQueueController()
+	queueRoutes := route.Group("/api/queue")
 	{
-		userRoutes.GET("", userController.List)
-		userRoutes.GET("/:id", userController.Get)
-		userRoutes.PUT("", userController.Put)
-		userRoutes.DELETE("/:id", userController.Delete)
-		userRoutes.POST("/:id/roles", userController.AssignRoles)
-		userRoutes.GET("/:id/roles", userController.GetRoles)
+		queueRoutes.GET("/stats", queueController.GetQueueStats)
+		queueRoutes.POST("/email", queueController.DispatchEmailJob)
+		queueRoutes.POST("/file-cleanup", queueController.DispatchFileCleanupJob)
+		queueRoutes.POST("/test", queueController.SendTestJobs)
+	}
+
+	// Routes untuk Cron Management
+	cronController := controllers.NewCronController()
+	cronRoutes := route.Group("/api/cron")
+	{
+		cronRoutes.GET("/status", cronController.GetCronStatus)
+	}
+
+	// Health Check Routes
+	healthRoutes := route.Group("/api/health")
+	{
+		healthRoutes.GET("/queue", queueController.HealthCheck)
+		healthRoutes.GET("/cron", cronController.HealthCheck)
 	}
 
 	// Routes untuk roles (protected by AuthMiddleware)

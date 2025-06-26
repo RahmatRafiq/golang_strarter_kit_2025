@@ -7,6 +7,7 @@ import (
 
 	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/cmd"
+	"golang_starter_kit_2025/config"
 	"golang_starter_kit_2025/docs"
 	"golang_starter_kit_2025/facades"
 	"golang_starter_kit_2025/routes"
@@ -27,10 +28,15 @@ func Init() {
 	facades.ConnectDB()
 	defer facades.CloseDB()
 
+	// Initialize Redis
+	config.InitRedis()
+	defer config.CloseRedis()
+
 	app := &cli.App{
 		Name:  "Golang Starter Kit",
-		Usage: "CLI tool for managing migrations",
+		Usage: "CLI tool for managing migrations and background jobs",
 		Commands: []*cli.Command{
+			// Database commands
 			cmd.MakeMigrationCommand,
 			cmd.MigrationCommand,
 			cmd.RollbackCommand,
@@ -41,6 +47,12 @@ func Init() {
 			cmd.MakeSeederCommand,
 			cmd.DBSeedCommand,
 			cmd.RollbackSeederCommand,
+			// Queue and Cron commands
+			cmd.QueueWorkCommand,
+			cmd.CronRunCommand,
+			cmd.QueueStatsCommand,
+			cmd.CronStatusCommand,
+			cmd.QueueTestCommand,
 		},
 	}
 

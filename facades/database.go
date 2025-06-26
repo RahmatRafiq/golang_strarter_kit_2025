@@ -87,6 +87,11 @@ func ConnectDB(envFiles ...string) *gorm.DB {
 	return DB
 }
 
+// GetDB returns the global GORM database instance
+func GetDB() *gorm.DB {
+	return DB
+}
+
 // CloseDB safely closes the database connection when it is no longer needed.
 // This should be called in a defer statement.
 func CloseDB() {
