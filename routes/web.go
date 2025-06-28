@@ -86,9 +86,22 @@ func RegisterRoutes(route *gin.Engine) {
 	}
 
 	fileController := controllers.NewFileController()
-	fileRoutes := route.Group("/file")
+	fileRoutes := route.Group("/files")
 	{
 		fileRoutes.GET("/:key/:filename", fileController.ServeFile)
+	}
+
+	// Database multi-connection routes
+	databaseController := controllers.NewDatabaseController()
+	dbRoutes := route.Group("/api/database")
+	{
+		dbRoutes.GET("/connections", databaseController.GetConnectionsInfo)
+		dbRoutes.GET("/test", databaseController.TestConnections)
+		dbRoutes.POST("/create-user-multi", databaseController.CreateUserInMultipleDBs)
+		dbRoutes.POST("/create-mongo-document", databaseController.CreateDocumentInMongoDB)
+		dbRoutes.GET("/mongo-documents", databaseController.GetDocumentsFromMongoDB)
+		dbRoutes.POST("/transaction-example", databaseController.TransactionExample)
+		dbRoutes.POST("/switch", databaseController.SwitchDatabase)
 	}
 
 	// Endpoint untuk mengecek kesehatan koneksi facades
