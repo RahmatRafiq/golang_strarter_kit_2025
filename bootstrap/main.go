@@ -24,6 +24,8 @@ func Init() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	// Initialize multi-database connections
 	facades.ConnectDB()
 	defer facades.CloseDB()
 
@@ -52,13 +54,22 @@ func Init() {
 	}
 
 	r := gin.Default()
-	facades.ConnectDB()
 
+	// Initialize database connections
+	facades.ConnectDB()
 	defer facades.CloseDB()
 
 	r = Router()
-	fmt.Println("Server is running on port 8080")
-	r.Run(":8080")
+	port := helpers.GetEnv("APP_PORT", "8080")
+	fmt.Printf("Server is running on port %s\n", port)
+	fmt.Println("Multi-database support enabled:")
+	fmt.Println("- MySQL (Primary)")
+	fmt.Println("- PostgreSQL")
+	fmt.Println("- SQLite")
+	fmt.Println("- SQL Server")
+	fmt.Println("- MongoDB")
+	fmt.Println("\nDatabase API endpoints available at /api/database/*")
+	r.Run(":" + port)
 }
 
 func Router() *gin.Engine {
