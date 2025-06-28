@@ -29,7 +29,7 @@ func Init() {
 
 	app := &cli.App{
 		Name:  "Golang Starter Kit",
-		Usage: "CLI tool for managing migrations",
+		Usage: "CLI tool for managing migrations and database connections",
 		Commands: []*cli.Command{
 			cmd.MakeMigrationCommand,
 			cmd.MigrationCommand,
@@ -38,6 +38,8 @@ func Init() {
 			cmd.MigrateFreshCommand,
 			cmd.RollbackAllCommand,
 			cmd.RollbackBatchCommand,
+			cmd.DBConnectionsCommand,
+			cmd.DBStatusCommand,
 			cmd.MakeSeederCommand,
 			cmd.DBSeedCommand,
 			cmd.RollbackSeederCommand,
