@@ -44,12 +44,14 @@ func ConnectDB(envFiles ...string) *gorm.DB {
 		}
 
 		// Build DSN (Data Source Name) for MySQL
-		dsn := fmt.Sprintf("%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 			os.Getenv("MYSQL_USER"),
+			os.Getenv("MYSQL_PASSWORD"),
 			os.Getenv("MYSQL_HOST"),
 			os.Getenv("MYSQL_PORT"),
 			os.Getenv("MYSQL_DB"),
 		)
+
 		// Build DSN (Data Source Name) for MySQL without password
 
 		// Open the database connection using GORM with custom logger
