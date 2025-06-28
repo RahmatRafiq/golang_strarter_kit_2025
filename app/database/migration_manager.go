@@ -2,8 +2,8 @@ package database
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"sort"
 	"strings"
 
@@ -15,28 +15,58 @@ const (
 	downMarker = "-- --- DOWN Migration"
 )
 
-func ensureMigrationsTable() error {
-	return facades.DB.Exec(`
-        CREATE TABLE IF NOT EXISTS migrations (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            filename VARCHAR(255) NOT NULL,
-            batch INT NOT NULL,
-            migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `).Error
+// ensureMigrationsTable creates migrations table for a specific connection
+func ensureMigrationsTable(connectionName string) error {
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
+	// Use different table creation syntax based on database type
+	var createTableSQL string
+	if conn.IsPostgreSQL() {
+		createTableSQL = `
+			CREATE TABLE IF NOT EXISTS migrations (
+				id SERIAL PRIMARY KEY,
+				filename VARCHAR(255) NOT NULL,
+				batch INTEGER NOT NULL,
+				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			)`
+	} else {
+		// MySQL/MariaDB
+		createTableSQL = `
+			CREATE TABLE IF NOT EXISTS migrations (
+				id INT PRIMARY KEY AUTO_INCREMENT,
+				filename VARCHAR(255) NOT NULL,
+				batch INT NOT NULL,
+				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			)`
+	}
+
+	return conn.DB.Exec(createTableSQL).Error
 }
 
-func getLastBatch() (int, error) {
+func getLastBatch(connectionName string) (int, error) {
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
 	var res struct{ Batch int }
-	if err := facades.DB.Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM migrations").Scan(&res).Error; err != nil {
+	if err := conn.DB.Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM migrations").Scan(&res).Error; err != nil {
 		return 0, err
 	}
 	return res.Batch, nil
 }
 
-func isMigrationApplied(filename string) (bool, error) {
+func isMigrationApplied(filename, connectionName string) (bool, error) {
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return false, fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
 	var cnt int64
-	if err := facades.DB.Raw("SELECT COUNT(*) FROM migrations WHERE filename = ?", filename).Scan(&cnt).Error; err != nil {
+	if err := conn.DB.Raw("SELECT COUNT(*) FROM migrations WHERE filename = ?", filename).Scan(&cnt).Error; err != nil {
 		return false, err
 	}
 	return cnt > 0, nil
@@ -53,52 +83,90 @@ func parseMigrationFile(content string) (upStmts, downStmts []string) {
 	return parseSQLStatements(upPart), parseSQLStatements(downPart)
 }
 
+// RunMigration runs a specific migration on the default connection
 func RunMigration(filename string) error {
+	return RunMigrationOnConnection(filename, "")
+}
 
-	if err := ensureMigrationsTable(); err != nil {
+// RunMigrationOnConnection runs a specific migration on a specified connection
+func RunMigrationOnConnection(filename, connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql" // default connection
+	}
+
+	if err := ensureMigrationsTable(connectionName); err != nil {
 		return err
 	}
 
-	last, err := getLastBatch()
+	last, err := getLastBatch(connectionName)
 	if err != nil {
 		return err
 	}
 	batch := last + 1
 
 	path := fmt.Sprintf("app/database/migrations/%s.sql", filename)
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("gagal membaca file migrasi: %v", err)
 	}
 
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
 	ups, _ := parseMigrationFile(string(data))
 	for _, sql := range ups {
-		if err := facades.DB.Exec(sql).Error; err != nil {
+		if err := conn.DB.Exec(sql).Error; err != nil {
 			return fmt.Errorf("gagal menjalankan migrasi: %v", err)
 		}
 	}
 
-	if err := facades.DB.Exec(
+	if err := conn.DB.Exec(
 		"INSERT INTO migrations(filename,batch) VALUES(?,?)", filename, batch,
 	).Error; err != nil {
 		return fmt.Errorf("gagal mencatat migrasi: %v", err)
 	}
 
+	log.Printf("✅ Migration '%s' applied on connection '%s'", filename, connectionName)
 	return nil
 }
 
+// RollbackMigration rolls back a specific migration on the default connection
 func RollbackMigration(filename string) error {
+	return RollbackMigrationOnConnection(filename, "")
+}
+
+// RollbackMigrationOnConnection rolls back a specific migration on a specified connection
+func RollbackMigrationOnConnection(filename, connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql" // default connection
+	}
+
 	path := fmt.Sprintf("app/database/migrations/%s.sql", filename)
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("gagal membaca file rollback: %v", err)
 	}
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
 	_, downs := parseMigrationFile(string(data))
 	for _, sql := range downs {
-		if err := facades.DB.Exec(sql).Error; err != nil {
+		if err := conn.DB.Exec(sql).Error; err != nil {
 			return fmt.Errorf("gagal rollback: %v", err)
 		}
 	}
+
+	// Remove from migrations table
+	if err := conn.DB.Exec("DELETE FROM migrations WHERE filename=?", filename).Error; err != nil {
+		return fmt.Errorf("gagal menghapus record migrasi: %v", err)
+	}
+
+	log.Printf("✅ Migration '%s' rolled back on connection '%s'", filename, connectionName)
 	return nil
 }
 
@@ -112,27 +180,35 @@ func parseSQLStatements(content string) []string {
 	return stmts
 }
 
+// RunAllMigrations runs all pending migrations on the default connection
 func RunAllMigrations() error {
+	return RunAllMigrationsOnConnection("")
+}
 
-	if err := facades.DB.Exec(`
-        CREATE TABLE IF NOT EXISTS migrations (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            filename VARCHAR(255) NOT NULL,
-            batch INT NOT NULL,
-            migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`).Error; err != nil {
+// RunAllMigrationsOnConnection runs all pending migrations on a specified connection
+func RunAllMigrationsOnConnection(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql" // default connection
+	}
+
+	if err := ensureMigrationsTable(connectionName); err != nil {
 		return err
 	}
 
 	var lastBatch struct{ Batch int }
-	if err := facades.DB.Raw(
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
+	if err := conn.DB.Raw(
 		"SELECT COALESCE(MAX(batch),0) AS batch FROM migrations",
 	).Scan(&lastBatch).Error; err != nil {
 		return err
 	}
 	batch := lastBatch.Batch + 1
 
-	files, err := ioutil.ReadDir("app/database/migrations")
+	files, err := os.ReadDir("app/database/migrations")
 	if err != nil {
 		return fmt.Errorf("gagal baca folder: %v", err)
 	}
@@ -141,7 +217,7 @@ func RunAllMigrations() error {
 		if strings.HasSuffix(f.Name(), ".sql") {
 			name := strings.TrimSuffix(f.Name(), ".sql")
 			var cnt int64
-			facades.DB.Raw(
+			conn.DB.Raw(
 				"SELECT COUNT(*) FROM migrations WHERE filename = ?", name,
 			).Scan(&cnt)
 			if cnt == 0 {
@@ -152,9 +228,9 @@ func RunAllMigrations() error {
 	sort.Strings(toRun)
 
 	for _, name := range toRun {
-		log.Println("🚀 Running", name)
+		log.Printf("🚀 Running %s on connection %s", name, connectionName)
 
-		data, err := ioutil.ReadFile(
+		data, err := os.ReadFile(
 			fmt.Sprintf("app/database/migrations/%s.sql", name),
 		)
 		if err != nil {
@@ -168,12 +244,12 @@ func RunAllMigrations() error {
 		)
 
 		for _, stmt := range parseSQLStatements(up) {
-			if err := facades.DB.Exec(stmt).Error; err != nil {
+			if err := conn.DB.Exec(stmt).Error; err != nil {
 				return fmt.Errorf("gagal %s: %v", name, err)
 			}
 		}
 
-		if err := facades.DB.Exec(
+		if err := conn.DB.Exec(
 			"INSERT INTO migrations(filename,batch) VALUES(?,?)",
 			name, batch,
 		).Error; err != nil {
@@ -181,53 +257,110 @@ func RunAllMigrations() error {
 		}
 	}
 
-	log.Printf("✅ Batch %d applied", batch)
+	log.Printf("✅ Batch %d applied on connection %s", batch, connectionName)
 	return nil
 }
 
+// RunAllRollbacks rolls back all migrations on the default connection
 func RunAllRollbacks() error {
-	if err := ensureMigrationsTable(); err != nil {
+	return RunAllRollbacksOnConnection("")
+}
+
+// RunAllRollbacksOnConnection rolls back all migrations on a specified connection
+func RunAllRollbacksOnConnection(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql" // default connection
+	}
+
+	if err := ensureMigrationsTable(connectionName); err != nil {
 		return err
 	}
-	last, _ := getLastBatch()
+	last, _ := getLastBatch(connectionName)
 	for b := last; b >= 1; b-- {
-		if err := RollbackBatch(b); err != nil {
+		if err := RollbackBatchOnConnection(b, connectionName); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// RollbackBatch rolls back a specific batch on the default connection
 func RollbackBatch(batch int) error {
-	if err := ensureMigrationsTable(); err != nil {
+	return RollbackBatchOnConnection(batch, "")
+}
+
+// RollbackBatchOnConnection rolls back a specific batch on a specified connection
+func RollbackBatchOnConnection(batch int, connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql" // default connection
+	}
+
+	if err := ensureMigrationsTable(connectionName); err != nil {
 		return err
 	}
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
 	var rows []struct{ Filename string }
-	facades.DB.Raw("SELECT filename FROM migrations WHERE batch=? ORDER BY id DESC", batch).Scan(&rows)
+	conn.DB.Raw("SELECT filename FROM migrations WHERE batch=? ORDER BY id DESC", batch).Scan(&rows)
 	for _, r := range rows {
-		log.Println("🔄 Rollback", r.Filename)
-		if err := RollbackMigration(r.Filename); err != nil {
+		log.Printf("🔄 Rollback %s on connection %s", r.Filename, connectionName)
+		if err := RollbackMigrationOnConnection(r.Filename, connectionName); err != nil {
 			return err
 		}
-		facades.DB.Exec("DELETE FROM migrations WHERE filename=?", r.Filename)
 	}
-	log.Printf("✅ Batch %d rolled back", batch)
+	log.Printf("✅ Batch %d rolled back on connection %s", batch, connectionName)
 	return nil
 }
 
+// RollbackLastBatch rolls back the last batch on the default connection
 func RollbackLastBatch() error {
-	last, _ := getLastBatch()
+	return RollbackLastBatchOnConnection("")
+}
+
+// RollbackLastBatchOnConnection rolls back the last batch on a specified connection
+func RollbackLastBatchOnConnection(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql" // default connection
+	}
+
+	last, _ := getLastBatch(connectionName)
 	if last == 0 {
-		log.Println("⚠️ No batch to rollback")
+		log.Printf("⚠️ No batch to rollback on connection %s", connectionName)
 		return nil
 	}
-	return RollbackBatch(last)
+	return RollbackBatchOnConnection(last, connectionName)
 }
 
+// FreshMigrations truncates migrations and re-runs all on the default connection
 func FreshMigrations() error {
-	if err := ensureMigrationsTable(); err != nil {
+	return FreshMigrationsOnConnection("")
+}
+
+// FreshMigrationsOnConnection truncates migrations and re-runs all on a specified connection
+func FreshMigrationsOnConnection(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql" // default connection
+	}
+
+	if err := ensureMigrationsTable(connectionName); err != nil {
 		return err
 	}
-	facades.DB.Exec("TRUNCATE migrations")
-	return RunAllMigrations()
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
+	// Use different truncate syntax for PostgreSQL
+	if conn.IsPostgreSQL() {
+		conn.DB.Exec("TRUNCATE migrations RESTART IDENTITY")
+	} else {
+		conn.DB.Exec("TRUNCATE migrations")
+	}
+
+	return RunAllMigrationsOnConnection(connectionName)
 }
