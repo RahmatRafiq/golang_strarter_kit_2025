@@ -60,23 +60,113 @@ air
 ## 🏗️ Arsitektur Project
 
 ```
-app/
-├── controllers/     # 🎮 API Controllers
-├── middleware/      # 🛡️ Middleware (Auth, CORS, Logging)
-├── models/         # 📊 Database Models
-├── services/       # 💼 Business Logic
-├── repositories/   # 🗄️ Data Access Layer
-├── requests/       # ✅ Request Validation
-├── responses/      # 📤 Response Formatting
-└── database/       # 🔧 Migration & Seeder
-    ├── migrations/ # 📋 SQL Migration Files
-    └── seeds/      # 🌱 Database Seeders
-
-config/             # ⚙️ Configuration Files
-docs/               # 📋 Swagger Documentation
-documentation/      # 📚 Project Documentation
-routes/             # 🛣️ API Routes
-storage/            # 💾 File Storage
+golang_starter_kit_2025/
+├── app/
+│   ├── controllers/        # 🎮 API Controllers
+│   │   ├── auth_controllers.go       # Logika autentikasi (login, register)
+│   │   ├── category_controller.go    # Manajemen kategori produk
+│   │   ├── database_controller.go    # Management database connections
+│   │   ├── file_controller.go        # Upload dan management file
+│   │   ├── permission_controller.go  # Management permission sistem
+│   │   ├── product_controller.go     # CRUD produk dan inventory
+│   │   ├── role_controller.go        # Management role pengguna
+│   │   └── user_controller.go        # Management pengguna
+│   ├── casts/             # 🔄 Data Transformation
+│   │   ├── jwt_claims.go            # JWT claims structure
+│   │   └── token.go                 # Token management
+│   ├── helpers/           # 🛠️ Helper Functions
+│   │   ├── base64file_helper.go     # Base64 file operations
+│   │   ├── env_helper.go            # Environment variable handling
+│   │   ├── error_helper.go          # Error handling utilities
+│   │   ├── file_helper.go           # File operations
+│   │   ├── hash_helper.go           # Password hashing (bcrypt)
+│   │   ├── path_helper.go           # Path utilities
+│   │   ├── reference_helper.go      # Reference data helpers
+│   │   ├── response_helper.go       # API response formatting
+│   │   └── url_helper.go            # URL utilities
+│   ├── middleware/        # 🛡️ Middleware Components
+│   │   ├── auth_middleware.go       # JWT authentication
+│   │   └── logger_middleware.go     # Request/response logging
+│   ├── models/            # 📊 Database Models
+│   │   ├── category.go              # Category model
+│   │   ├── permission.go            # Permission model
+│   │   ├── product.go               # Product model
+│   │   ├── role.go                  # Role model
+│   │   ├── role_has_permission.go   # Role-Permission pivot
+│   │   ├── user.go                  # User model
+│   │   ├── user_has_role.go         # User-Role pivot
+│   │   └── scopes/                  # Query scopes
+│   │       └── pagination.go        # Pagination scope
+│   ├── repositories/      # 🗄️ Data Access Layer
+│   │   └── user_repository.go       # User data operations
+│   ├── requests/          # ✅ Request Validation
+│   │   ├── category_request.go      # Category validation rules
+│   │   ├── filter_request.go        # Filter/search validation
+│   │   ├── login_request.go         # Login form validation
+│   │   ├── permission_request.go    # Permission validation
+│   │   ├── product_request.go       # Product validation rules
+│   │   └── role_request.go          # Role validation rules
+│   ├── responses/         # 📤 Response Formatting
+│   │   └── check_nik.go             # NIK validation response
+│   ├── services/          # 💼 Business Logic
+│   │   ├── auth_service.go          # Authentication business logic
+│   │   ├── category_service.go      # Category business logic
+│   │   ├── database_service.go      # Multi-database operations
+│   │   ├── file_service.go          # File upload/management
+│   │   ├── jwt_service.go           # JWT token operations
+│   │   ├── permission_service.go    # Permission management
+│   │   ├── product_service.go       # Product business logic
+│   │   ├── role_service.go          # Role management
+│   │   └── user_services.go         # User business logic
+│   └── database/          # 🔧 Database Management
+│       ├── migration_manager.go     # Migration management system
+│       ├── seeder_manager.go        # Seeder management system
+│       ├── migrations/              # SQL Migration Files
+│       │   ├── 20250426184415_create_roles_table.sql
+│       │   ├── 20250426184424_create_permissions_table.sql
+│       │   ├── 20250426184432_create_users_table.sql
+│       │   └── ...
+│       └── seeds/                   # Database Seeders
+│           └── ...
+├── bootstrap/             # 🚀 Application Bootstrap
+│   └── main.go                      # Application entry point
+├── cmd/                   # 📝 CLI Commands
+│   ├── migrate.go                   # Migration commands
+│   └── seeder.go                    # Seeder commands
+├── config/                # ⚙️ Configuration
+│   └── database.go                  # Multi-database configuration
+├── database/              # 🗃️ Database Core
+│   └── manager.go                   # Database connection manager
+├── docs/                  # 📋 Swagger Documentation
+│   ├── docs.go                      # Generated swagger docs
+│   ├── swagger.json                 # Swagger JSON spec
+│   └── swagger.yaml                 # Swagger YAML spec
+├── documentation/         # 📚 Project Documentation
+│   ├── README.md                    # Documentation index
+│   ├── GETTING_STARTED.md           # Setup and installation guide
+│   ├── DATABASE.md                  # Migration & seeder guide
+│   ├── MULTI_DATABASE.md            # Multi-database configuration
+│   └── API_REFERENCE.md             # Complete API documentation
+├── examples/              # � Usage Examples
+│   └── multi_database_usage.go      # Multi-database examples
+├── facades/               # 🎭 Facade Pattern
+│   ├── database.go                  # Primary database facade
+│   └── database2.go                 # Secondary database facade
+├── routes/                # �🛣️ API Routes
+│   └── web.go                       # Route definitions
+├── storage/               # 💾 File Storage
+├── tmp/                   # 🗂️ Temporary Files
+│   ├── build-errors.log             # Build error logs
+│   └── main.exe                     # Compiled executable
+├── .env                   # 🔐 Environment Configuration
+├── .air.toml              # 🔄 Air (Hot Reload) Configuration
+├── docker-compose.yml     # 🐳 Docker Compose Configuration
+├── Dockerfile             # 🐳 Docker Container Configuration
+├── go.mod                 # 📦 Go Module Definition
+├── go.sum                 # 🔒 Go Module Checksums
+├── main.go                # 🎯 Application Main Entry Point
+├── Makefile               # 🔨 Build Automation
+└── README.md              # 📖 Project Documentation
 ```
 
 ## 🛠️ Tech Stack
