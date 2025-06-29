@@ -91,6 +91,16 @@ func RegisterRoutes(route *gin.Engine) {
 		fileRoutes.GET("/:key/:filename", fileController.ServeFile)
 	}
 
+	// Database management routes (protected by AuthMiddleware)
+	databaseController := controllers.NewDatabaseController()
+	databaseRoutes := route.Group("/api/database")
+	{
+		databaseRoutes.GET("/status", databaseController.GetConnectionStatus)
+		databaseRoutes.GET("/health", databaseController.HealthCheck)
+		databaseRoutes.GET("/test", databaseController.TestConnection)
+		databaseRoutes.POST("/sync", databaseController.SyncData)
+	}
+
 	// Endpoint untuk mengecek kesehatan koneksi facades
 	route.GET("/health", func(c *gin.Context) {
 		sqlDB, err := facades.DB.DB() // Mengambil facades/sql *DB dari GORM *DB
@@ -114,6 +124,47 @@ func RegisterRoutes(route *gin.Engine) {
 		c.JSON(200, gin.H{
 			"message": "facades is connected",
 			"facades": "supply_chain_retail", // Sesuaikan dengan nama facades Anda
+		})
+	})
+
+	// Multi-database health check endpoint (public)
+	route.GET("/health/databases", func(c *gin.Context) {
+		manager := facades.GetManager()
+		health := make(map[string]interface{})
+		connections := []string{"mysql", "postgres", "mysql_secondary"}
+
+		allHealthy := true
+		for _, connName := range connections {
+			if manager.IsConnected(connName) {
+				stats, err := manager.GetConnectionStats(connName)
+				if err == nil {
+					health[connName] = gin.H{
+						"status": "healthy",
+						"stats":  stats,
+					}
+				} else {
+					health[connName] = gin.H{
+						"status": "unhealthy",
+						"error":  err.Error(),
+					}
+					allHealthy = false
+				}
+			} else {
+				health[connName] = gin.H{
+					"status": "disconnected",
+				}
+				allHealthy = false
+			}
+		}
+
+		statusCode := http.StatusOK
+		if !allHealthy {
+			statusCode = http.StatusServiceUnavailable
+		}
+
+		c.JSON(statusCode, gin.H{
+			"overall_health": allHealthy,
+			"connections":    health,
 		})
 	})
 }
