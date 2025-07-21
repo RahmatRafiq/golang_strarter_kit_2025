@@ -22,14 +22,15 @@ import (
 func Init() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("No .env file found, using environment variables")
 	}
+
 	facades.ConnectDB()
 	defer facades.CloseDB()
 
 	app := &cli.App{
 		Name:  "Golang Starter Kit",
-		Usage: "CLI tool for managing migrations and database connections",
+		Usage: "CLI tool for managing migrations",
 		Commands: []*cli.Command{
 			cmd.MakeMigrationCommand,
 			cmd.MigrationCommand,
@@ -38,8 +39,6 @@ func Init() {
 			cmd.MigrateFreshCommand,
 			cmd.RollbackAllCommand,
 			cmd.RollbackBatchCommand,
-			cmd.DBConnectionsCommand,
-			cmd.DBStatusCommand,
 			cmd.MakeSeederCommand,
 			cmd.DBSeedCommand,
 			cmd.RollbackSeederCommand,
