@@ -58,8 +58,9 @@ func Init() {
 	defer facades.CloseDB()
 
 	r = Router()
-	fmt.Println("Server is running on port 8080")
-	r.Run(":8080")
+	appPort := helpers.GetEnv("APP_PORT", "8080")
+	fmt.Printf("Server is running on port %s\n", appPort)
+	r.Run(":" + appPort)
 }
 
 func Router() *gin.Engine {
