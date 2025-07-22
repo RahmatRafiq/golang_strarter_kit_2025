@@ -6,7 +6,6 @@ import (
 	"golang_starter_kit_2025/app/services"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // DatabaseController handles database management endpoints
@@ -161,64 +160,5 @@ func (ctrl *DatabaseController) TestConnection(c *gin.Context) {
 			"in_use":           stats.InUse,
 			"idle":             stats.Idle,
 		},
-	})
-}
-
-// SyncData performs data synchronization between databases
-// @Summary Sync data between databases
-// @Description Synchronize data from source database to target database
-// @Tags Database
-// @Param source query string true "Source database connection"
-// @Param target query string true "Target database connection"
-// @Param table query string false "Specific table to sync (optional)"
-// @Produce json
-// @Success 200 {object} map[string]interface{} "Sync result"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
-// @Router /api/database/sync [post]
-func (ctrl *DatabaseController) SyncData(c *gin.Context) {
-	source := c.Query("source")
-	target := c.Query("target")
-
-	if source == "" || target == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "Both source and target connections are required",
-		})
-		return
-	}
-
-	if source == target {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   true,
-			"message": "Source and target connections must be different",
-		})
-		return
-	}
-
-	// For demonstration, we'll sync a simple table
-	// In production, you'd want more sophisticated sync logic
-	err := ctrl.dbService.SyncData(func(sourceDB, targetDB *gorm.DB) error {
-		// This is a basic example - you'd implement your specific sync logic here
-		// For now, we'll just return success
-		return nil
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   true,
-			"message": "Failed to sync data",
-			"source":  source,
-			"target":  target,
-			"details": err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"error":   false,
-		"message": "Data synchronization completed successfully",
-		"source":  source,
-		"target":  target,
 	})
 }

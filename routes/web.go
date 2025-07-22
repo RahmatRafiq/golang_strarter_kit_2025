@@ -98,7 +98,6 @@ func RegisterRoutes(route *gin.Engine) {
 		databaseRoutes.GET("/status", databaseController.GetConnectionStatus)
 		databaseRoutes.GET("/health", databaseController.HealthCheck)
 		databaseRoutes.GET("/test", databaseController.TestConnection)
-		databaseRoutes.POST("/sync", databaseController.SyncData)
 	}
 
 	// Endpoint untuk mengecek kesehatan koneksi facades
