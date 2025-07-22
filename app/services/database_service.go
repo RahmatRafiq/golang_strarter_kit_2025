@@ -102,21 +102,6 @@ func (s *DatabaseService) TransactionOnPostgreSQL(fn func(*gorm.DB) error) error
 	return db.Transaction(fn)
 }
 
-// SyncData syncs data between MySQL and PostgreSQL
-func (s *DatabaseService) SyncData(syncFn func(mysql, postgres *gorm.DB) error) error {
-	mysqlDB, err := s.GetMySQL()
-	if err != nil {
-		return fmt.Errorf("failed to get MySQL connection: %v", err)
-	}
-
-	postgresDB, err := s.GetPostgreSQL()
-	if err != nil {
-		return fmt.Errorf("failed to get PostgreSQL connection: %v", err)
-	}
-
-	return syncFn(mysqlDB, postgresDB)
-}
-
 // GetConnectionStats returns statistics for all connections
 func (s *DatabaseService) GetConnectionStats() (map[string]interface{}, error) {
 	manager := facades.GetManager()
