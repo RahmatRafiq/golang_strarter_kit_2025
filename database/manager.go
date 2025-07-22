@@ -85,7 +85,7 @@ func (m *Manager) Connect(connectionName string) (*Connection, error) {
 
 	// Configure GORM
 	gormConfig := &gorm.Config{
-		Logger:      logger.Default.LogMode(logger.Info),
+		Logger:      logger.Default.LogMode(logger.Silent),
 		PrepareStmt: true,
 	}
 
