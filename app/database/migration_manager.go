@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -128,7 +127,7 @@ func RunMigrationOnConnection(filename, connectionName string) error {
 		return fmt.Errorf("gagal mencatat migrasi: %v", err)
 	}
 
-	log.Printf("✅ Migration '%s' applied on connection '%s'", filename, connectionName)
+	fmt.Printf("Migrated: %s\n", filename)
 	return nil
 }
 
@@ -166,7 +165,7 @@ func RollbackMigrationOnConnection(filename, connectionName string) error {
 		return fmt.Errorf("gagal menghapus record migrasi: %v", err)
 	}
 
-	log.Printf("✅ Migration '%s' rolled back on connection '%s'", filename, connectionName)
+	fmt.Printf("Rolled back: %s\n", filename)
 	return nil
 }
 
@@ -228,7 +227,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 	sort.Strings(toRun)
 
 	for _, name := range toRun {
-		log.Printf("🚀 Running %s on connection %s", name, connectionName)
+		fmt.Printf("Migrating: %s\n", name)
 
 		data, err := os.ReadFile(
 			fmt.Sprintf("app/database/migrations/%s.sql", name),
@@ -257,7 +256,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 		}
 	}
 
-	log.Printf("✅ Batch %d applied on connection %s", batch, connectionName)
+	fmt.Printf("Batch %d applied.\n", batch)
 	return nil
 }
 
@@ -307,12 +306,12 @@ func RollbackBatchOnConnection(batch int, connectionName string) error {
 	var rows []struct{ Filename string }
 	conn.DB.Raw("SELECT filename FROM migrations WHERE batch=? ORDER BY id DESC", batch).Scan(&rows)
 	for _, r := range rows {
-		log.Printf("🔄 Rollback %s on connection %s", r.Filename, connectionName)
+		fmt.Printf("Rolling back: %s\n", r.Filename)
 		if err := RollbackMigrationOnConnection(r.Filename, connectionName); err != nil {
 			return err
 		}
 	}
-	log.Printf("✅ Batch %d rolled back on connection %s", batch, connectionName)
+	fmt.Printf("Batch %d rolled back.\n", batch)
 	return nil
 }
 
@@ -329,7 +328,7 @@ func RollbackLastBatchOnConnection(connectionName string) error {
 
 	last, _ := getLastBatch(connectionName)
 	if last == 0 {
-		log.Printf("⚠️ No batch to rollback on connection %s", connectionName)
+		fmt.Printf("No batch to rollback.\n")
 		return nil
 	}
 	return RollbackBatchOnConnection(last, connectionName)
