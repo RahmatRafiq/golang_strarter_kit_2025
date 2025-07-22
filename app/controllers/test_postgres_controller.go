@@ -21,7 +21,7 @@ func NewTestController(service services.TestService) *TestController {
 // List godoc
 // @Summary      Get all test data
 // @Description  Get all test records from PostgreSQL
-// @Tags         Test
+// @Tags         Test Postgres
 // @Produce      json
 // @Success      200  {array}   models.Test
 // @Router       /tests [get]
@@ -41,7 +41,7 @@ func (c *TestController) List(ctx *gin.Context) {
 // Get godoc
 // @Summary      Get test by ID
 // @Description  Get a test record by ID from PostgreSQL
-// @Tags         Test
+// @Tags         Test Postgres
 // @Produce      json
 // @Param        id   path      int  true  "Test ID"
 // @Success      200  {object}  models.Test
@@ -73,7 +73,7 @@ func (c *TestController) Get(ctx *gin.Context) {
 // Create godoc
 // @Summary      Create new test
 // @Description  Create a new test record in PostgreSQL
-// @Tags         Test
+// @Tags         Test Postgres
 // @Accept       json
 // @Produce      json
 // @Param        test  body      models.Test  true  "Test Data"
@@ -104,7 +104,7 @@ func (c *TestController) Create(ctx *gin.Context) {
 // Update godoc
 // @Summary      Update test
 // @Description  Update a test record in PostgreSQL
-// @Tags         Test
+// @Tags         Test Postgres
 // @Accept       json
 // @Produce      json
 // @Param        id    path      int         true  "Test ID"
@@ -147,7 +147,7 @@ func (c *TestController) Update(ctx *gin.Context) {
 // Delete godoc
 // @Summary      Delete test
 // @Description  Delete a test record in PostgreSQL
-// @Tags         Test
+// @Tags         Test Postgres
 // @Produce      json
 // @Param        id   path      int  true  "Test ID"
 // @Success      200  {object}  map[string]string
