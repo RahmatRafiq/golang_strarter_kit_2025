@@ -12,6 +12,17 @@ import (
 )
 
 func RegisterRoutes(route *gin.Engine) {
+	// Routes untuk test table (PostgreSQL, multi koneksi, tanpa auth)
+	testService := services.TestService{}
+	testController := controllers.NewTestController(testService)
+	testRoutes := route.Group("/tests")
+	{
+		testRoutes.GET("", testController.List)         // List all test
+		testRoutes.GET(":id", testController.Get)       // Get test by ID
+		testRoutes.POST("", testController.Create)      // Create test
+		testRoutes.PUT(":id", testController.Update)    // Update test
+		testRoutes.DELETE(":id", testController.Delete) // Delete test
+	}
 	// Apply middleware logging untuk semua route
 	// route.Use(middleware.LoggerMiddleware())
 
