@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"net/http"
 	"strconv"
 
+	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/services"
 
@@ -28,10 +28,14 @@ func NewTestController(service services.TestService) *TestController {
 func (c *TestController) List(ctx *gin.Context) {
 	tests, err := c.service.GetAll()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Gagal mendapatkan data test",
+			Reference: "ERROR-TEST-1",
+		}, 500)
 		return
 	}
-	ctx.JSON(http.StatusOK, tests)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Test]{Data: &tests}, 200)
 }
 
 // Get godoc
@@ -47,15 +51,23 @@ func (c *TestController) Get(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": "Invalid ID"},
+			Message:   "ID tidak valid",
+			Reference: "ERROR-TEST-2",
+		}, 400)
 		return
 	}
 	test, err := c.service.GetByID(uint(id))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Data test tidak ditemukan",
+			Reference: "ERROR-TEST-3",
+		}, 404)
 		return
 	}
-	ctx.JSON(http.StatusOK, test)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Test]{Item: test}, 200)
 }
 
 // Create godoc
@@ -71,14 +83,22 @@ func (c *TestController) Get(ctx *gin.Context) {
 func (c *TestController) Create(ctx *gin.Context) {
 	var test models.Test
 	if err := ctx.ShouldBindJSON(&test); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Parameter tidak valid",
+			Reference: "ERROR-TEST-4",
+		}, 400)
 		return
 	}
 	if err := c.service.Create(&test); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Gagal membuat data test",
+			Reference: "ERROR-TEST-5",
+		}, 500)
 		return
 	}
-	ctx.JSON(http.StatusCreated, test)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Test]{Item: &test}, 201)
 }
 
 // Update godoc
@@ -96,20 +116,32 @@ func (c *TestController) Update(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": "Invalid ID"},
+			Message:   "ID tidak valid",
+			Reference: "ERROR-TEST-6",
+		}, 400)
 		return
 	}
 	var test models.Test
 	if err := ctx.ShouldBindJSON(&test); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Parameter tidak valid",
+			Reference: "ERROR-TEST-7",
+		}, 400)
 		return
 	}
 	test.ID = uint(id)
 	if err := c.service.Update(&test); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Gagal update data test",
+			Reference: "ERROR-TEST-8",
+		}, 500)
 		return
 	}
-	ctx.JSON(http.StatusOK, test)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Test]{Item: &test}, 200)
 }
 
 // Delete godoc
@@ -124,12 +156,20 @@ func (c *TestController) Delete(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": "Invalid ID"},
+			Message:   "ID tidak valid",
+			Reference: "ERROR-TEST-9",
+		}, 400)
 		return
 	}
 	if err := c.service.Delete(uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Gagal menghapus data test",
+			Reference: "ERROR-TEST-10",
+		}, 500)
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Deleted"})
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{}, 200)
 }
