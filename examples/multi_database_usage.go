@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"golang_starter_kit_2025/app/models"
-	"golang_starter_kit_2025/app/repositories"
 	"golang_starter_kit_2025/app/services"
 	"golang_starter_kit_2025/facades"
 
@@ -27,14 +25,6 @@ func main() {
 	// Example 1: Basic database service usage
 	fmt.Println("=== Database Service Examples ===")
 	basicDatabaseExample()
-
-	// Example 2: Repository pattern usage
-	fmt.Println("\n=== Repository Pattern Examples ===")
-	repositoryExample()
-
-	// Example 3: Cross-database synchronization
-	fmt.Println("\n=== Data Synchronization Examples ===")
-	syncExample()
 
 	// Example 4: Connection status and health
 	fmt.Println("\n=== Connection Health Examples ===")
@@ -84,76 +74,6 @@ func basicDatabaseExample() {
 		fmt.Printf("   ❌ MySQL Secondary Error: %v\n", err)
 	} else {
 		fmt.Printf("   ✅ MySQL Secondary connection successful\n")
-	}
-}
-
-func repositoryExample() {
-	userRepo := repositories.NewUserRepository()
-
-	// Example user
-	user := &models.User{
-		Username: "testuser",
-		Email:    "test@example.com",
-		Password: "password123",
-	}
-
-	// Create user in MySQL
-	fmt.Println("1. Creating user in MySQL...")
-	err := userRepo.CreateOnMySQL(user)
-	if err != nil {
-		fmt.Printf("   ❌ MySQL Create Error: %v\n", err)
-	} else {
-		fmt.Printf("   ✅ User created in MySQL with ID: %d\n", user.ID)
-	}
-
-	// Create user in PostgreSQL
-	fmt.Println("2. Creating user in PostgreSQL...")
-	user2 := &models.User{
-		Username: "testuserpg",
-		Email:    "testpg@example.com",
-		Password: "password123",
-	}
-	err = userRepo.CreateOnPostgreSQL(user2)
-	if err != nil {
-		fmt.Printf("   ❌ PostgreSQL Create Error: %v\n", err)
-	} else {
-		fmt.Printf("   ✅ User created in PostgreSQL with ID: %d\n", user2.ID)
-	}
-
-	// Get user from MySQL
-	fmt.Println("3. Retrieving user from MySQL...")
-	if user.ID > 0 {
-		retrievedUser, err := userRepo.GetFromMySQL(user.ID)
-		if err != nil {
-			fmt.Printf("   ❌ MySQL Retrieve Error: %v\n", err)
-		} else {
-			fmt.Printf("   ✅ Retrieved user from MySQL: %s (%s)\n", retrievedUser.Username, retrievedUser.Email)
-		}
-	}
-}
-
-func syncExample() {
-	dbService := services.NewDatabaseService()
-
-	fmt.Println("1. Testing data synchronization between MySQL and PostgreSQL...")
-	err := dbService.SyncData(func(mysql, postgres *gorm.DB) error {
-		// Count users in each database
-		var mysqlCount int64
-		var postgresCount int64
-
-		mysql.Model(&models.User{}).Count(&mysqlCount)
-		postgres.Model(&models.User{}).Count(&postgresCount)
-
-		fmt.Printf("   MySQL users: %d\n", mysqlCount)
-		fmt.Printf("   PostgreSQL users: %d\n", postgresCount)
-
-		return nil
-	})
-
-	if err != nil {
-		fmt.Printf("   ❌ Sync Error: %v\n", err)
-	} else {
-		fmt.Printf("   ✅ Sync operation completed\n")
 	}
 }
 

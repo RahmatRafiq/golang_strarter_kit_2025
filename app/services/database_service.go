@@ -102,21 +102,6 @@ func (s *DatabaseService) TransactionOnPostgreSQL(fn func(*gorm.DB) error) error
 	return db.Transaction(fn)
 }
 
-// SyncData syncs data between MySQL and PostgreSQL
-func (s *DatabaseService) SyncData(syncFn func(mysql, postgres *gorm.DB) error) error {
-	mysqlDB, err := s.GetMySQL()
-	if err != nil {
-		return fmt.Errorf("failed to get MySQL connection: %v", err)
-	}
-
-	postgresDB, err := s.GetPostgreSQL()
-	if err != nil {
-		return fmt.Errorf("failed to get PostgreSQL connection: %v", err)
-	}
-
-	return syncFn(mysqlDB, postgresDB)
-}
-
 // GetConnectionStats returns statistics for all connections
 func (s *DatabaseService) GetConnectionStats() (map[string]interface{}, error) {
 	manager := facades.GetManager()
@@ -124,9 +109,11 @@ func (s *DatabaseService) GetConnectionStats() (map[string]interface{}, error) {
 
 	connections := []string{"mysql", "postgres", "mysql_secondary"}
 	for _, connName := range connections {
-		if manager.IsConnected(connName) {
-			connStats, err := manager.GetConnectionStats(connName)
-			if err == nil {
+		// Always try to get the connection (will try to connect if not established)
+		conn, err := facades.GetConnection(connName)
+		if err == nil && conn != nil && manager.IsConnected(connName) {
+			connStats, errStats := manager.GetConnectionStats(connName)
+			if errStats == nil {
 				stats[connName] = map[string]interface{}{
 					"connected":           true,
 					"open_connections":    connStats.OpenConnections,
@@ -140,13 +127,18 @@ func (s *DatabaseService) GetConnectionStats() (map[string]interface{}, error) {
 			} else {
 				stats[connName] = map[string]interface{}{
 					"connected": false,
-					"error":     err.Error(),
+					"error":     errStats.Error(),
 				}
 			}
 		} else {
+			// Try to provide error from GetConnection if available
+			errMsg := "Connection not established"
+			if err != nil {
+				errMsg = err.Error()
+			}
 			stats[connName] = map[string]interface{}{
 				"connected": false,
-				"error":     "Connection not established",
+				"error":     errMsg,
 			}
 		}
 	}
