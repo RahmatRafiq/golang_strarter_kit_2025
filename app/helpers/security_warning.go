@@ -49,18 +49,11 @@ func CheckSecurityWarning() bool {
 		fmt.Printf("%sPlease set SKIP_AUTH=false in your .env file immediately!%s\n\n", ColorRed, ColorReset)
 
 		fmt.Printf("%sDo you want to continue anyway? (type 'yes' to continue, anything else to exit): %s", ColorRed, ColorReset)
-	} else {
-		fmt.Printf("%s⚙️  Development Mode Detected%s\n", ColorGreen, ColorReset)
-		fmt.Printf("%sThis setting is acceptable for local development.%s\n\n", ColorWhite, ColorReset)
 
-		fmt.Printf("%sDo you want to continue? (Y/n): %s", ColorCyan, ColorReset)
-	}
+		reader := bufio.NewReader(os.Stdin)
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(strings.ToLower(input))
 
-	reader := bufio.NewReader(os.Stdin)
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(strings.ToLower(input))
-
-	if appEnv == "production" || appEnv == "prod" {
 		if input != "yes" {
 			fmt.Printf("\n%s%s❌ Application startup cancelled for security reasons.%s\n", ColorBold, ColorRed, ColorReset)
 			fmt.Printf("%sPlease update your .env file:%s\n", ColorYellow, ColorReset)
@@ -73,14 +66,10 @@ func CheckSecurityWarning() bool {
 		return true
 	}
 
-	if input == "n" || input == "no" {
-		fmt.Printf("\n%s%s❌ Application startup cancelled.%s\n", ColorBold, ColorYellow, ColorReset)
-		fmt.Printf("%sTo enable authentication, set in .env:%s\n", ColorWhite, ColorReset)
-		fmt.Printf("%s  SKIP_AUTH=false%s\n\n", ColorGreen, ColorReset)
-		return false
-	}
-
-	fmt.Printf("\n%s%s✅ Starting application with authentication disabled...%s\n", ColorBold, ColorGreen, ColorReset)
+	// Development mode - auto-accept with warning
+	fmt.Printf("%s⚙️  Development Mode Detected%s\n", ColorGreen, ColorReset)
+	fmt.Printf("%sThis setting is acceptable for local development.%s\n", ColorWhite, ColorReset)
+	fmt.Printf("%s%s✅ Auto-continuing in development mode...%s\n\n", ColorBold, ColorGreen, ColorReset)
 	fmt.Printf("%sRemember: This is for development only!%s\n\n", ColorYellow, ColorReset)
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println()
