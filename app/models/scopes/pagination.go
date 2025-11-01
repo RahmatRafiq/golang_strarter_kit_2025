@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Paginate creates a pagination scope from FilterRequest
 func Paginate(filter requests.FilterRequest) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		page := 1
@@ -34,6 +35,30 @@ func Paginate(filter requests.FilterRequest) func(db *gorm.DB) *gorm.DB {
 				offset = 0
 			}
 		}
+
+		return db.Offset(offset).Limit(limit)
+	}
+}
+
+// PaginateSimple creates a simple pagination scope from page and limit
+func PaginateSimple(page, limit int) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		// Validate and set defaults
+		if page <= 0 {
+			page = 1
+		}
+
+		if limit <= 0 {
+			limit = 10
+		}
+
+		// Max limit to prevent abuse
+		if limit > 100 {
+			limit = 100
+		}
+
+		// Calculate offset
+		offset := (page - 1) * limit
 
 		return db.Offset(offset).Limit(limit)
 	}

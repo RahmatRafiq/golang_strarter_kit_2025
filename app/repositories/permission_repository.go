@@ -71,7 +71,7 @@ func (r *permissionRepository) List(page, limit int) ([]models.Permission, int64
 	}
 
 	// Get paginated data
-	err := r.db.Scopes(scopes.Paginate(page, limit)).Find(&permissions).Error
+	err := r.db.Scopes(scopes.PaginateSimple(page, limit)).Find(&permissions).Error
 	if err != nil {
 		return nil, 0, err
 	}

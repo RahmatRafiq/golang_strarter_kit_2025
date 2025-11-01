@@ -84,7 +84,7 @@ func (r *categoryRepository) List(page, limit int) ([]models.Category, int64, er
 	}
 
 	// Get paginated data
-	err := r.db.Scopes(scopes.Paginate(page, limit)).Find(&categories).Error
+	err := r.db.Scopes(scopes.PaginateSimple(page, limit)).Find(&categories).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -103,7 +103,7 @@ func (r *categoryRepository) ListWithProducts(page, limit int) ([]models.Categor
 	}
 
 	// Get paginated data with products
-	err := r.db.Preload("Products").Scopes(scopes.Paginate(page, limit)).Find(&categories).Error
+	err := r.db.Preload("Products").Scopes(scopes.PaginateSimple(page, limit)).Find(&categories).Error
 	if err != nil {
 		return nil, 0, err
 	}

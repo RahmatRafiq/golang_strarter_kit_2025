@@ -71,7 +71,7 @@ func (r *roleRepository) List(page, limit int) ([]models.Role, int64, error) {
 	}
 
 	// Get paginated data
-	err := r.db.Scopes(scopes.Paginate(page, limit)).Find(&roles).Error
+	err := r.db.Scopes(scopes.PaginateSimple(page, limit)).Find(&roles).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -90,7 +90,7 @@ func (r *roleRepository) ListWithPermissions(page, limit int) ([]models.Role, in
 	}
 
 	// Get paginated data with permissions
-	err := r.db.Preload("Permissions").Scopes(scopes.Paginate(page, limit)).Find(&roles).Error
+	err := r.db.Preload("Permissions").Scopes(scopes.PaginateSimple(page, limit)).Find(&roles).Error
 	if err != nil {
 		return nil, 0, err
 	}

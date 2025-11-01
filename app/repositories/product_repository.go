@@ -71,7 +71,7 @@ func (r *productRepository) List(page, limit int) ([]models.Product, int64, erro
 	}
 
 	// Get paginated data
-	err := r.db.Scopes(scopes.Paginate(page, limit)).Find(&products).Error
+	err := r.db.Scopes(scopes.PaginateSimple(page, limit)).Find(&products).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -90,7 +90,7 @@ func (r *productRepository) ListWithCategory(page, limit int) ([]models.Product,
 	}
 
 	// Get paginated data with category
-	err := r.db.Preload("Category").Scopes(scopes.Paginate(page, limit)).Find(&products).Error
+	err := r.db.Preload("Category").Scopes(scopes.PaginateSimple(page, limit)).Find(&products).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -111,7 +111,7 @@ func (r *productRepository) ListByCategory(categoryID uint, page, limit int) ([]
 	}
 
 	// Get paginated data
-	err := query.Scopes(scopes.Paginate(page, limit)).Find(&products).Error
+	err := query.Scopes(scopes.PaginateSimple(page, limit)).Find(&products).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -133,7 +133,7 @@ func (r *productRepository) Search(keyword string, page, limit int) ([]models.Pr
 	}
 
 	// Get paginated data
-	err := query.Preload("Category").Scopes(scopes.Paginate(page, limit)).Find(&products).Error
+	err := query.Preload("Category").Scopes(scopes.PaginateSimple(page, limit)).Find(&products).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -173,7 +173,7 @@ func (r *productRepository) GetLowStockProducts(threshold int, page, limit int) 
 	}
 
 	// Get paginated data
-	err := query.Preload("Category").Scopes(scopes.Paginate(page, limit)).Find(&products).Error
+	err := query.Preload("Category").Scopes(scopes.PaginateSimple(page, limit)).Find(&products).Error
 	if err != nil {
 		return nil, 0, err
 	}
