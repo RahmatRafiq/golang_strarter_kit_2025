@@ -52,6 +52,10 @@ func Init() {
 		return
 	}
 
+	if !helpers.CheckSecurityWarning() {
+		os.Exit(0)
+	}
+
 	r := gin.Default()
 	facades.ConnectDB()
 
@@ -59,7 +63,9 @@ func Init() {
 
 	r = Router()
 	appPort := helpers.GetEnv("APP_PORT", "8080")
-	fmt.Printf("Server is running on port %s\n", appPort)
+
+	helpers.PrintServerStartupInfo()
+
 	r.Run(":" + appPort)
 }
 
