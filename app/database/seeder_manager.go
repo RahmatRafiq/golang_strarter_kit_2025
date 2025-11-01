@@ -26,20 +26,52 @@ var SeederList = []Seeder{
 	},
 }
 
-func ensureSeedsTable() error {
-	return facades.DB.Exec(`
-		CREATE TABLE IF NOT EXISTS seeds (
-			id INT PRIMARY KEY AUTO_INCREMENT,
-			filename VARCHAR(255) NOT NULL,
-			batch BIGINT NOT NULL,
-			seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		)
-	`).Error
+func ensureSeedsTable(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
+	// Use different table creation syntax based on database type
+	var createTableSQL string
+	if conn.IsPostgreSQL() {
+		createTableSQL = `
+			CREATE TABLE IF NOT EXISTS seeds (
+				id SERIAL PRIMARY KEY,
+				filename VARCHAR(255) NOT NULL,
+				batch BIGINT NOT NULL,
+				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			)`
+	} else {
+		// MySQL/MariaDB
+		createTableSQL = `
+			CREATE TABLE IF NOT EXISTS seeds (
+				id INT PRIMARY KEY AUTO_INCREMENT,
+				filename VARCHAR(255) NOT NULL,
+				batch BIGINT NOT NULL,
+				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			)`
+	}
+
+	return conn.DB.Exec(createTableSQL).Error
 }
 
-func getLastSeedBatch() (int64, error) {
+func getLastSeedBatch(connectionName string) (int64, error) {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
 	var res struct{ Batch int64 }
-	if err := facades.DB.
+	if err := conn.DB.
 		Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM seeds").
 		Scan(&res).Error; err != nil {
 		return 0, err
@@ -47,9 +79,18 @@ func getLastSeedBatch() (int64, error) {
 	return res.Batch, nil
 }
 
-func isSeedApplied(name string) (bool, error) {
+func isSeedApplied(name, connectionName string) (bool, error) {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return false, fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
 	var cnt int64
-	if err := facades.DB.
+	if err := conn.DB.
 		Raw("SELECT COUNT(*) FROM seeds WHERE filename = ?", name).
 		Scan(&cnt).Error; err != nil {
 		return false, err
@@ -57,11 +98,27 @@ func isSeedApplied(name string) (bool, error) {
 	return cnt > 0, nil
 }
 
+// RunAllSeeders runs all seeders on the default connection
 func RunAllSeeders() error {
-	if err := ensureSeedsTable(); err != nil {
+	return RunAllSeedersOnConnection("")
+}
+
+// RunAllSeedersOnConnection runs all seeders on a specified connection
+func RunAllSeedersOnConnection(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	if err := ensureSeedsTable(connectionName); err != nil {
 		return err
 	}
-	_, err := getLastSeedBatch()
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
+	_, err = getLastSeedBatch(connectionName)
 	if err != nil {
 		return err
 	}
@@ -69,7 +126,7 @@ func RunAllSeeders() error {
 
 	var pending []Seeder
 	for _, s := range SeederList {
-		applied, err := isSeedApplied(s.Name)
+		applied, err := isSeedApplied(s.Name, connectionName)
 		if err != nil {
 			return err
 		}
@@ -82,25 +139,40 @@ func RunAllSeeders() error {
 
 	for _, s := range pending {
 		log.Println("🌱 Seeding:", s.Name)
-		if err := s.Run(facades.DB); err != nil {
+		if err := s.Run(conn.DB); err != nil {
 			return fmt.Errorf("failed to run seeder %s: %w", s.Name, err)
 		}
-		if err := facades.DB.
+		if err := conn.DB.
 			Exec("INSERT INTO seeds (filename, batch) VALUES (?, ?)", s.Name, s.Batch).
 			Error; err != nil {
 			return err
 		}
 	}
-	log.Printf("✅ Seed batch %d applied.\n", newBatch)
+	log.Printf("✅ Seed batch %d applied on connection %s.\n", newBatch, connectionName)
 	return nil
 }
+// RollbackSeedBatch rolls back a specific seed batch on default connection
 func RollbackSeedBatch(batch int64) error {
-	if err := ensureSeedsTable(); err != nil {
+	return RollbackSeedBatchOnConnection(batch, "")
+}
+
+// RollbackSeedBatchOnConnection rolls back a specific seed batch on a specified connection
+func RollbackSeedBatchOnConnection(batch int64, connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	if err := ensureSeedsTable(connectionName); err != nil {
 		return err
 	}
 
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
 	var rows []struct{ Filename string }
-	if err := facades.DB.
+	if err := conn.DB.
 		Raw("SELECT filename FROM seeds WHERE batch = ? ORDER BY id DESC", batch).
 		Scan(&rows).Error; err != nil {
 		return err
@@ -115,25 +187,35 @@ func RollbackSeedBatch(batch int64) error {
 		for _, s := range SeederList {
 			if s.Name == r.Filename {
 				if s.Rollback != nil {
-					if err := s.Rollback(facades.DB); err != nil {
+					if err := s.Rollback(conn.DB); err != nil {
 						return fmt.Errorf("rollback seeder %s failed: %w", s.Name, err)
 					}
 				}
 				break
 			}
 		}
-		if err := facades.DB.
+		if err := conn.DB.
 			Exec("DELETE FROM seeds WHERE filename = ? AND batch = ?", r.Filename, batch).
 			Error; err != nil {
 			return err
 		}
 	}
-	log.Printf("✅ Seeder batch %d rolled back.\n", batch)
+	log.Printf("✅ Seeder batch %d rolled back on connection %s.\n", batch, connectionName)
 	return nil
 }
 
+// RollbackLastSeedBatch rolls back the last seed batch on default connection
 func RollbackLastSeedBatch() error {
-	b, err := getLastSeedBatch()
+	return RollbackLastSeedBatchOnConnection("")
+}
+
+// RollbackLastSeedBatchOnConnection rolls back the last seed batch on a specified connection
+func RollbackLastSeedBatchOnConnection(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	b, err := getLastSeedBatch(connectionName)
 	if err != nil {
 		return err
 	}
@@ -141,5 +223,67 @@ func RollbackLastSeedBatch() error {
 		log.Println("⚠️ No seed batch to rollback.")
 		return nil
 	}
-	return RollbackSeedBatch(b)
+	return RollbackSeedBatchOnConnection(b, connectionName)
+}
+
+// RunSpecificSeeder runs a specific seeder on default connection
+func RunSpecificSeeder(name string) error {
+	return RunSpecificSeederOnConnection(name, "")
+}
+
+// RunSpecificSeederOnConnection runs a specific seeder on a specified connection
+func RunSpecificSeederOnConnection(name, connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	if err := ensureSeedsTable(connectionName); err != nil {
+		return err
+	}
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
+	// Find the seeder
+	var seeder *Seeder
+	for _, s := range SeederList {
+		if s.Name == name {
+			seeder = &s
+			break
+		}
+	}
+
+	if seeder == nil {
+		return fmt.Errorf("seeder '%s' not found", name)
+	}
+
+	// Check if already applied
+	applied, err := isSeedApplied(name, connectionName)
+	if err != nil {
+		return err
+	}
+
+	if applied {
+		log.Printf("⚠️ Seeder '%s' has already been run\n", name)
+		return nil
+	}
+
+	// Run the seeder
+	newBatch := time.Now().Unix()
+	log.Printf("🌱 Running seeder: %s\n", name)
+
+	if err := seeder.Run(conn.DB); err != nil {
+		return fmt.Errorf("failed to run seeder %s: %w", name, err)
+	}
+
+	if err := conn.DB.
+		Exec("INSERT INTO seeds (filename, batch) VALUES (?, ?)", name, newBatch).
+		Error; err != nil {
+		return err
+	}
+
+	log.Printf("✅ Seeder '%s' completed successfully on connection %s\n", name, connectionName)
+	return nil
 }
