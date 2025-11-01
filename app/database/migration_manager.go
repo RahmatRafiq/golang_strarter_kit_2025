@@ -334,6 +334,40 @@ func RollbackLastBatchOnConnection(connectionName string) error {
 	return RollbackBatchOnConnection(last, connectionName)
 }
 
+// RollbackStepsOnConnection rolls back the last N batches on a specified connection
+func RollbackStepsOnConnection(steps int, connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql" // default connection
+	}
+
+	if err := ensureMigrationsTable(connectionName); err != nil {
+		return err
+	}
+
+	last, _ := getLastBatch(connectionName)
+	if last == 0 {
+		fmt.Println("⚠️ No batches to rollback.")
+		return nil
+	}
+
+	// Calculate target batch (we rollback from last down to last-steps+1)
+	targetBatch := last - steps + 1
+	if targetBatch < 1 {
+		targetBatch = 1
+	}
+
+	count := 0
+	for b := last; b >= targetBatch && b >= 1; b-- {
+		if err := RollbackBatchOnConnection(b, connectionName); err != nil {
+			return fmt.Errorf("failed to rollback batch %d: %v", b, err)
+		}
+		count++
+	}
+
+	fmt.Printf("✅ Successfully rolled back %d batch(es).\n", count)
+	return nil
+}
+
 // FreshMigrations truncates migrations and re-runs all on the default connection
 func FreshMigrations() error {
 	return FreshMigrationsOnConnection("")
@@ -362,4 +396,130 @@ func FreshMigrationsOnConnection(connectionName string) error {
 	}
 
 	return RunAllMigrationsOnConnection(connectionName)
+}
+
+// ShowMigrationStatus displays the status of all migrations
+func ShowMigrationStatus(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	if err := ensureMigrationsTable(connectionName); err != nil {
+		return err
+	}
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
+	// Get all migration files
+	files, err := os.ReadDir("app/database/migrations")
+	if err != nil {
+		return fmt.Errorf("failed to read migrations folder: %v", err)
+	}
+
+	// Get applied migrations
+	var applied []struct {
+		Filename string
+		Batch    int
+	}
+	conn.DB.Raw("SELECT filename, batch FROM migrations ORDER BY batch, filename").Scan(&applied)
+
+	appliedMap := make(map[string]int)
+	for _, a := range applied {
+		appliedMap[a.Filename] = a.Batch
+	}
+
+	fmt.Println()
+	fmt.Println("Migration Status on connection:", connectionName)
+	fmt.Println(strings.Repeat("=", 80))
+	fmt.Printf("%-50s %-10s %-10s\n", "Migration", "Batch", "Status")
+	fmt.Println(strings.Repeat("-", 80))
+
+	var pending, ran int
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".sql") {
+			continue
+		}
+		name := strings.TrimSuffix(f.Name(), ".sql")
+		if batch, ok := appliedMap[name]; ok {
+			fmt.Printf("%-50s %-10d ✅ Ran\n", truncateString(name, 50), batch)
+			ran++
+		} else {
+			fmt.Printf("%-50s %-10s ⏳ Pending\n", truncateString(name, 50), "-")
+			pending++
+		}
+	}
+
+	fmt.Println(strings.Repeat("=", 80))
+	fmt.Printf("Total: %d migrations (%d ran, %d pending)\n", ran+pending, ran, pending)
+	fmt.Println()
+	return nil
+}
+
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// WipeDatabase drops all tables from the database
+func WipeDatabase(connectionName string) error {
+	if connectionName == "" {
+		connectionName = "mysql"
+	}
+
+	conn, err := facades.GetConnection(connectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
+	}
+
+	var tables []string
+
+	if conn.IsPostgreSQL() {
+		// PostgreSQL: Get all tables from public schema
+		var rows []struct{ TableName string }
+		conn.DB.Raw(`
+			SELECT tablename as table_name
+			FROM pg_tables
+			WHERE schemaname = 'public'
+		`).Scan(&rows)
+
+		for _, row := range rows {
+			tables = append(tables, row.TableName)
+		}
+
+		// Drop tables with CASCADE
+		for _, table := range tables {
+			fmt.Printf("Dropping table: %s\n", table)
+			if err := conn.DB.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", table)).Error; err != nil {
+				return fmt.Errorf("failed to drop table %s: %v", table, err)
+			}
+		}
+	} else {
+		// MySQL/MariaDB: Disable foreign key checks temporarily
+		conn.DB.Exec("SET FOREIGN_KEY_CHECKS = 0")
+		defer conn.DB.Exec("SET FOREIGN_KEY_CHECKS = 1")
+
+		// Get all tables
+		var rows []struct{ TableName string }
+		conn.DB.Raw("SHOW TABLES").Scan(&rows)
+
+		for _, row := range rows {
+			tables = append(tables, row.TableName)
+		}
+
+		// Drop each table
+		for _, table := range tables {
+			fmt.Printf("Dropping table: %s\n", table)
+			if err := conn.DB.Exec(fmt.Sprintf("DROP TABLE IF EXISTS `%s`", table)).Error; err != nil {
+				return fmt.Errorf("failed to drop table %s: %v", table, err)
+			}
+		}
+	}
+
+	fmt.Printf("✅ Successfully dropped %d tables.\n", len(tables))
+	return nil
 }
