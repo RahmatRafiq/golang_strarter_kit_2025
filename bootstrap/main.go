@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"time"
 
 	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/cmd"
@@ -20,14 +22,30 @@ import (
 )
 
 func Init() {
+	// Load environment variables
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found, using environment variables")
 	}
 
+	// Validate required environment variables
+	validateRequiredEnvVars()
+
+	// Set Gin mode based on environment
+	appEnv := helpers.GetEnv("APP_ENV", "production")
+	if appEnv == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	} else if appEnv == "development" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.TestMode)
+	}
+
+	// Connect to database
 	facades.ConnectDB()
 	defer facades.CloseDB()
 
+	// CLI commands
 	app := &cli.App{
 		Name:  "Golang Starter Kit",
 		Usage: "CLI tool for managing migrations",
@@ -45,6 +63,7 @@ func Init() {
 		},
 	}
 
+	// If CLI command provided, run it and exit
 	if len(os.Args) > 1 {
 		if err := app.Run(os.Args); err != nil {
 			log.Fatal(err)
@@ -52,24 +71,53 @@ func Init() {
 		return
 	}
 
-	r := gin.Default()
-	facades.ConnectDB()
-
-	defer facades.CloseDB()
-
-	r = Router()
-	appPort := helpers.GetEnv("APP_PORT", "8080")
-	fmt.Printf("Server is running on port %s\n", appPort)
+	// Start web server
+	r := Router()
+	appPort := helpers.GetEnv("APP_PORT", "9999")
+	fmt.Printf("🚀 Server is running on port %s\n", appPort)
+	fmt.Printf("📚 Swagger documentation: http://localhost:%s/swagger/index.html\n", appPort)
+	fmt.Printf("💚 Health check: http://localhost:%s/health\n", appPort)
 	r.Run(":" + appPort)
+}
+
+// validateRequiredEnvVars validates that required environment variables are set
+func validateRequiredEnvVars() {
+	required := map[string]string{
+		"DB_CONNECTION":  "Database connection type",
+		"JWT_SECRET_KEY": "JWT secret key",
+		"APP_PORT":       "Application port",
+	}
+
+	var missing []string
+	for key, description := range required {
+		if os.Getenv(key) == "" {
+			missing = append(missing, fmt.Sprintf("%s (%s)", key, description))
+		}
+	}
+
+	// Check JWT secret is not placeholder
+	jwtSecret := os.Getenv("JWT_SECRET_KEY")
+	if jwtSecret == "your_jwt_secret_key_here" || jwtSecret == "CHANGE_THIS_TO_RANDOM_STRING_AT_LEAST_32_CHARS" {
+		log.Fatal("❌ SECURITY ERROR: JWT_SECRET_KEY is still using placeholder value. Please generate a strong secret key using: openssl rand -base64 48")
+	}
+
+	if len(missing) > 0 {
+		log.Fatalf("❌ ERROR: Required environment variables are not set:\n  - %s", strings.Join(missing, "\n  - "))
+	}
 }
 
 func Router() *gin.Engine {
 	route := gin.Default()
 
+	// Configure CORS properly
+	allowedOrigins := helpers.GetEnv("ALLOWED_ORIGINS", "http://localhost:3000")
 	route.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "PUT", "DELETE"},
-		AllowHeaders: []string{"*"},
+		AllowOrigins:     strings.Split(allowedOrigins, ","),
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Api-Key", "X-Request-ID"},
+		ExposeHeaders:    []string{"Content-Length", "X-Request-ID"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	routes.RegisterRoutes(route)
