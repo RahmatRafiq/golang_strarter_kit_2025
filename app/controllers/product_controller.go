@@ -14,12 +14,12 @@ import (
 )
 
 type ProductController struct {
-	service *services.ProductService
+	service services.ProductService
 }
 
-func NewProductController() *ProductController {
+func NewProductController(service services.ProductService) *ProductController {
 	return &ProductController{
-		service: services.NewProductService(),
+		service: service,
 	}
 }
 
