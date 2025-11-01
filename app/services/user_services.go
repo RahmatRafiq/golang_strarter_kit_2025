@@ -2,79 +2,130 @@ package services
 
 import (
 	"golang_starter_kit_2025/app/models"
-	"golang_starter_kit_2025/facades"
-
-	"gorm.io/gorm/clause"
+	"golang_starter_kit_2025/app/repositories/interfaces"
+	"strconv"
 )
 
-type UserService struct{}
-
-func (*UserService) GetAllUsers() ([]models.User, error) {
-	var users []models.User
-	if err := facades.DB.Find(&users).Error; err != nil {
-		return nil, err
-	}
-	return users, nil
+// UserService handles user business logic
+type UserService struct {
+	repo interfaces.UserRepositoryInterface
 }
 
-func (*UserService) Find(id string) (models.User, error) {
-	var user models.User
-	if err := facades.DB.First(&user, id).Error; err != nil {
+// NewUserService creates a new user service
+func NewUserService(repo interfaces.UserRepositoryInterface) *UserService {
+	return &UserService{repo: repo}
+}
+
+// GetAllUsers returns all users (consider deprecating in favor of List with pagination)
+func (s *UserService) GetAllUsers() ([]models.User, error) {
+	// For backward compatibility, return first 1000 users
+	users, _, err := s.repo.List(1, 1000)
+	return users, err
+}
+
+// List returns paginated list of users
+func (s *UserService) List(page, limit int) ([]models.User, int64, error) {
+	return s.repo.List(page, limit)
+}
+
+// Find finds user by ID (string for backward compatibility)
+func (s *UserService) Find(id string) (models.User, error) {
+	userID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	user, err := s.repo.FindByID(uint(userID))
+	if err != nil {
+		return models.User{}, err
+	}
+	return *user, nil
+}
+
+// FindByID finds user by ID (uint version)
+func (s *UserService) FindByID(id uint) (*models.User, error) {
+	return s.repo.FindByID(id)
+}
+
+// FindByEmail finds user by email
+func (s *UserService) FindByEmail(email string) (*models.User, error) {
+	return s.repo.FindByEmail(email)
+}
+
+// Put creates or updates a user (based on ID)
+func (s *UserService) Put(user models.User) (models.User, error) {
+	if user.ID == 0 {
+		// Create new user
+		err := s.repo.Create(&user)
+		return user, err
+	} else {
+		// Update existing user
+		err := s.repo.Update(&user)
 		return user, err
 	}
-	return user, nil
 }
 
-func (*UserService) Put(user models.User) (models.User, error) {
-
-	if err := facades.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"username", "email", "password", "fcm_token", "updated_at"}),
-	}).Create(&user).Error; err != nil {
-		return user, err
-	}
-
-	return user, nil
+// Create creates a new user
+func (s *UserService) Create(user *models.User) error {
+	return s.repo.Create(user)
 }
 
-func (*UserService) Delete(id string) error {
-	var user models.User
-	if err := facades.DB.First(&user, id).Error; err != nil {
-		return err
-	}
-	return facades.DB.Delete(&user).Error
+// Update updates existing user
+func (s *UserService) Update(user *models.User) error {
+	return s.repo.Update(user)
 }
 
-func (*UserService) AssignRolesToUser(userId string, roles []uint) error {
-	var user models.User
-	if err := facades.DB.First(&user, userId).Error; err != nil {
+// Delete deletes user by ID (string for backward compatibility)
+func (s *UserService) Delete(id string) error {
+	userID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
 		return err
 	}
 
-	// Clear existing roles for the user
-	facades.DB.Where("user_id = ?", user.ID).Delete(&models.UserHasRole{})
+	return s.repo.Delete(uint(userID))
+}
 
-	// Assign new roles
-	for _, roleId := range roles {
-		userRole := models.UserHasRole{
-			UserID: user.ID,
-			RoleID: roleId,
-		}
-		if err := facades.DB.Create(&userRole).Error; err != nil {
-			return err
-		}
+// DeleteByID deletes user by ID (uint version)
+func (s *UserService) DeleteByID(id uint) error {
+	return s.repo.Delete(id)
+}
+
+// AssignRolesToUser assigns roles to a user
+func (s *UserService) AssignRolesToUser(userId string, roleIDs []uint) error {
+	userID, err := strconv.ParseUint(userId, 10, 32)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return s.repo.AssignRoles(uint(userID), roleIDs)
 }
-func (*UserService) GetRolesByUserId(userId string) ([]models.Role, error) {
-	var roles []models.Role
-	if err := facades.DB.Table("roles").
-		Select("roles.*").
-		Joins("join user_has_roles on roles.id = user_has_roles.role_id").
-		Where("user_has_roles.user_id = ?", userId).
-		Find(&roles).Error; err != nil {
+
+// AssignRoles assigns roles to a user (uint version)
+func (s *UserService) AssignRoles(userID uint, roleIDs []uint) error {
+	return s.repo.AssignRoles(userID, roleIDs)
+}
+
+// GetRolesByUserId gets roles for a user
+func (s *UserService) GetRolesByUserId(userId string) ([]models.Role, error) {
+	userID, err := strconv.ParseUint(userId, 10, 32)
+	if err != nil {
 		return nil, err
 	}
-	return roles, nil
+
+	return s.repo.GetRoles(uint(userID))
+}
+
+// GetRoles gets roles for a user (uint version)
+func (s *UserService) GetRoles(userID uint) ([]models.Role, error) {
+	return s.repo.GetRoles(userID)
+}
+
+// ExistsByEmail checks if user with email exists
+func (s *UserService) ExistsByEmail(email string) (bool, error) {
+	return s.repo.ExistsByEmail(email)
+}
+
+// Count returns total number of users
+func (s *UserService) Count() (int64, error) {
+	return s.repo.Count()
 }
