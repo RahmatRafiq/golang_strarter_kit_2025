@@ -79,20 +79,45 @@ var RollbackAllCommand = &cli.Command{
 	},
 }
 
+var MigrateResetCommand = &cli.Command{
+	Name:  "migrate:reset",
+	Usage: "Rollback all migrations (alias for rollback:all)",
+	Flags: []cli.Flag{
+		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection to use (mysql, postgres, mysql_secondary)"},
+	},
+	Action: func(c *cli.Context) error {
+		connection := c.String("connection")
+		fmt.Printf("🔄 Resetting all migrations on connection %s\n", connection)
+		return database.RunAllRollbacksOnConnection(connection)
+	},
+}
+
 var RollbackBatchCommand = &cli.Command{
 	Name:  "rollback:batch",
-	Usage: "Rollback specific batch",
+	Usage: "Rollback specific batch or last N steps",
 	Flags: []cli.Flag{
-		&cli.IntFlag{Name: "batch"},
+		&cli.IntFlag{Name: "batch", Usage: "Specific batch number to rollback"},
+		&cli.IntFlag{Name: "step", Usage: "Number of batches to rollback (from latest)"},
 		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection to use (mysql, postgres, mysql_secondary)"},
 	},
 	Action: func(c *cli.Context) error {
 		b := c.Int("batch")
+		step := c.Int("step")
 		connection := c.String("connection")
-		if b == 0 {
-			return database.RollbackLastBatchOnConnection(connection)
+
+		// If step is provided, rollback N batches
+		if step > 0 {
+			fmt.Printf("🔄 Rolling back last %d batch(es) on connection %s\n", step, connection)
+			return database.RollbackStepsOnConnection(step, connection)
 		}
-		return database.RollbackBatchOnConnection(b, connection)
+
+		// If batch is provided, rollback specific batch
+		if b > 0 {
+			return database.RollbackBatchOnConnection(b, connection)
+		}
+
+		// Default: rollback last batch
+		return database.RollbackLastBatchOnConnection(connection)
 	},
 }
 
@@ -101,14 +126,60 @@ var MigrateFreshCommand = &cli.Command{
 	Usage: "Reset and re-run all migrations",
 	Flags: []cli.Flag{
 		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection to use (mysql, postgres, mysql_secondary)"},
+		&cli.BoolFlag{Name: "seed", Usage: "Run seeders after migrations"},
 	},
 	Action: func(c *cli.Context) error {
 		connection := c.String("connection")
+		seed := c.Bool("seed")
+
 		fmt.Printf("🔄 Fresh: rollback all then migrate all on connection %s\n", connection)
 		if err := database.RunAllRollbacksOnConnection(connection); err != nil {
 			return err
 		}
-		return database.RunAllMigrationsOnConnection(connection)
+
+		if err := database.RunAllMigrationsOnConnection(connection); err != nil {
+			return err
+		}
+
+		if seed {
+			fmt.Println("🌱 Running seeders...")
+			if err := database.RunAllSeeders(); err != nil {
+				return fmt.Errorf("failed to run seeders: %v", err)
+			}
+			fmt.Println("✅ Seeders completed successfully!")
+		}
+
+		return nil
+	},
+}
+
+var DBWipeCommand = &cli.Command{
+	Name:  "db:wipe",
+	Usage: "Drop all tables from the database",
+	Flags: []cli.Flag{
+		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection to use (mysql, postgres, mysql_secondary)"},
+		&cli.BoolFlag{Name: "force", Usage: "Force execution without confirmation"},
+	},
+	Action: func(c *cli.Context) error {
+		connection := c.String("connection")
+		force := c.Bool("force")
+
+		if !force {
+			fmt.Println("⚠️  WARNING: This will DROP ALL TABLES in the database!")
+			fmt.Printf("Connection: %s\n\n", connection)
+			fmt.Print("Are you sure you want to continue? (type 'yes' to confirm): ")
+
+			var confirmation string
+			fmt.Scanln(&confirmation)
+
+			if confirmation != "yes" {
+				fmt.Println("❌ Operation cancelled.")
+				return nil
+			}
+		}
+
+		fmt.Printf("🗑️  Dropping all tables on connection %s\n", connection)
+		return database.WipeDatabase(connection)
 	},
 }
 
@@ -122,6 +193,18 @@ var DBConnectionsCommand = &cli.Command{
 			fmt.Printf("  - %s\n", conn)
 		}
 		return nil
+	},
+}
+
+var MigrateStatusCommand = &cli.Command{
+	Name:  "migrate:status",
+	Usage: "Show the status of each migration",
+	Flags: []cli.Flag{
+		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection to use (mysql, postgres, mysql_secondary)"},
+	},
+	Action: func(c *cli.Context) error {
+		connection := c.String("connection")
+		return database.ShowMigrationStatus(connection)
 	},
 }
 

@@ -89,12 +89,24 @@ func Rollback%[1]s(db *gorm.DB) error {
 var DBSeedCommand = &cli.Command{
 	Name:  "db:seed",
 	Usage: "Run all Go-based seeders",
+	Flags: []cli.Flag{
+		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection to use (mysql, postgres, mysql_secondary)"},
+		&cli.StringFlag{Name: "class", Usage: "Specific seeder class to run"},
+	},
 	Action: func(c *cli.Context) error {
-		fmt.Println("🌱 Menjalankan semua seeder Go...")
-		if err := database.RunAllSeeders(); err != nil {
-			log.Fatal("❌ Gagal menjalankan seeder:", err)
+		connection := c.String("connection")
+		class := c.String("class")
+
+		if class != "" {
+			fmt.Printf("🌱 Running specific seeder: %s on connection %s\n", class, connection)
+			return database.RunSpecificSeederOnConnection(class, connection)
 		}
-		fmt.Println("✅ Semua seeder berhasil dijalankan!")
+
+		fmt.Printf("🌱 Running all seeders on connection %s\n", connection)
+		if err := database.RunAllSeedersOnConnection(connection); err != nil {
+			log.Fatal("❌ Failed to run seeders:", err)
+		}
+		fmt.Println("✅ All seeders completed successfully!")
 		return nil
 	},
 }
@@ -107,14 +119,17 @@ var RollbackSeederCommand = &cli.Command{
 			Aliases: []string{"b"},
 			Usage:   "Batch number to rollback",
 		},
+		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection to use (mysql, postgres, mysql_secondary)"},
 	},
 	Action: func(c *cli.Context) error {
 		b := c.Int64("batch")
+		connection := c.String("connection")
+
 		if b == 0 {
-			log.Println("🔄 Rolling back last seed batch...")
-			return database.RollbackLastSeedBatch()
+			log.Printf("🔄 Rolling back last seed batch on connection %s\n", connection)
+			return database.RollbackLastSeedBatchOnConnection(connection)
 		}
-		log.Printf("🔄 Rolling back seed batch %d...\n", b)
-		return database.RollbackSeedBatch(b)
+		log.Printf("🔄 Rolling back seed batch %d on connection %s\n", b, connection)
+		return database.RollbackSeedBatchOnConnection(b, connection)
 	},
 }
