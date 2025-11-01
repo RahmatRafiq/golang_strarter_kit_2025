@@ -10,7 +10,7 @@ type Category struct {
 	ID       uint   `gorm:"primaryKey" json:"id"`
 	Category string `json:"category"`
 
-	Products *[]Product `gorm:"foreignKey:CategoryID" json:"products"`
+	Products *[]Product `gorm:"foreignKey:CategoryID" json:"products,omitempty" swaggerignore:"true"`
 
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`

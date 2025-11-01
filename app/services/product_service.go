@@ -2,62 +2,62 @@ package services
 
 import (
 	"log"
+	"strconv"
 
 	"golang_starter_kit_2025/app/models"
+	"golang_starter_kit_2025/app/repositories/interfaces"
 	"golang_starter_kit_2025/app/requests"
-	"golang_starter_kit_2025/facades"
 
 	"github.com/gin-gonic/gin"
 )
 
 type ProductService struct {
-	fileService FileService
+	productRepo  interfaces.ProductRepositoryInterface
+	categoryRepo interfaces.CategoryRepositoryInterface
+	fileService  FileService
 }
 
-func NewProductService() *ProductService {
+func NewProductService(productRepo interfaces.ProductRepositoryInterface, categoryRepo interfaces.CategoryRepositoryInterface) *ProductService {
 	return &ProductService{
-		fileService: FileService{},
+		productRepo:  productRepo,
+		categoryRepo: categoryRepo,
+		fileService:  FileService{},
 	}
 }
 
-func (service *ProductService) GetAll(filters requests.FilterRequest) ([]models.Product, error) {
-	var products []models.Product
-	query := facades.DB
-
-	if filters.Search != nil {
-		query = query.Where("name LIKE ?", "%"+*filters.Search+"%").
-			Or("description LIKE ?", "%"+*filters.Search+"%").
-			Or("reference LIKE ?", "%"+*filters.Search+"%")
-	}
-
-	if filters.OrderBy != nil {
-		query = query.Order(*filters.OrderBy + " " + *filters.OrderDirection)
-	} else {
-		query = query.Order("updated_at desc")
-	}
-
-	if err := query.Find(&products).Error; err != nil {
-		return nil, err
-	}
-	return products, nil
+func (s *ProductService) GetAll(filters requests.FilterRequest) ([]models.Product, error) {
+	products, _, err := s.productRepo.ListWithCategory(1, 1000)
+	return products, err
 }
 
-func (service *ProductService) GetByID(id string) (models.Product, error) {
-	var product models.Product
-	if err := facades.DB.First(&product, id).Error; err != nil {
-		return product, err
-	}
-	return product, nil
+func (s *ProductService) List(page, limit int) ([]models.Product, int64, error) {
+	return s.productRepo.ListWithCategory(page, limit)
 }
 
-func (service *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) (*models.Product, error) {
+func (s *ProductService) GetByID(id string) (models.Product, error) {
+	productID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return models.Product{}, err
+	}
+
+	product, err := s.productRepo.FindByIDWithCategory(uint(productID))
+	if err != nil {
+		return models.Product{}, err
+	}
+	return *product, nil
+}
+
+func (s *ProductService) FindByID(id uint) (*models.Product, error) {
+	return s.productRepo.FindByIDWithCategory(id)
+}
+
+func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) (*models.Product, error) {
 	var product models.Product
 
-	// Mengunggah file gambar produk jika ada
 	var filenames []string
 	if request.Images != nil {
 		for _, image := range request.Images {
-			filename, err := service.fileService.StoreBase64File(image, "images", "products")
+			filename, err := s.fileService.StoreBase64File(image, "images", "products")
 			if err != nil {
 				return nil, err
 			}
@@ -69,11 +69,9 @@ func (service *ProductService) Put(ctx *gin.Context, request requests.ProductReq
 	if request.ID != 0 {
 		product.ID = request.ID
 	}
-
 	if request.CategoryID != 0 {
 		product.CategoryID = request.CategoryID
 	}
-
 	if request.Name != "" {
 		product.Name = request.Name
 	}
@@ -99,29 +97,62 @@ func (service *ProductService) Put(ctx *gin.Context, request requests.ProductReq
 		product.Images = filenames
 	}
 
-	if count := facades.DB.Model(&models.Product{}).Where("id = ?", request.ID).Find(&map[string]interface{}{}).RowsAffected; count == 0 {
-		if err := facades.DB.Create(&product).Error; err != nil {
-			return &product, err
-		}
+	if request.ID == 0 {
+		err := s.productRepo.Create(&product)
+		return &product, err
 	} else {
-		if err := facades.DB.Model(&models.Product{}).Where("id = ?", request.ID).Updates(&product).Error; err != nil {
+		err := s.productRepo.Update(&product)
+		if err != nil {
 			return &product, err
 		}
-		if err := facades.DB.First(&product, request.ID).Error; err != nil {
+		updated, err := s.productRepo.FindByID(request.ID)
+		if err != nil {
 			return &product, err
 		}
+		return updated, nil
 	}
-
-	return &product, nil
 }
 
-func (service *ProductService) Delete(id string) error {
-	result := facades.DB.Delete(&models.Product{}, id)
-	if result.Error != nil {
-		return result.Error
+func (s *ProductService) Create(product *models.Product) error {
+	return s.productRepo.Create(product)
+}
+
+func (s *ProductService) Update(product *models.Product) error {
+	return s.productRepo.Update(product)
+}
+
+func (s *ProductService) Delete(id string) error {
+	productID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return err
 	}
-	if result.RowsAffected == 0 {
-		return result.Error
-	}
-	return nil
+	return s.productRepo.Delete(uint(productID))
+}
+
+func (s *ProductService) DeleteByID(id uint) error {
+	return s.productRepo.Delete(id)
+}
+
+func (s *ProductService) ListByCategory(categoryID uint, page, limit int) ([]models.Product, int64, error) {
+	return s.productRepo.ListByCategory(categoryID, page, limit)
+}
+
+func (s *ProductService) Search(keyword string, page, limit int) ([]models.Product, int64, error) {
+	return s.productRepo.Search(keyword, page, limit)
+}
+
+func (s *ProductService) UpdateStock(productID uint, stock int) error {
+	return s.productRepo.UpdateStock(productID, stock)
+}
+
+func (s *ProductService) GetLowStockProducts(threshold int, page, limit int) ([]models.Product, int64, error) {
+	return s.productRepo.GetLowStockProducts(threshold, page, limit)
+}
+
+func (s *ProductService) Count() (int64, error) {
+	return s.productRepo.Count()
+}
+
+func (s *ProductService) CountByCategory(categoryID uint) (int64, error) {
+	return s.productRepo.CountByCategory(categoryID)
 }
