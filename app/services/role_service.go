@@ -1,89 +1,126 @@
 package services
 
 import (
-	"errors"
-
 	"golang_starter_kit_2025/app/models"
-	"golang_starter_kit_2025/facades"
+	"golang_starter_kit_2025/app/repositories/interfaces"
+	"strconv"
 )
 
-type RoleService struct{}
-
-func (*RoleService) GetAll() ([]models.Role, error) {
-	var roles []models.Role
-	if err := facades.DB.Find(&roles).Error; err != nil {
-		return nil, err
-	}
-	return roles, nil
+// RoleService handles role business logic
+type RoleService struct {
+	roleRepo       interfaces.RoleRepositoryInterface
+	permissionRepo interfaces.PermissionRepositoryInterface
 }
 
-func (*RoleService) Put(updatedRole models.Role) (models.Role, error) {
-	var role models.Role
+// NewRoleService creates a new role service
+func NewRoleService(roleRepo interfaces.RoleRepositoryInterface, permissionRepo interfaces.PermissionRepositoryInterface) *RoleService {
+	return &RoleService{
+		roleRepo:       roleRepo,
+		permissionRepo: permissionRepo,
+	}
+}
 
-	if count := facades.DB.Model(&models.Role{}).Where("id = ?", updatedRole.ID).Find(&map[string]interface{}{}).RowsAffected; count == 0 {
-		if err := facades.DB.Create(&updatedRole).Error; err != nil {
-			return role, err
-		}
+// GetAll returns all roles without pagination
+func (s *RoleService) GetAll() ([]models.Role, error) {
+	return s.roleRepo.GetAll()
+}
+
+// List returns paginated list of roles
+func (s *RoleService) List(page, limit int) ([]models.Role, int64, error) {
+	return s.roleRepo.List(page, limit)
+}
+
+// Put creates or updates a role (based on ID)
+func (s *RoleService) Put(updatedRole models.Role) (models.Role, error) {
+	if updatedRole.ID == 0 {
+		// Create new role
+		err := s.roleRepo.Create(&updatedRole)
+		return updatedRole, err
 	} else {
-		if err := facades.DB.Where("id = ?", updatedRole.ID).Updates(&updatedRole).Error; err != nil {
-			return role, err
+		// Update existing role
+		err := s.roleRepo.Update(&updatedRole)
+		if err != nil {
+			return updatedRole, err
 		}
-
-		if err := facades.DB.First(&role, updatedRole.ID).Error; err != nil {
-			return role, err
+		// Return updated role
+		role, err := s.roleRepo.FindByID(updatedRole.ID)
+		if err != nil {
+			return updatedRole, err
 		}
+		return *role, nil
 	}
-
-	return role, nil
 }
 
-func (*RoleService) Delete(id string) error {
-	var role models.Role
-	if err := facades.DB.First(&role, id).Error; err != nil {
+// Create creates a new role
+func (s *RoleService) Create(role *models.Role) error {
+	return s.roleRepo.Create(role)
+}
+
+// Update updates existing role
+func (s *RoleService) Update(role *models.Role) error {
+	return s.roleRepo.Update(role)
+}
+
+// Delete deletes role by ID (string for backward compatibility)
+func (s *RoleService) Delete(id string) error {
+	roleID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
 		return err
 	}
-	return facades.DB.Delete(&role).Error
+	return s.roleRepo.Delete(uint(roleID))
 }
 
-func (*RoleService) AssignPermissionsToRole(roleId string, permissions []uint) error {
-	var role models.Role
-	if err := facades.DB.First(&role, roleId).Error; err != nil {
+// DeleteByID deletes role by ID (uint version)
+func (s *RoleService) DeleteByID(id uint) error {
+	return s.roleRepo.Delete(id)
+}
+
+// AssignPermissionsToRole assigns permissions to a role
+func (s *RoleService) AssignPermissionsToRole(roleId string, permissionIDs []uint) error {
+	roleID, err := strconv.ParseUint(roleId, 10, 32)
+	if err != nil {
 		return err
 	}
 
-	// Validasi permissions sebelum diassign
-	var validPermissions []uint
-	facades.DB.Table("permissions").Where("id IN ?", permissions).Pluck("id", &validPermissions)
-
-	if len(validPermissions) != len(permissions) {
-		return errors.New("one or more permission IDs are invalid")
-	}
-
-	// Clear existing permissions for the role
-	facades.DB.Where("role_id = ?", role.ID).Delete(&models.RoleHasPermissions{})
-
-	// Assign new permissions
-	for _, permId := range validPermissions {
-		rolePerm := models.RoleHasPermissions{
-			RoleID:       role.ID,
-			PermissionID: permId,
-		}
-		if err := facades.DB.Create(&rolePerm).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return s.roleRepo.AssignPermissions(uint(roleID), permissionIDs)
 }
 
-func (*RoleService) GetPermissionsByRoleId(roleId string) ([]models.Permission, error) {
-	var permissions []models.Permission
-	if err := facades.DB.Table("permissions").
-		Select("permissions.*").
-		Joins("join role_has_permissions on permissions.id = role_has_permissions.permission_id").
-		Where("role_has_permissions.role_id = ?", roleId).
-		Find(&permissions).Error; err != nil {
+// AssignPermissions assigns permissions to a role (uint version)
+func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint) error {
+	return s.roleRepo.AssignPermissions(roleID, permissionIDs)
+}
+
+// GetPermissionsByRoleId gets permissions for a role
+func (s *RoleService) GetPermissionsByRoleId(roleId string) ([]models.Permission, error) {
+	roleID, err := strconv.ParseUint(roleId, 10, 32)
+	if err != nil {
 		return nil, err
 	}
-	return permissions, nil
+
+	return s.roleRepo.GetPermissions(uint(roleID))
+}
+
+// GetPermissions gets permissions for a role (uint version)
+func (s *RoleService) GetPermissions(roleID uint) ([]models.Permission, error) {
+	return s.roleRepo.GetPermissions(roleID)
+}
+
+// FindByID finds role by ID
+func (s *RoleService) FindByID(id uint) (*models.Role, error) {
+	return s.roleRepo.FindByID(id)
+}
+
+// FindByName finds role by name
+func (s *RoleService) FindByName(name string) (*models.Role, error) {
+	return s.roleRepo.FindByName(name)
+}
+
+// ExistsByName checks if role with name exists
+func (s *RoleService) ExistsByName(name string) (bool, error) {
+	return s.roleRepo.ExistsByName(name)
+}
+
+// Count returns total number of roles
+func (s *RoleService) Count() (int64, error) {
+	return s.roleRepo.Count()
 }
