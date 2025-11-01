@@ -9,32 +9,26 @@ import (
 	"gorm.io/gorm"
 )
 
-// roleRepository implements RoleRepositoryInterface
 type roleRepository struct {
 	db *gorm.DB
 }
 
-// NewRoleRepository creates a new role repository
 func NewRoleRepository(db *gorm.DB) interfaces.RoleRepositoryInterface {
 	return &roleRepository{db: db}
 }
 
-// Create creates a new role
 func (r *roleRepository) Create(role *models.Role) error {
 	return r.db.Create(role).Error
 }
 
-// Update updates existing role
 func (r *roleRepository) Update(role *models.Role) error {
 	return r.db.Save(role).Error
 }
 
-// Delete soft deletes a role by ID
 func (r *roleRepository) Delete(id uint) error {
 	return r.db.Delete(&models.Role{}, id).Error
 }
 
-// FindByID finds role by ID
 func (r *roleRepository) FindByID(id uint) (*models.Role, error) {
 	var role models.Role
 	err := r.db.First(&role, id).Error
@@ -47,7 +41,6 @@ func (r *roleRepository) FindByID(id uint) (*models.Role, error) {
 	return &role, nil
 }
 
-// FindByName finds role by name
 func (r *roleRepository) FindByName(name string) (*models.Role, error) {
 	var role models.Role
 	err := r.db.Where("name = ?", name).First(&role).Error
@@ -60,17 +53,14 @@ func (r *roleRepository) FindByName(name string) (*models.Role, error) {
 	return &role, nil
 }
 
-// List returns paginated list of roles
 func (r *roleRepository) List(page, limit int) ([]models.Role, int64, error) {
 	var roles []models.Role
 	var total int64
 
-	// Count total
 	if err := r.db.Model(&models.Role{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Get paginated data
 	err := r.db.Scopes(scopes.PaginateSimple(page, limit)).Find(&roles).Error
 	if err != nil {
 		return nil, 0, err
@@ -79,17 +69,14 @@ func (r *roleRepository) List(page, limit int) ([]models.Role, int64, error) {
 	return roles, total, nil
 }
 
-// ListWithPermissions returns roles with preloaded permissions
 func (r *roleRepository) ListWithPermissions(page, limit int) ([]models.Role, int64, error) {
 	var roles []models.Role
 	var total int64
 
-	// Count total
 	if err := r.db.Model(&models.Role{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Get paginated data with permissions
 	err := r.db.Preload("Permissions").Scopes(scopes.PaginateSimple(page, limit)).Find(&roles).Error
 	if err != nil {
 		return nil, 0, err
@@ -98,27 +85,22 @@ func (r *roleRepository) ListWithPermissions(page, limit int) ([]models.Role, in
 	return roles, total, nil
 }
 
-// AssignPermissions assigns permissions to role
 func (r *roleRepository) AssignPermissions(roleID uint, permissionIDs []uint) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		// Find role
 		var role models.Role
 		if err := tx.First(&role, roleID).Error; err != nil {
 			return err
 		}
 
-		// Find permissions
 		var permissions []models.Permission
 		if err := tx.Find(&permissions, permissionIDs).Error; err != nil {
 			return err
 		}
 
-		// Check if all permissions found
 		if len(permissions) != len(permissionIDs) {
 			return errors.New("some permissions not found")
 		}
 
-		// Clear existing permissions and assign new ones
 		if err := tx.Model(&role).Association("Permissions").Replace(permissions); err != nil {
 			return err
 		}
@@ -127,7 +109,6 @@ func (r *roleRepository) AssignPermissions(roleID uint, permissionIDs []uint) er
 	})
 }
 
-// GetPermissions gets role's permissions
 func (r *roleRepository) GetPermissions(roleID uint) ([]models.Permission, error) {
 	var role models.Role
 	if err := r.db.Preload("Permissions").First(&role, roleID).Error; err != nil {
@@ -136,7 +117,6 @@ func (r *roleRepository) GetPermissions(roleID uint) ([]models.Permission, error
 	return role.Permissions, nil
 }
 
-// ExistsByName checks if role with name exists
 func (r *roleRepository) ExistsByName(name string) (bool, error) {
 	var count int64
 	err := r.db.Model(&models.Role{}).Where("name = ?", name).Count(&count).Error
@@ -146,14 +126,12 @@ func (r *roleRepository) ExistsByName(name string) (bool, error) {
 	return count > 0, nil
 }
 
-// Count returns total number of roles
 func (r *roleRepository) Count() (int64, error) {
 	var count int64
 	err := r.db.Model(&models.Role{}).Count(&count).Error
 	return count, err
 }
 
-// GetAll returns all roles without pagination
 func (r *roleRepository) GetAll() ([]models.Role, error) {
 	var roles []models.Role
 	err := r.db.Find(&roles).Error
