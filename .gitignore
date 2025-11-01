@@ -18,9 +18,19 @@
 go.work
 go.work.sum
 
-# Environment file
+# Environment files
 .env
+.env.local
+.env.*.local
 .env.docker
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
 # Custom patterns for ignoring specific files and directories
 tmp/
@@ -28,5 +38,22 @@ main.exe
 build-errors.log
 backend/tmp/build-errors.log
 **/main
+bin/
+dist/
 
-docs/
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage.out
+coverage.html
+*.coverprofile
+
+# Swagger generated docs (regenerate dengan swag init)
+docs/docs.go
+docs/swagger.json
+docs/swagger.yaml
+
+# Air tmp files
+.air/

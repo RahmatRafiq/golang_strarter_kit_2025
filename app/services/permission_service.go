@@ -2,43 +2,79 @@ package services
 
 import (
 	"golang_starter_kit_2025/app/models"
-	"golang_starter_kit_2025/facades"
+	"golang_starter_kit_2025/app/repositories/interfaces"
+	"strconv"
 )
 
-type PermissionService struct{}
-
-func (*PermissionService) GetAll() ([]models.Permission, error) {
-	var permissions []models.Permission
-	if err := facades.DB.Find(&permissions).Error; err != nil {
-		return nil, err
-	}
-	return permissions, nil
+type PermissionService struct {
+	repo interfaces.PermissionRepositoryInterface
 }
 
-func (*PermissionService) Put(updatedPermission models.Permission) (models.Permission, error) {
-	var permission models.Permission
+func NewPermissionService(repo interfaces.PermissionRepositoryInterface) *PermissionService {
+	return &PermissionService{repo: repo}
+}
 
-	if count := facades.DB.Model(&models.Permission{}).Where("id = ?", updatedPermission.ID).Find(&map[string]interface{}{}).RowsAffected; count == 0 {
-		if err := facades.DB.Create(&updatedPermission).Error; err != nil {
-			return permission, err
-		}
+func (s *PermissionService) GetAll() ([]models.Permission, error) {
+	return s.repo.GetAll()
+}
+
+func (s *PermissionService) List(page, limit int) ([]models.Permission, int64, error) {
+	return s.repo.List(page, limit)
+}
+
+func (s *PermissionService) Put(updatedPermission models.Permission) (models.Permission, error) {
+	if updatedPermission.ID == 0 {
+		err := s.repo.Create(&updatedPermission)
+		return updatedPermission, err
 	} else {
-		if err := facades.DB.Where("id = ?", updatedPermission.ID).Updates(&updatedPermission).Error; err != nil {
-			return permission, err
+		err := s.repo.Update(&updatedPermission)
+		if err != nil {
+			return updatedPermission, err
 		}
-
-		if err := facades.DB.First(&permission, updatedPermission.ID).Error; err != nil {
-			return permission, err
+		permission, err := s.repo.FindByID(updatedPermission.ID)
+		if err != nil {
+			return updatedPermission, err
 		}
+		return *permission, nil
 	}
-
-	return permission, nil
 }
 
-func (*PermissionService) Delete(id string) error {
-	var permission models.Permission
-	if err := facades.DB.First(&permission, id).Error; err != nil {
+func (s *PermissionService) Create(permission *models.Permission) error {
+	return s.repo.Create(permission)
+}
+
+func (s *PermissionService) Update(permission *models.Permission) error {
+	return s.repo.Update(permission)
+}
+
+func (s *PermissionService) Delete(id string) error {
+	permissionID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
 		return err
 	}
-	return facades.DB.Delete(&permission).Error
+	return s.repo.Delete(uint(permissionID))
+}
+
+func (s *PermissionService) DeleteByID(id uint) error {
+	return s.repo.Delete(id)
+}
+
+func (s *PermissionService) FindByID(id uint) (*models.Permission, error) {
+	return s.repo.FindByID(id)
+}
+
+func (s *PermissionService) FindByName(name string) (*models.Permission, error) {
+	return s.repo.FindByName(name)
+}
+
+func (s *PermissionService) FindByIDs(ids []uint) ([]models.Permission, error) {
+	return s.repo.FindByIDs(ids)
+}
+
+func (s *PermissionService) ExistsByName(name string) (bool, error) {
+	return s.repo.ExistsByName(name)
+}
+
+func (s *PermissionService) Count() (int64, error) {
+	return s.repo.Count()
 }

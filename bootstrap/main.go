@@ -71,6 +71,12 @@ func Init() {
 		return
 	}
 
+	if !helpers.CheckSecurityWarning() {
+		os.Exit(0)
+	}
+
+	r := gin.Default()
+	facades.ConnectDB()
 	// Start web server
 	r := Router()
 	appPort := helpers.GetEnv("APP_PORT", "9999")
@@ -88,6 +94,12 @@ func validateRequiredEnvVars() {
 		"APP_PORT":       "Application port",
 	}
 
+	r = Router()
+	appPort := helpers.GetEnv("APP_PORT", "8080")
+
+	helpers.PrintServerStartupInfo()
+
+	r.Run(":" + appPort)
 	var missing []string
 	for key, description := range required {
 		if os.Getenv(key) == "" {
