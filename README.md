@@ -45,8 +45,9 @@ air
 ```
 
 🌐 **Akses Aplikasi:**
-- API Documentation: http://localhost:8080/swagger/index.html
-- Health Check: http://localhost:8080/api/health
+- API Documentation: http://localhost:9999/swagger/index.html
+- Health Check: http://localhost:9999/health
+- Multi-Database Health: http://localhost:9999/health/databases
 
 ## 📖 Dokumentasi
 
@@ -93,12 +94,11 @@ golang_starter_kit_2025/
 │   │   ├── product.go                # Product model
 │   │   ├── role.go                   # Role model
 │   │   ├── role_has_permission.go    # Role-Permission pivot
+│   │   ├── test_postgres.go          # Test model for PostgreSQL
 │   │   ├── user.go                   # User model
 │   │   ├── user_has_role.go          # User-Role pivot
 │   │   └── scopes/                   # Query scopes
 │   │       └── pagination.go         # Pagination scope
-│   ├── repositories/                 # 🗄️ Data Access Layer
-│   │   └── user_repository.go        # User data operations
 │   ├── requests/                     # ✅ Request Validation
 │   │   ├── category_request.go       # Category validation rules
 │   │   ├── filter_request.go         # Filter/search validation
@@ -116,7 +116,10 @@ golang_starter_kit_2025/
 │   │   ├── permission_service.go     # Permission management
 │   │   ├── product_service.go        # Product business logic
 │   │   ├── role_service.go           # Role management
+│   │   ├── test_postgres_service.go  # Test service for PostgreSQL
 │   │   └── user_services.go          # User business logic
+│   ├── handlers/                     # 📨 Response Handlers
+│   │   └── response_handler.go       # Standardized response formatting
 │   └── database/                     # 🔧 Database Management
 │       ├── migration_manager.go      # Migration management system
 │       ├── seeder_manager.go         # Seeder management system
@@ -133,7 +136,8 @@ golang_starter_kit_2025/
 │   ├── migrate.go                    # Migration commands
 │   └── seeder.go                     # Seeder commands
 ├── config/                           # ⚙️ Configuration
-│   └── database.go                   # Multi-database configuration
+│   ├── database_config.go            # Multi-database configuration
+│   └── mongo_config.go               # MongoDB configuration (optional)
 ├── database/                         # 🗃️ Database Core
 │   └── manager.go                    # Database connection manager
 ├── docs/                             # 📋 Swagger Documentation
@@ -149,8 +153,8 @@ golang_starter_kit_2025/
 ├── examples/                         # � Usage Examples
 │   └── multi_database_usage.go       # Multi-database examples
 ├── facades/                          # 🎭 Facade Pattern
-│   ├── database.go                   # Primary database facade
-│   └── database2.go                  # Secondary database facade
+│   ├── database.go                   # Database facade with manager pattern
+│   └── mongo.go                      # MongoDB facade (optional)
 ├── routes/                           # �🛣️ API Routes
 │   └── web.go                        # Route definitions
 ├── storage/                          # 💾 File Storage
