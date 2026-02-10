@@ -248,6 +248,81 @@ var MigrateLockReleaseCommand = &cli.Command{
 	},
 }
 
+var MigrateLogsCommand = &cli.Command{
+	Name:  "migrate:logs",
+	Usage: "Show migration execution logs",
+	Flags: []cli.Flag{
+		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection"},
+		&cli.IntFlag{Name: "limit", Value: 20, Usage: "Number of logs to show"},
+		&cli.BoolFlag{Name: "failed", Usage: "Show only failed migrations"},
+		&cli.BoolFlag{Name: "slow", Usage: "Show slow migrations (>1s)"},
+	},
+	Action: func(c *cli.Context) error {
+		connection := c.String("connection")
+		limit := c.Int("limit")
+		showFailed := c.Bool("failed")
+		showSlow := c.Bool("slow")
+
+		var logs []database.MigrationLog
+		var err error
+
+		if showFailed {
+			logs, err = database.GetFailedMigrations(connection, limit)
+			fmt.Printf("📊 Failed Migrations (connection: %s)\n\n", connection)
+		} else if showSlow {
+			logs, err = database.GetSlowMigrations(connection, 1000, limit) // >1s
+			fmt.Printf("🐌 Slow Migrations (>1s) (connection: %s)\n\n", connection)
+		} else {
+			logs, err = database.GetMigrationLogs(connection, limit)
+			fmt.Printf("📊 Recent Migration Logs (connection: %s)\n\n", connection)
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed to get logs: %v", err)
+		}
+
+		if len(logs) == 0 {
+			fmt.Println("No logs found.")
+			return nil
+		}
+
+		fmt.Println(strings.Repeat("=", 100))
+		fmt.Printf("%-40s %-8s %-12s %-12s %-20s\n", "Migration", "Batch", "Status", "Time", "Executed At")
+		fmt.Println(strings.Repeat("-", 100))
+
+		for _, log := range logs {
+			status := log.Status
+			if status == "success" {
+				status = "✅ Success"
+			} else {
+				status = "❌ Failed"
+			}
+
+			fmt.Printf("%-40s %-8d %-12s %-12s %-20s\n",
+				truncate(log.Filename, 40),
+				log.Batch,
+				status,
+				database.FormatDuration(log.ExecutionTimeMs),
+				log.ExecutedAt.Format("2006-01-02 15:04:05"),
+			)
+
+			if log.ErrorMessage != "" && showFailed {
+				fmt.Printf("   Error: %s\n", truncate(log.ErrorMessage, 90))
+			}
+		}
+
+		fmt.Println(strings.Repeat("=", 100))
+		return nil
+	},
+}
+
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
+}
+
 var MigrateStatusCommand = &cli.Command{
 	Name:  "migrate:status",
 	Usage: "Show the status of each migration",
