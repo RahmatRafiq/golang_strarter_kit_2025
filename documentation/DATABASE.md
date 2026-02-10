@@ -1,18 +1,50 @@
 # Database Management Guide
 
-Complete guide to database migrations and seeders in Golang Starter Kit 2025. This project implements a powerful Laravel-inspired migration system with batch tracking, multi-database support, and comprehensive CLI tools.
+Complete guide to database migrations and seeders in Golang Starter Kit 2025. This project implements a Laravel-inspired migration system with batch tracking, **independent multi-database connection tracking**, and comprehensive CLI tools.
 
-## Overview
+## 🎯 Key Features
 
-The migration system provides:
-- **Batch Tracking**: Track migrations in batches like Laravel
-- **Multi-Database Support**: Run migrations on any configured database
-- **Bidirectional Migrations**: UP and DOWN migrations for safe rollbacks
-- **Status Tracking**: See which migrations have run and which are pending
-- **Seeder System**: Database seeding with rollback support
-- **CLI Tools**: Comprehensive command-line interface
+- **✅ Independent Connection Tracking**: Each database connection has separate migration/seeder tracking
+- **✅ Batch System**: Track migrations in batches like Laravel
+- **✅ Multi-Database Support**: MySQL, PostgreSQL, SQLite, SQL Server
+- **✅ Transaction-Protected Rollbacks**: Atomic rollback operations
+- **✅ Bidirectional Migrations**: UP and DOWN migrations
+- **✅ Seeder System**: Database seeding with rollback support
+- **✅ Status Tracking**: Real-time migration status per connection
 
-## Migration Commands
+## 🔧 Database Schema
+
+### Migrations Table
+
+```sql
+CREATE TABLE migrations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    connection_name VARCHAR(50) NOT NULL,    -- NEW: Connection isolation
+    filename VARCHAR(255) NOT NULL,
+    batch INT NOT NULL,
+    migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_migration (connection_name, filename)  -- Prevents duplicates
+);
+```
+
+**Important**: Each database connection tracks its own migrations independently using `connection_name`.
+
+### Seeds Table
+
+```sql
+CREATE TABLE seeds (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    connection_name VARCHAR(50) NOT NULL,    -- NEW: Connection isolation
+    filename VARCHAR(255) NOT NULL,
+    batch BIGINT NOT NULL,
+    seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_seed (connection_name, filename)
+);
+```
+
+---
+
+## 📋 Migration Commands
 
 ### 1. Create New Migration
 
@@ -20,28 +52,30 @@ The migration system provides:
 go run main.go make:migration <migration_name>
 ```
 
-**Description**: Creates a new migration file with timestamp prefix.
-
-**File Format**: `YYYYMMDDHHMMSS_<migration_name>.sql`
-
-**Location**: `app/database/migrations/`
+**Creates**: `app/database/migrations/YYYYMMDDHHMMSS_<migration_name>.sql`
 
 **Examples:**
 ```bash
-# Create users table
 go run main.go make:migration create_users_table
-
-# Alter products table
 go run main.go make:migration alter_products_add_status
-
-# Add indexes
 go run main.go make:migration add_indexes_to_orders
 ```
 
-**Best Practices:**
-- Use descriptive names: `create_`, `alter_`, `add_`, `drop_`
-- One table operation per migration
-- Keep migrations atomic and reversible
+**Migration File Structure:**
+```sql
+-- +++ UP Migration
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_email ON users(email);
+
+-- --- DOWN Migration
+DROP TABLE IF EXISTS users;
+```
 
 ---
 
@@ -51,25 +85,33 @@ go run main.go make:migration add_indexes_to_orders
 go run main.go migrate --file=<filename> [--connection=mysql]
 ```
 
-**Description**: Run a specific migration file (UP direction only).
-
 **Parameters:**
-- `--file`: Migration filename (required)
-- `--connection`: Database connection (optional, default: mysql)
+- `--file`: Migration filename without `.sql` extension (required)
+- `--connection`: Target database (optional, default: `mysql`)
+
+**Available Connections:**
+- `mysql` (default)
+- `postgres`
+- `mysql_secondary`
 
 **Examples:**
 ```bash
-# Run specific migration on default database
-go run main.go migrate --file=20250426184415_create_roles_table.sql
+# Run on default MySQL connection
+go run main.go migrate --file=20250426184415_create_roles_table
 
 # Run on PostgreSQL
-go run main.go migrate --file=20250426184415_create_roles_table.sql --connection=postgres
+go run main.go migrate --file=20250426184415_create_roles_table --connection=postgres
+
+# Run on secondary MySQL
+go run main.go migrate --file=20250426184415_create_roles_table --connection=mysql_secondary
 ```
 
-**Use Cases:**
-- Testing a new migration
-- Re-running a failed migration after fixes
-- Applying migrations out of order (not recommended)
+**Output:**
+```
+🚀 Migrate: 20250426184415_create_roles_table on connection postgres
+Migrating: 20250426184415_create_roles_table
+Migrated: 20250426184415_create_roles_table
+```
 
 ---
 
@@ -79,38 +121,37 @@ go run main.go migrate --file=20250426184415_create_roles_table.sql --connection
 go run main.go migrate:all [--connection=mysql]
 ```
 
-**Description**: Run all pending migrations in chronological order.
+**Description**: Runs all pending migrations in chronological order and creates a new batch.
 
 **Process:**
-1. Creates new batch number
-2. Finds all `.sql` files not in `migrations` table
-3. Executes UP section of each migration
-4. Records each migration with batch number
-
-**Parameters:**
-- `--connection`: Database connection (optional)
+1. Queries `migrations` table filtered by `connection_name`
+2. Finds all `.sql` files not yet applied to this connection
+3. Creates new batch number (independent per connection)
+4. Executes UP section of each migration
+5. Records migration with `connection_name` and batch number
 
 **Examples:**
 ```bash
-# Run all pending migrations on default database
+# Run all pending on MySQL (batch 1, 2, 3...)
 go run main.go migrate:all
 
-# Run on PostgreSQL
+# Run all pending on PostgreSQL (independent batch 1, 2, 3...)
 go run main.go migrate:all --connection=postgres
-
-# Run on secondary MySQL
-go run main.go migrate:all --connection=mysql_secondary
 ```
 
 **Output:**
 ```
-Running migrations...
-✅ 20250426184415_create_roles_table.sql (Batch: 1)
-✅ 20250426184424_create_permissions_table.sql (Batch: 1)
-✅ 20250426184432_create_users_table.sql (Batch: 1)
-
-Migrations completed successfully!
+🚀 Migrate all on connection postgres
+Migrating: 20250426184415_create_roles_table
+Migrating: 20250426184424_create_permissions_table
+Migrating: 20250426184432_create_users_table
+Batch 1 applied.
 ```
+
+**⚠️ Important**: Each connection has independent batch numbering:
+- MySQL may be at batch 5
+- PostgreSQL may be at batch 1
+- This is correct and prevents cross-contamination
 
 ---
 
@@ -120,101 +161,92 @@ Migrations completed successfully!
 go run main.go migrate:status [--connection=mysql]
 ```
 
-**Description**: Display status of all migrations showing which have run and which are pending.
+**Description**: Shows migration status for the specified connection only.
 
-**Output Format:**
+**Output Example:**
 ```
+Migration Status on connection: postgres
 ================================================================================
 Migration                                          Batch      Status
 --------------------------------------------------------------------------------
 20250426184415_create_roles_table                  1          ✅ Ran
 20250426184424_create_permissions_table            1          ✅ Ran
 20250426184432_create_users_table                  1          ✅ Ran
-20250426184440_create_user_has_roles               2          ✅ Ran
-20250508221607_create_products_table               -          ⏳ Pending
-20250508221615_create_categories_table             -          ⏳ Pending
+20250426184449_create_users_has_roles_table        -          ⏳ Pending
+20250426184459_create_role_has_permissions_table   -          ⏳ Pending
 ================================================================================
-Total: 6 migrations (4 ran, 2 pending)
+Total: 5 migrations (3 ran, 2 pending)
 ```
-
-**Parameters:**
-- `--connection`: Database connection (optional)
 
 **Examples:**
 ```bash
-# Check status on default database
+# Check MySQL status
 go run main.go migrate:status
 
 # Check PostgreSQL status
 go run main.go migrate:status --connection=postgres
-```
 
-**Use Cases:**
-- Pre-deployment checks
-- Verify migrations before rollback
-- Debug migration issues
-- Track deployment progress
+# Compare different connections
+go run main.go migrate:status --connection=mysql
+go run main.go migrate:status --connection=postgres
+# Each shows different migration states
+```
 
 ---
 
-### 5. Rollback Specific Migration
-
-```bash
-go run main.go rollback --file=<filename> [--connection=mysql]
-```
-
-**Description**: Rollback a specific migration (run DOWN section) without affecting batch tracking.
-
-**Parameters:**
-- `--file`: Migration filename (required)
-- `--connection`: Database connection (optional)
-
-**Examples:**
-```bash
-# Rollback specific migration
-go run main.go rollback --file=20250426184415_create_roles_table.sql
-
-# Rollback on PostgreSQL
-go run main.go rollback --file=20250426184415_create_roles_table.sql --connection=postgres
-```
-
-**Warning**: This doesn't update batch tracking. Use `rollback:batch` for proper batch management.
-
----
-
-### 6. Rollback Last Batch
+### 5. Rollback Last Batch
 
 ```bash
 go run main.go rollback:batch [--connection=mysql]
 ```
 
-**Description**: Rollback all migrations in the last batch (like Laravel).
+**Description**: Rolls back all migrations in the last batch for the specified connection.
 
 **Process:**
-1. Finds highest batch number
-2. Gets all migrations in that batch
-3. Runs DOWN section for each migration (reverse order)
-4. Removes migrations from tracking table
-
-**Parameters:**
-- `--connection`: Database connection (optional)
+1. Finds highest batch number for the connection
+2. Gets all migrations in that batch (filtered by `connection_name`)
+3. **Wraps in transaction** for atomic operation
+4. Runs DOWN section for each migration (reverse order)
+5. Removes records from `migrations` table
 
 **Examples:**
 ```bash
-# Rollback last batch
+# Rollback last batch on MySQL
 go run main.go rollback:batch
 
-# Rollback on PostgreSQL
+# Rollback last batch on PostgreSQL (doesn't affect MySQL)
 go run main.go rollback:batch --connection=postgres
 ```
 
 **Output:**
 ```
-Rolling back batch 3...
-✅ Rolled back: 20250508221615_create_categories_table.sql
-✅ Rolled back: 20250508221607_create_products_table.sql
+🔄 Rollback batch 2 on connection postgres
+Rolling back: 20250426184459_create_role_has_permissions_table
+Rolled back: 20250426184459_create_role_has_permissions_table
+Rolling back: 20250426184449_create_users_has_roles_table
+Rolled back: 20250426184449_create_users_has_roles_table
+Batch 2 rolled back.
+```
 
-Rollback completed successfully!
+---
+
+### 6. Rollback Specific Batch
+
+```bash
+go run main.go rollback:batch --batch=<number> [--connection=mysql]
+```
+
+**Parameters:**
+- `--batch`: Specific batch number to rollback (required)
+- `--connection`: Target database (optional)
+
+**Examples:**
+```bash
+# Rollback batch 3 on MySQL
+go run main.go rollback:batch --batch=3
+
+# Rollback batch 1 on PostgreSQL
+go run main.go rollback:batch --batch=1 --connection=postgres
 ```
 
 ---
@@ -225,379 +257,238 @@ Rollback completed successfully!
 go run main.go rollback:batch --step=<N> [--connection=mysql]
 ```
 
-**Description**: Rollback the last N batches (Laravel-style step rollback).
-
 **Parameters:**
-- `--step`: Number of batches to rollback (required)
-- `--connection`: Database connection (optional)
+- `--step`: Number of batches to rollback from latest (required)
+- `--connection`: Target database (optional)
 
 **Examples:**
 ```bash
-# Rollback last 1 batch
-go run main.go rollback:batch --step=1
-
-# Rollback last 3 batches
+# Rollback last 3 batches on MySQL
 go run main.go rollback:batch --step=3
 
-# Rollback on PostgreSQL
+# Rollback last 2 batches on PostgreSQL
 go run main.go rollback:batch --step=2 --connection=postgres
 ```
 
-**Process:**
-- `--step=1`: Rollback batch 5 (if current max is 5)
-- `--step=3`: Rollback batches 5, 4, and 3
-- Automatically calculates target batches
-
-**Use Cases:**
-- Incremental rollbacks
-- Safe deployment rollback
-- Testing rollback procedures
+**Output:**
+```
+🔄 Rolling back last 3 batch(es) on connection mysql
+Batch 5 rolled back.
+Batch 4 rolled back.
+Batch 3 rolled back.
+✅ Successfully rolled back 3 batch(es).
+```
 
 ---
 
-### 8. Rollback Specific Batch
-
-```bash
-go run main.go rollback:batch --batch=<number> [--connection=mysql]
-```
-
-**Description**: Rollback all migrations in a specific batch number.
-
-**Parameters:**
-- `--batch`: Batch number to rollback (required)
-- `--connection`: Database connection (optional)
-
-**Examples:**
-```bash
-# Rollback batch 2
-go run main.go rollback:batch --batch=2
-
-# Rollback batch 1 on PostgreSQL
-go run main.go rollback:batch --batch=1 --connection=postgres
-```
-
-**Use Cases:**
-- Rollback specific deployment
-- Fix issues in particular batch
-- Selective migration management
-
----
-
-### 9. Rollback All Migrations
+### 8. Rollback All Migrations
 
 ```bash
 go run main.go rollback:all [--connection=mysql]
-# Alias:
-go run main.go migrate:reset [--connection=mysql]
 ```
 
-**Description**: Rollback ALL migrations from highest batch to batch 1.
+**Description**: Rolls back ALL batches on the specified connection (nuclear option).
 
-**Process:**
-1. Finds all batches (highest to lowest)
-2. Rolls back each batch sequentially
-3. Clears entire `migrations` table
-
-**Parameters:**
-- `--connection`: Database connection (optional)
+**⚠️ Warning**: This removes all migrations but keeps the tables/data. Use `migrate:fresh` for complete reset.
 
 **Examples:**
 ```bash
-# Rollback all migrations
+# Rollback everything on MySQL
 go run main.go rollback:all
 
-# Using alias
-go run main.go migrate:reset
-
-# On PostgreSQL
+# Rollback everything on PostgreSQL (MySQL unaffected)
 go run main.go rollback:all --connection=postgres
 ```
 
-**Warning**: This removes all database structure created by migrations. Use with caution!
-
 ---
 
-### 10. Fresh Migration
+### 9. Fresh Migration (Reset + Migrate)
 
 ```bash
-go run main.go migrate:fresh [--connection=mysql]
+go run main.go migrate:fresh [--seed] [--connection=mysql]
 ```
 
-**Description**: Rollback all migrations, then run all migrations again (clean slate).
+**Description**: Deletes all migration records and re-runs all migrations.
 
 **Process:**
-1. Rollback all migrations (via `rollback:all`)
-2. Run all migrations (via `migrate:all`)
+1. Deletes records from `migrations` table WHERE `connection_name = ?`
+2. Runs all migrations from scratch (batch 1)
+3. Optionally runs seeders on same connection
 
 **Parameters:**
-- `--connection`: Database connection (optional)
+- `--seed`: Run seeders after migrations (optional)
+- `--connection`: Target database (optional)
 
 **Examples:**
 ```bash
-# Fresh migration on default database
+# Fresh migration on MySQL
 go run main.go migrate:fresh
 
-# Fresh on PostgreSQL
-go run main.go migrate:fresh --connection=postgres
-```
-
-**Use Cases:**
-- Clean development environment
-- Reset test database
-- Fix migration conflicts
-
-**Warning**: Destroys all data! Don't use in production.
-
----
-
-### 11. Fresh Migration with Seeding
-
-```bash
-go run main.go migrate:fresh --seed [--connection=mysql]
-```
-
-**Description**: Fresh migration + automatically run all seeders.
-
-**Process:**
-1. Rollback all migrations
-2. Run all migrations
-3. Run all seeders
-
-**Parameters:**
-- `--seed`: Enable seeding after migration
-- `--connection`: Database connection (optional)
-
-**Examples:**
-```bash
-# Fresh migration with seeding
-go run main.go migrate:fresh --seed
-
-# On PostgreSQL
+# Fresh migration with seeders on PostgreSQL
 go run main.go migrate:fresh --seed --connection=postgres
 ```
 
-**Use Cases:**
-- Setup development environment
-- Reset test database with sample data
-- Prepare demo environment
+**Output:**
+```
+🔄 Fresh: rollback all then migrate all on connection postgres
+Batch 3 rolled back.
+Batch 2 rolled back.
+Batch 1 rolled back.
+🚀 Migrate all on connection postgres
+Migrating: 20250426184415_create_roles_table
+...
+Batch 1 applied.
+🌱 Running seeders on connection postgres...
+✅ Seeders completed successfully!
+```
 
-**Workflow:**
-```
-DB State: Empty
-    ↓
-rollback:all → Empty (cleaned)
-    ↓
-migrate:all → Structure created
-    ↓
-db:seed → Data populated
-    ↓
-DB State: Fresh with data
-```
+**⚠️ Important**: `--seed` flag now correctly respects `--connection` parameter (fixed bug #4).
 
 ---
 
-### 12. Wipe Database
+### 10. Reset Migrations
+
+```bash
+go run main.go migrate:reset [--connection=mysql]
+```
+
+**Description**: Alias for `rollback:all`. Rolls back all batches.
+
+---
+
+### 11. Wipe Database (Nuclear Option)
 
 ```bash
 go run main.go db:wipe [--connection=mysql] [--force]
 ```
 
-**Description**: Drop ALL tables from database (nuclear option).
+**Description**: Drops ALL tables from the database (data destruction).
 
 **Parameters:**
-- `--connection`: Database connection (optional)
-- `--force`: Skip confirmation prompt (for CI/CD)
-
-**Process:**
-1. Disables foreign key checks
-2. Drops all tables in database
-3. Re-enables foreign key checks
+- `--connection`: Target database (required)
+- `--force`: Skip confirmation prompt (optional)
 
 **Examples:**
 ```bash
 # Wipe with confirmation
-go run main.go db:wipe
+go run main.go db:wipe --connection=postgres
 
-# Force wipe (no confirmation)
-go run main.go db:wipe --force
-
-# Wipe PostgreSQL
+# Force wipe without prompt
 go run main.go db:wipe --connection=postgres --force
 ```
 
-**Confirmation Prompt:**
+**Output:**
 ```
 ⚠️  WARNING: This will DROP ALL TABLES in the database!
-Type 'yes' to confirm:
+Connection: postgres
+
+Are you sure you want to continue? (type 'yes' to confirm): yes
+🗑️  Dropping all tables on connection postgres
+Dropping table: users
+Dropping table: roles
+Dropping table: permissions
+✅ Successfully dropped 15 tables.
 ```
-
-**Supported Databases:**
-- MySQL
-- PostgreSQL
-- SQLite
-- SQL Server
-
-**Use Cases:**
-- Clean slate for testing
-- Remove all data and structure
-- CI/CD pipeline cleanup
-
-**⚠️ WARNING**:
-- Extremely destructive operation
-- No undo available
-- Always backup before wiping
-- Never use in production without extreme caution
 
 ---
 
-## Seeder Commands
-
-### 1. Create New Seeder
+### 12. Rollback Specific Migration
 
 ```bash
-go run main.go make:seeder --name=<SeederName>
+go run main.go rollback --file=<filename> [--connection=mysql]
 ```
 
-**Description**: Create new seeder file with template.
+**Description**: Rolls back a specific migration file (runs DOWN section only).
 
-**File Format**: `YYYYMMDDHHMMSS_<SeederName>.go`
-
-**Location**: `app/database/seeds/`
-
-**Generated Template:**
-```go
-package seeds
-
-import (
-    "golang_starter_kit_2025/app/models"
-    "gorm.io/gorm"
-)
-
-func SeedUserSeeder(db *gorm.DB) error {
-    // Seeding logic here
-    return nil
-}
-
-func RollbackUserSeeder(db *gorm.DB) error {
-    // Rollback logic here
-    return nil
-}
-```
+**⚠️ Warning**: This removes the migration record but doesn't affect batch tracking properly. Use `rollback:batch` for proper batch management.
 
 **Examples:**
 ```bash
-# Create user seeder
-go run main.go make:seeder --name=UserSeeder
-
-# Create product seeder
-go run main.go make:seeder --name=ProductSeeder
-
-# Create role seeder
-go run main.go make:seeder --name=RoleSeeder
+go run main.go rollback --file=20250426184415_create_roles_table
+go run main.go rollback --file=20250426184415_create_roles_table --connection=postgres
 ```
-
-**Naming Convention:**
-- File: `20250423230248_UserSeeder.go`
-- Seed function: `SeedUserSeeder(db *gorm.DB) error`
-- Rollback function: `RollbackUserSeeder(db *gorm.DB) error`
-- ⚠️ Function names MUST match filename!
 
 ---
 
-### 2. Run All Seeders
+## 🌱 Seeder Commands
+
+### 1. Run All Seeders
 
 ```bash
 go run main.go db:seed [--connection=mysql]
 ```
 
-**Description**: Run all seeders in `app/database/seeds/` directory.
+**Description**: Runs all registered seeders on the specified connection.
 
 **Process:**
-1. Creates new batch number
-2. Finds all seeder files
-3. Calls Seed function for each
-4. Records in `seeders` table with batch
-
-**Parameters:**
-- `--connection`: Database connection (optional)
+1. Checks `seeds` table filtered by `connection_name`
+2. Finds seeders not yet applied to this connection
+3. Creates batch number (Unix timestamp)
+4. Executes seeder functions
+5. Records with `connection_name` and batch
 
 **Examples:**
 ```bash
-# Run all seeders on default database
+# Seed MySQL
 go run main.go db:seed
 
-# Run on PostgreSQL
+# Seed PostgreSQL (independent tracking)
 go run main.go db:seed --connection=postgres
-
-# Run on secondary MySQL
-go run main.go db:seed --connection=mysql_secondary
 ```
 
 **Output:**
 ```
-Running seeders...
-🌱 UserSeeder seeded successfully (Batch: 1)
-🌱 RoleSeeder seeded successfully (Batch: 1)
-🌱 ProductSeeder seeded successfully (Batch: 1)
-
-Seeders completed successfully!
+🌱 Running all seeders on connection postgres
+🌱 Seeding: UserSeeder
+✅ Seed batch 1770731266 applied on connection postgres.
+✅ All seeders completed successfully!
 ```
 
 ---
 
-### 3. Run Specific Seeder
+### 2. Run Specific Seeder
 
 ```bash
 go run main.go db:seed --class=<SeederName> [--connection=mysql]
 ```
 
-**Description**: Run a single specific seeder (Laravel-style).
-
 **Parameters:**
 - `--class`: Seeder class name (required)
-- `--connection`: Database connection (optional)
+- `--connection`: Target database (optional)
 
 **Examples:**
 ```bash
-# Run user seeder only
+# Run specific seeder on MySQL
 go run main.go db:seed --class=UserSeeder
 
 # Run on PostgreSQL
 go run main.go db:seed --class=ProductSeeder --connection=postgres
 ```
 
-**Features:**
-- Checks if seeder already ran
-- Errors if seeder not found
-- Supports multi-database
-
-**Use Cases:**
-- Seed specific data only
-- Re-run failed seeders
-- Test individual seeders
+**Output:**
+```
+🌱 Running seeder: UserSeeder
+✅ Seeder 'UserSeeder' completed successfully on connection postgres
+```
 
 ---
 
-### 4. Rollback Last Seeder Batch
+### 3. Rollback Last Seeder Batch
 
 ```bash
 go run main.go rollback:seeder [--connection=mysql]
 ```
 
-**Description**: Rollback all seeders in the last batch.
+**Description**: Rolls back the last seeder batch for the specified connection.
 
 **Process:**
-1. Finds highest seeder batch number
-2. Gets all seeders in that batch
-3. Calls Rollback function for each (reverse order)
-4. Removes from `seeders` table
-
-**Parameters:**
-- `--connection`: Database connection (optional)
+1. Finds highest batch number in `seeds` WHERE `connection_name = ?`
+2. Executes rollback function for each seeder
+3. Removes records from `seeds` table
 
 **Examples:**
 ```bash
-# Rollback last seeder batch
+# Rollback last seeder batch on MySQL
 go run main.go rollback:seeder
 
 # Rollback on PostgreSQL
@@ -606,584 +497,386 @@ go run main.go rollback:seeder --connection=postgres
 
 **Output:**
 ```
-Rolling back seeder batch 2...
-🗑️  ProductSeeder rolled back successfully
-🗑️  RoleSeeder rolled back successfully
-
-Seeder rollback completed!
+🔄 Rolling back seeder: UserSeeder
+✅ Seeder batch 1770731266 rolled back on connection postgres.
 ```
 
 ---
 
-### 5. Rollback Specific Seeder Batch
+### 4. Rollback Specific Seeder Batch
 
 ```bash
-go run main.go rollback:seeder --batch=<number> [--connection=mysql]
+go run main.go rollback:seeder --batch=<timestamp> [--connection=mysql]
 ```
 
-**Description**: Rollback all seeders in a specific batch number.
-
 **Parameters:**
-- `--batch`: Batch number to rollback (required)
-- `--connection`: Database connection (optional)
+- `--batch`: Specific batch number (Unix timestamp) to rollback
+- `--connection`: Target database (optional)
 
 **Examples:**
 ```bash
-# Rollback batch 1
-go run main.go rollback:seeder --batch=1
-
-# Rollback on PostgreSQL
-go run main.go rollback:seeder --batch=2 --connection=postgres
+go run main.go rollback:seeder --batch=1770731266 --connection=postgres
 ```
-
-**Use Cases:**
-- Remove specific data set
-- Rollback problematic seeders
-- Clean test data
 
 ---
 
-## Multi-Database Support
-
-All migration and seeder commands support the `--connection` flag to target specific databases.
-
-### Available Connections
-
-| Connection Name | Database Type | Default |
-|----------------|---------------|---------|
-| `mysql` | MySQL (Primary) | ✅ Yes |
-| `postgres` | PostgreSQL | No |
-| `mysql_secondary` | MySQL (Secondary) | No |
-
-### Usage Examples
+### 5. Create New Seeder
 
 ```bash
-# Migrations on different databases
-go run main.go migrate:all --connection=mysql
-go run main.go migrate:all --connection=postgres
-go run main.go migrate:all --connection=mysql_secondary
-
-# Seeders on different databases
-go run main.go db:seed --connection=postgres
-go run main.go db:seed --class=UserSeeder --connection=mysql_secondary
-
-# Check status on different databases
-go run main.go migrate:status --connection=postgres
-go run main.go migrate:status --connection=mysql_secondary
-
-# Wipe different databases
-go run main.go db:wipe --connection=postgres --force
+go run main.go make:seeder --name=<SeederName>
 ```
 
-### Multi-Database Workflow
+**Creates**: `app/database/seeds/YYYYMMDDHHMMSS_<SeederName>.go`
 
-**Scenario**: Migrate both MySQL and PostgreSQL
-
+**Examples:**
 ```bash
-# 1. Migrate primary MySQL
-go run main.go migrate:all
-
-# 2. Migrate PostgreSQL
-go run main.go migrate:all --connection=postgres
-
-# 3. Check both statuses
-go run main.go migrate:status
-go run main.go migrate:status --connection=postgres
-
-# 4. Seed both databases
-go run main.go db:seed
-go run main.go db:seed --connection=postgres
+go run main.go make:seeder --name=ProductSeeder
+go run main.go make:seeder --name=CategorySeeder
 ```
 
----
-
-## Migration File Format
-
-### Basic Structure
-
-All migration files must have UP and DOWN sections:
-
-```sql
--- +++ UP Migration
--- SQL statements to apply the migration
-
--- --- DOWN Migration
--- SQL statements to reverse the migration
-```
-
-### MySQL Example
-
-```sql
--- +++ UP Migration
-CREATE TABLE users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    reference VARCHAR(100) UNIQUE NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL DEFAULT NULL
-);
-
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_username ON users(username);
-
--- --- DOWN Migration
-DROP TABLE IF EXISTS users;
-```
-
-### PostgreSQL Example
-
-```sql
--- +++ UP Migration
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    reference VARCHAR(100) UNIQUE NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL DEFAULT NULL
-);
-
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_username ON users(username);
-
--- --- DOWN Migration
-DROP TABLE IF EXISTS users;
-```
-
-### Key Differences
-
-| Feature | MySQL | PostgreSQL |
-|---------|-------|------------|
-| Auto Increment | `AUTO_INCREMENT` | `SERIAL` |
-| Update Timestamp | `ON UPDATE CURRENT_TIMESTAMP` | Requires trigger |
-| Boolean Type | `TINYINT(1)` | `BOOLEAN` |
-| String Type | `VARCHAR(n)` | `VARCHAR(n)` or `TEXT` |
-
-### Complex Migration Example
-
-```sql
--- +++ UP Migration
--- 1. Create table
-CREATE TABLE products (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    reference VARCHAR(100) UNIQUE NOT NULL,
-    category_id BIGINT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price DECIMAL(10, 2) NOT NULL,
-    stock INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL
-);
-
--- 2. Add foreign key
-ALTER TABLE products
-ADD CONSTRAINT fk_products_category
-FOREIGN KEY (category_id) REFERENCES categories(id)
-ON DELETE RESTRICT;
-
--- 3. Add indexes
-CREATE INDEX idx_products_category ON products(category_id);
-CREATE INDEX idx_products_name ON products(name);
-CREATE INDEX idx_products_price ON products(price);
-
--- --- DOWN Migration
--- Drop table (automatically drops constraints and indexes)
-DROP TABLE IF EXISTS products;
-```
-
----
-
-## Seeder File Format
-
-### Template Structure
-
+**Generated File Structure:**
 ```go
 package seeds
 
 import (
-    "golang_starter_kit_2025/app/helpers"
     "golang_starter_kit_2025/app/models"
-    "log"
-    "time"
     "gorm.io/gorm"
 )
 
-// Seed function: Insert data
-func SeedUserSeeder(db *gorm.DB) error {
-    log.Println("🌱 Seeding UserSeeder...")
-
-    // Create data
-    users := []models.User{
-        {
-            Reference: helpers.GenerateReference("USR"),
-            Username:  "admin",
-            Email:     "admin@example.com",
-            Password:  "admin123", // Will be hashed by BeforeCreate hook
-            Pin:       "123456",   // Will be hashed by BeforeCreate hook
-            CreatedAt: time.Now(),
-            UpdatedAt: time.Now(),
-        },
-        {
-            Reference: helpers.GenerateReference("USR"),
-            Username:  "user",
-            Email:     "user@example.com",
-            Password:  "user123",
-            Pin:       "654321",
-            CreatedAt: time.Now(),
-            UpdatedAt: time.Now(),
-        },
-    }
-
-    // Insert data
-    return db.Create(&users).Error
-}
-
-// Rollback function: Remove seeded data
-func RollbackUserSeeder(db *gorm.DB) error {
-    log.Println("🗑️ Rolling back UserSeeder...")
-
-    // Use Unscoped() for hard delete (ignore soft delete)
-    return db.Unscoped().
-        Where("username IN ?", []string{"admin", "user"}).
-        Delete(&models.User{}).
-        Error
-}
-```
-
-### Important Notes
-
-**1. Function Naming:**
-- Seed: `Seed<ClassName>(db *gorm.DB) error`
-- Rollback: `Rollback<ClassName>(db *gorm.DB) error`
-- Must match filename exactly!
-
-**2. Using Helpers:**
-```go
-// Generate unique references
-reference := helpers.GenerateReference("USR") // USR-20250101-ABC123
-
-// Hash passwords (automatic in BeforeCreate hook)
-// No need to manually hash if model has BeforeCreate hook
-```
-
-**3. Rollback Best Practices:**
-```go
-// Use Unscoped() to hard delete
-db.Unscoped().Where(...).Delete(...)
-
-// Alternative: Use unique identifiers
-db.Unscoped().Where("email IN ?", seededEmails).Delete(...)
-
-// Or use references
-db.Unscoped().Where("reference LIKE ?", "USR-20250101%").Delete(...)
-```
-
-**4. Idempotent Seeders:**
-```go
-func SeedUserSeeder(db *gorm.DB) error {
-    // Check if already seeded
-    var count int64
-    db.Model(&models.User{}).Where("email = ?", "admin@example.com").Count(&count)
-
-    if count > 0 {
-        log.Println("UserSeeder already seeded, skipping...")
-        return nil
-    }
-
-    // Proceed with seeding
-    // ...
-}
-```
-
----
-
-## Best Practices
-
-### 1. Check Status Before Deploy
-
-```bash
-# Always check migration status before deployment
-go run main.go migrate:status
-
-# Expected output: All migrations should show ✅ Ran
-# If pending migrations exist, run migrate:all
-```
-
-### 2. Test with Fresh Migration
-
-```bash
-# Development: Test with fresh database + seed data
-go run main.go migrate:fresh --seed
-
-# Verify everything works from scratch
-```
-
-### 3. Incremental Rollback
-
-```bash
-# Don't rollback all at once, use steps
-go run main.go rollback:batch --step=1
-
-# Test after each rollback
-go run main.go migrate:status
-```
-
-### 4. CI/CD Pipeline
-
-```bash
-# Automated testing pipeline
-go run main.go db:wipe --force --connection=test_db
-go run main.go migrate:fresh --seed --connection=test_db
-# Run tests
-go test ./...
-```
-
-### 5. Development Workflow
-
-```bash
-# 1. Create migration
-go run main.go make:migration create_orders_table
-
-# 2. Edit migration file
-nano app/database/migrations/YYYYMMDDHHMMSS_create_orders_table.sql
-
-# 3. Run migration
-go run main.go migrate:all
-
-# 4. Check status
-go run main.go migrate:status
-
-# 5. If error, rollback and fix
-go run main.go rollback:batch
-# Fix the SQL
-go run main.go migrate:all
-```
-
-### 6. Database-Specific Migrations
-
-```bash
-# If using different databases, test on all:
-go run main.go migrate:fresh --connection=mysql
-go run main.go migrate:fresh --connection=postgres
-
-# Ensure SQL syntax works on both
-```
-
-### 7. Version Control
-
-```bash
-# Commit migrations with descriptive messages
-git add app/database/migrations/20250426184415_create_roles_table.sql
-git commit -m "feat: add roles table migration"
-
-# Never modify migrations that have been deployed
-# Create new migration for changes
-```
-
-### 8. Backup Before Rollback
-
-```bash
-# Always backup production database before rollback
-mysqldump -u root -p golang_starter_kit_2025 > backup_$(date +%Y%m%d).sql
-
-# Then rollback
-go run main.go rollback:batch
-```
-
----
-
-## Troubleshooting
-
-### Migration Failed Mid-Execution
-
-**Problem**: Migration partially executed, database in inconsistent state.
-
-**Solution:**
-```bash
-# 1. Check status
-go run main.go migrate:status
-
-# 2. Rollback problematic batch
-go run main.go rollback:batch
-
-# 3. Fix SQL in migration file
-
-# 4. Re-run migration
-go run main.go migrate:all
-
-# 5. Verify
-go run main.go migrate:status
-```
-
-### Seeder Already Exists
-
-**Problem**: Trying to seed data that already exists.
-
-**Solution:**
-```bash
-# 1. Check if data exists in database manually
-
-# 2. Rollback seeder
-go run main.go rollback:seeder
-
-# 3. Re-run seeder
-go run main.go db:seed
-
-# Or use --class for specific seeder
-go run main.go db:seed --class=UserSeeder
-```
-
-### Foreign Key Constraint Error
-
-**Problem**: Cannot drop table due to foreign key constraints.
-
-**Solution:**
-```bash
-# Use db:wipe which handles foreign keys
-go run main.go db:wipe --force
-
-# Or manually in MySQL:
-# SET FOREIGN_KEY_CHECKS = 0;
-# DROP TABLE ...;
-# SET FOREIGN_KEY_CHECKS = 1;
-```
-
-### Migration Out of Sync
-
-**Problem**: Migration file exists but not recorded in database.
-
-**Solution:**
-```bash
-# 1. Check what's in database vs files
-go run main.go migrate:status
-
-# 2. Run specific missing migration
-go run main.go migrate --file=<filename>
-
-# Or run all pending
-go run main.go migrate:all
-```
-
-### Duplicate Seeder Execution
-
-**Problem**: Seeder runs twice creating duplicate data.
-
-**Solution:**
-
-Make seeders idempotent:
-```go
-func SeedUserSeeder(db *gorm.DB) error {
-    // Use FirstOrCreate to avoid duplicates
-    admin := models.User{Email: "admin@example.com"}
-    db.FirstOrCreate(&admin, models.User{
-        Email:    "admin@example.com",
-        Username: "admin",
-        Password: "admin123",
-    })
-
-    return nil
-}
-```
-
-### Database Connection Error
-
-**Problem**: Cannot connect to database.
-
-**Solution:**
-```bash
-# 1. Check database is running
-systemctl status mysql
-systemctl status postgresql
-
-# 2. Test connection manually
-mysql -h localhost -u root -p
-psql -h localhost -U postgres
-
-# 3. Verify .env credentials
-cat .env | grep MYSQL
-cat .env | grep POSTGRES
-
-# 4. Check multi-database health
-curl http://localhost:9999/health/databases
-```
-
----
-
-## Advanced Usage
-
-### Running Migrations Programmatically
-
-```go
-package main
-
-import (
-    "golang_starter_kit_2025/app/database"
-    "golang_starter_kit_2025/facades"
-)
-
-func main() {
-    // Initialize database
-    facades.ConnectDB()
-    defer facades.CloseDB()
-
-    // Run migrations
-    manager := database.NewMigrationManager(facades.DB, "app/database/migrations")
-
-    // Run all migrations
-    err := manager.MigrateAll()
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    // Check status
-    status, _ := manager.GetStatus()
-    for _, migration := range status {
-        fmt.Printf("%s: %s\n", migration.Name, migration.Status)
-    }
-}
-```
-
-### Custom Seeder Logic
-
-```go
 func SeedProductSeeder(db *gorm.DB) error {
-    // Get category first
-    var category models.Category
-    if err := db.Where("category = ?", "Electronics").First(&category).Error; err != nil {
-        return err
-    }
-
-    // Create products with relationship
+    // Insert seed data here
     products := []models.Product{
-        {
-            Reference:   helpers.GenerateReference("PRD"),
-            CategoryID:  category.ID,
-            Name:        "Laptop",
-            Price:       1200.50,
-            Stock:       100,
-        },
+        {Name: "Product 1", Price: 100.00},
+        {Name: "Product 2", Price: 200.00},
     }
-
     return db.Create(&products).Error
 }
+
+func RollbackProductSeeder(db *gorm.DB) error {
+    // Remove seed data here
+    return db.Unscoped().Where("name IN ?", []string{"Product 1", "Product 2"}).
+        Delete(&models.Product{}).Error
+}
+```
+
+**Important**: Register seeder in `app/database/seeder_manager.go`:
+```go
+var SeederList = []Seeder{
+    {Name: "ProductSeeder", Run: seeds.SeedProductSeeder, Rollback: seeds.RollbackProductSeeder},
+}
 ```
 
 ---
 
-## Further Reading
+## 🔍 Multi-Connection Isolation Examples
 
-- [MULTI_DATABASE.md](./MULTI_DATABASE.md) - Multi-database configuration guide
-- [GETTING_STARTED.md](./GETTING_STARTED.md) - Initial setup guide
-- [API_REFERENCE.md](./API_REFERENCE.md) - API endpoint documentation
-- [CLAUDE.md](../CLAUDE.md) - Complete technical documentation
+### Example 1: Independent Batch Tracking
+
+```bash
+# MySQL: Run migrations (batch 1)
+$ go run main.go migrate:all --connection=mysql
+Batch 1 applied.
+
+# PostgreSQL: Run migrations (also batch 1, not batch 2!)
+$ go run main.go migrate:all --connection=postgres
+Batch 1 applied.  # ✅ CORRECT: Independent numbering
+
+# Verify isolation
+$ go run main.go migrate:status --connection=mysql
+Total: 12 migrations (12 ran, 0 pending)  # Batch 1
+
+$ go run main.go migrate:status --connection=postgres
+Total: 12 migrations (12 ran, 0 pending)  # Also Batch 1
+```
+
+**Key Point**: Each connection has independent batch numbering starting from 1.
 
 ---
 
-**Need help?** Check our [GitHub Discussions](https://github.com/RahmatRafiq/golang_starter_kit_2025/discussions)
+### Example 2: Rollback Doesn't Affect Other Connections
+
+```bash
+# Rollback MySQL batch
+$ go run main.go rollback:batch --connection=mysql
+Batch 1 rolled back.
+
+# Check MySQL (now empty)
+$ go run main.go migrate:status --connection=mysql
+Total: 12 migrations (0 ran, 12 pending)
+
+# Check PostgreSQL (unaffected!)
+$ go run main.go migrate:status --connection=postgres
+Total: 12 migrations (12 ran, 0 pending)  # ✅ Still intact
+```
+
+---
+
+### Example 3: Seeders Per Connection
+
+```bash
+# Seed MySQL
+$ go run main.go db:seed --connection=mysql
+Seed batch 1770731266 applied on connection mysql.
+
+# Seed PostgreSQL (independent tracking)
+$ go run main.go db:seed --connection=postgres
+Seed batch 1770731280 applied on connection postgres.
+
+# Run again on MySQL (no re-seeding)
+$ go run main.go db:seed --connection=mysql
+⚠️ Seeder 'UserSeeder' has already been run  # ✅ Tracks per connection
+```
+
+---
+
+### Example 4: Fresh with Seed
+
+```bash
+# Fresh migration with seeding on PostgreSQL
+$ go run main.go migrate:fresh --seed --connection=postgres
+
+# This will:
+# 1. Delete postgres migration records
+# 2. Re-run all migrations on postgres (batch 1)
+# 3. Run seeders on postgres (NOT on mysql!)  # ✅ Fixed bug #4
+```
+
+---
+
+## 🗄️ Database Connection Configuration
+
+Available connections are configured in `.env`:
+
+```bash
+# Default MySQL Connection
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DB=golang_starter_kit_2025
+MYSQL_USER=root
+MYSQL_PASSWORD=secure_password
+
+# PostgreSQL Connection
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=golang_starter_kit_2025_pg
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=secure_password
+
+# Secondary MySQL Connection
+MYSQL_SECONDARY_HOST=localhost
+MYSQL_SECONDARY_PORT=3307
+MYSQL_SECONDARY_DB=golang_starter_kit_2025_secondary
+MYSQL_SECONDARY_USER=root
+MYSQL_SECONDARY_PASSWORD=secure_password
+```
+
+**View Available Connections:**
+```bash
+go run main.go db:connections
+```
+
+**Output:**
+```
+📊 Available Database Connections:
+  - mysql
+  - postgres
+  - mysql_secondary
+```
+
+---
+
+## 📊 Database Schema Details
+
+### Current Schema State
+
+Query migrations table:
+```sql
+SELECT * FROM migrations ORDER BY batch, id;
+```
+
+**Sample Output:**
+```
+| id | connection_name | filename                    | batch | migrated_at         |
+|----|----------------|-----------------------------|-------|---------------------|
+| 1  | mysql          | create_roles_table          | 1     | 2025-07-22 22:13:34 |
+| 2  | mysql          | create_permissions_table    | 1     | 2025-07-22 22:13:34 |
+| 3  | postgres       | create_roles_table          | 1     | 2025-07-22 22:15:10 |
+| 4  | postgres       | create_permissions_table    | 1     | 2025-07-22 22:15:10 |
+```
+
+Notice: Same migration file, different `connection_name`, same batch number per connection.
+
+Query seeds table:
+```sql
+SELECT * FROM seeds ORDER BY batch, id;
+```
+
+**Sample Output:**
+```
+| id | connection_name | filename    | batch      | seeded_at           |
+|----|----------------|-------------|------------|---------------------|
+| 1  | mysql          | UserSeeder  | 1770731266 | 2025-07-22 22:13:36 |
+| 2  | postgres       | UserSeeder  | 1770731280 | 2025-07-22 22:15:15 |
+```
+
+---
+
+## ⚠️ Important Notes & Best Practices
+
+### 1. **Connection Isolation is Mandatory**
+
+Always specify `--connection` when working with non-default databases:
+
+```bash
+# ❌ Wrong: Will use default mysql connection
+go run main.go migrate:all
+
+# ✅ Correct: Explicitly specify postgres
+go run main.go migrate:all --connection=postgres
+```
+
+### 2. **Batch Numbers are Independent**
+
+Each connection has its own batch sequence starting from 1. This is **correct behavior**:
+
+- MySQL: batch 1, 2, 3, 4, 5
+- PostgreSQL: batch 1, 2, 3
+- Secondary MySQL: batch 1
+
+### 3. **Rollbacks are Transaction-Protected**
+
+All rollback operations use database transactions for atomicity:
+
+```go
+// Rollback is wrapped in transaction
+return conn.DB.Transaction(func(tx *gorm.DB) error {
+    // Run DOWN migrations
+    // Delete migration records
+    return nil  // Commit
+})
+```
+
+If any step fails, the entire rollback is reverted.
+
+### 4. **Migration File Syntax**
+
+Use database-agnostic SQL or create connection-specific migrations:
+
+**MySQL:**
+```sql
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ...
+);
+```
+
+**PostgreSQL:**
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    ...
+);
+```
+
+**Tip**: Check `conn.IsPostgreSQL()` in migration manager for syntax switching.
+
+### 5. **Seeder Rollback Best Practices**
+
+Always use `Unscoped()` for hard deletes in seeder rollbacks:
+
+```go
+func RollbackUserSeeder(db *gorm.DB) error {
+    // ✅ Hard delete (bypasses soft delete)
+    return db.Unscoped().
+        Where("username = ?", "admin").
+        Delete(&models.User{}).Error
+}
+```
+
+### 6. **migrate:fresh vs db:wipe**
+
+- `migrate:fresh`: Removes migration records, keeps table structure
+- `db:wipe`: Drops ALL tables (data destruction)
+
+### 7. **Check Before Rollback**
+
+Always check migration status before rolling back:
+
+```bash
+# Check current state
+go run main.go migrate:status --connection=postgres
+
+# Verify batch numbers
+# Then rollback
+go run main.go rollback:batch --connection=postgres
+```
+
+---
+
+## 🐛 Known Issues & Fixes
+
+### Issue #23: Multi-Connection Tracking Bugs (FIXED)
+
+**Status**: ✅ **RESOLVED** (2026-02-10)
+
+**Problems Fixed:**
+1. ✅ Migrations table lacked `connection_name` column
+2. ✅ Seeds table lacked `connection_name` column
+3. ✅ Rollbacks not wrapped in transactions
+4. ✅ `migrate:fresh --seed` ignored connection flag
+
+**Changes Made:**
+- Added `connection_name VARCHAR(50)` to both tables
+- Added UNIQUE constraints `(connection_name, filename)`
+- All queries now filter by `connection_name`
+- Rollbacks use transactions
+- `migrate:fresh --seed` respects `--connection` parameter
+
+**Migration**: Schema changes applied via `20260210_fix_multi_connection_tracking.sql`
+
+**GitHub Issue**: https://github.com/RahmatRafiq/golang_strarter_kit_2025/issues/23
+
+---
+
+## 🧪 Testing Migration System
+
+### Test Suite
+
+```bash
+# Test 1: Independent tracking
+go run main.go migrate:all --connection=mysql
+go run main.go migrate:all --connection=postgres
+# Both should start at batch 1
+
+# Test 2: Status isolation
+go run main.go migrate:status --connection=mysql
+go run main.go migrate:status --connection=postgres
+# Different ran/pending counts
+
+# Test 3: Rollback isolation
+go run main.go rollback:batch --connection=mysql
+go run main.go migrate:status --connection=postgres
+# Postgres migrations unaffected
+
+# Test 4: Seeder tracking
+go run main.go db:seed --connection=mysql
+go run main.go db:seed --connection=postgres
+# Independent seeder batches
+
+# Test 5: Fresh with seed
+go run main.go migrate:fresh --seed --connection=postgres
+# Seeders run on postgres only
+```
+
+---
+
+## 📚 Related Documentation
+
+- [Multi-Database Configuration](./MULTI_DATABASE.md)
+- [API Reference](./API_REFERENCE.md)
+- [Getting Started Guide](./GETTING_STARTED.md)
+
+---
+
+**Last Updated**: 2026-02-10
+**Version**: 2.0 (Multi-Connection Isolation)
