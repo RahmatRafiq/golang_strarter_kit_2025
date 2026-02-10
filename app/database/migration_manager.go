@@ -5,8 +5,11 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"golang_starter_kit_2025/facades"
+
+	"gorm.io/gorm"
 )
 
 const (
@@ -27,18 +30,22 @@ func ensureMigrationsTable(connectionName string) error {
 		createTableSQL = `
 			CREATE TABLE IF NOT EXISTS migrations (
 				id SERIAL PRIMARY KEY,
+				connection_name VARCHAR(50) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
 				batch INTEGER NOT NULL,
-				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (connection_name, filename)
 			)`
 	} else {
 		// MySQL/MariaDB
 		createTableSQL = `
 			CREATE TABLE IF NOT EXISTS migrations (
 				id INT PRIMARY KEY AUTO_INCREMENT,
+				connection_name VARCHAR(50) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
 				batch INT NOT NULL,
-				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE KEY unique_migration (connection_name, filename)
 			)`
 	}
 
@@ -52,7 +59,7 @@ func getLastBatch(connectionName string) (int, error) {
 	}
 
 	var res struct{ Batch int }
-	if err := conn.DB.Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM migrations").Scan(&res).Error; err != nil {
+	if err := conn.DB.Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM migrations WHERE connection_name = ?", connectionName).Scan(&res).Error; err != nil {
 		return 0, err
 	}
 	return res.Batch, nil
@@ -65,7 +72,7 @@ func isMigrationApplied(filename, connectionName string) (bool, error) {
 	}
 
 	var cnt int64
-	if err := conn.DB.Raw("SELECT COUNT(*) FROM migrations WHERE filename = ?", filename).Scan(&cnt).Error; err != nil {
+	if err := conn.DB.Raw("SELECT COUNT(*) FROM migrations WHERE connection_name = ? AND filename = ?", connectionName, filename).Scan(&cnt).Error; err != nil {
 		return false, err
 	}
 	return cnt > 0, nil
@@ -87,13 +94,18 @@ func RunMigration(filename string) error {
 	return RunMigrationOnConnection(filename, "")
 }
 
-// RunMigrationOnConnection runs a specific migration on a specified connection
+// RunMigrationOnConnection runs a specific migration on a specified connection with timing
 func RunMigrationOnConnection(filename, connectionName string) error {
 	if connectionName == "" {
 		connectionName = "mysql" // default connection
 	}
 
 	if err := ensureMigrationsTable(connectionName); err != nil {
+		return err
+	}
+
+	// Ensure migration_logs table exists
+	if err := ensureMigrationLogsTable(connectionName); err != nil {
 		return err
 	}
 
@@ -114,20 +126,40 @@ func RunMigrationOnConnection(filename, connectionName string) error {
 		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
 	}
 
+	// Start timing
+	startTime := time.Now()
+
 	ups, _ := parseMigrationFile(string(data))
+	var execError error
+
 	for _, sql := range ups {
 		if err := conn.DB.Exec(sql).Error; err != nil {
-			return fmt.Errorf("gagal menjalankan migrasi: %v", err)
+			execError = fmt.Errorf("gagal menjalankan migrasi: %v", err)
+			break
 		}
 	}
 
+	// Calculate execution time
+	executionTime := time.Since(startTime).Milliseconds()
+
+	// If execution failed, log and return error
+	if execError != nil {
+		logMigrationExecution(connectionName, filename, batch, executionTime, "failed", execError.Error())
+		return execError
+	}
+
+	// Record migration
 	if err := conn.DB.Exec(
-		"INSERT INTO migrations(filename,batch) VALUES(?,?)", filename, batch,
+		"INSERT INTO migrations(connection_name,filename,batch) VALUES(?,?,?)", connectionName, filename, batch,
 	).Error; err != nil {
+		logMigrationExecution(connectionName, filename, batch, executionTime, "failed", err.Error())
 		return fmt.Errorf("gagal mencatat migrasi: %v", err)
 	}
 
-	fmt.Printf("Migrated: %s\n", filename)
+	// Log successful execution
+	logMigrationExecution(connectionName, filename, batch, executionTime, "success", "")
+
+	fmt.Printf("Migrated: %s (%s)\n", filename, FormatDuration(executionTime))
 	return nil
 }
 
@@ -153,20 +185,24 @@ func RollbackMigrationOnConnection(filename, connectionName string) error {
 		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
 	}
 
+	// Use transaction for atomic rollback
 	_, downs := parseMigrationFile(string(data))
-	for _, sql := range downs {
-		if err := conn.DB.Exec(sql).Error; err != nil {
-			return fmt.Errorf("gagal rollback: %v", err)
+
+	return conn.DB.Transaction(func(tx *gorm.DB) error {
+		for _, sql := range downs {
+			if err := tx.Exec(sql).Error; err != nil {
+				return fmt.Errorf("gagal rollback: %v", err)
+			}
 		}
-	}
 
-	// Remove from migrations table
-	if err := conn.DB.Exec("DELETE FROM migrations WHERE filename=?", filename).Error; err != nil {
-		return fmt.Errorf("gagal menghapus record migrasi: %v", err)
-	}
+		// Remove from migrations table with connection_name filter
+		if err := tx.Exec("DELETE FROM migrations WHERE connection_name = ? AND filename = ?", connectionName, filename).Error; err != nil {
+			return fmt.Errorf("gagal menghapus record migrasi: %v", err)
+		}
 
-	fmt.Printf("Rolled back: %s\n", filename)
-	return nil
+		fmt.Printf("Rolled back: %s\n", filename)
+		return nil
+	})
 }
 
 func parseSQLStatements(content string) []string {
@@ -184,11 +220,18 @@ func RunAllMigrations() error {
 	return RunAllMigrationsOnConnection("")
 }
 
-// RunAllMigrationsOnConnection runs all pending migrations on a specified connection
+// RunAllMigrationsOnConnection runs all pending migrations on a specified connection with lock
 func RunAllMigrationsOnConnection(connectionName string) error {
 	if connectionName == "" {
 		connectionName = "mysql" // default connection
 	}
+
+	// Acquire migration lock
+	lock := NewMigrationLock(connectionName)
+	if err := lock.Acquire(); err != nil {
+		return fmt.Errorf("failed to acquire migration lock: %v", err)
+	}
+	defer lock.Release()
 
 	if err := ensureMigrationsTable(connectionName); err != nil {
 		return err
@@ -201,7 +244,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 	}
 
 	if err := conn.DB.Raw(
-		"SELECT COALESCE(MAX(batch),0) AS batch FROM migrations",
+		"SELECT COALESCE(MAX(batch),0) AS batch FROM migrations WHERE connection_name = ?", connectionName,
 	).Scan(&lastBatch).Error; err != nil {
 		return err
 	}
@@ -217,7 +260,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 			name := strings.TrimSuffix(f.Name(), ".sql")
 			var cnt int64
 			conn.DB.Raw(
-				"SELECT COUNT(*) FROM migrations WHERE filename = ?", name,
+				"SELECT COUNT(*) FROM migrations WHERE connection_name = ? AND filename = ?", connectionName, name,
 			).Scan(&cnt)
 			if cnt == 0 {
 				toRun = append(toRun, name)
@@ -226,8 +269,14 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 	}
 	sort.Strings(toRun)
 
+	// Ensure migration_logs table exists
+	ensureMigrationLogsTable(connectionName)
+
 	for _, name := range toRun {
 		fmt.Printf("Migrating: %s\n", name)
+
+		// Start timing
+		startTime := time.Now()
 
 		data, err := os.ReadFile(
 			fmt.Sprintf("app/database/migrations/%s.sql", name),
@@ -242,18 +291,34 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 			parts[0], "-- +++ UP Migration", "", 1,
 		)
 
+		var execError error
 		for _, stmt := range parseSQLStatements(up) {
 			if err := conn.DB.Exec(stmt).Error; err != nil {
-				return fmt.Errorf("gagal %s: %v", name, err)
+				execError = fmt.Errorf("gagal %s: %v", name, err)
+				break
 			}
 		}
 
+		// Calculate execution time
+		executionTime := time.Since(startTime).Milliseconds()
+
+		// If execution failed, log and return error
+		if execError != nil {
+			logMigrationExecution(connectionName, name, batch, executionTime, "failed", execError.Error())
+			return execError
+		}
+
 		if err := conn.DB.Exec(
-			"INSERT INTO migrations(filename,batch) VALUES(?,?)",
-			name, batch,
+			"INSERT INTO migrations(connection_name,filename,batch) VALUES(?,?,?)",
+			connectionName, name, batch,
 		).Error; err != nil {
+			logMigrationExecution(connectionName, name, batch, executionTime, "failed", err.Error())
 			return fmt.Errorf("gagal mencatat %s: %v", name, err)
 		}
+
+		// Log successful execution
+		logMigrationExecution(connectionName, name, batch, executionTime, "success", "")
+		fmt.Printf("  ✓ Completed in %s\n", FormatDuration(executionTime))
 	}
 
 	fmt.Printf("Batch %d applied.\n", batch)
@@ -304,7 +369,7 @@ func RollbackBatchOnConnection(batch int, connectionName string) error {
 	}
 
 	var rows []struct{ Filename string }
-	conn.DB.Raw("SELECT filename FROM migrations WHERE batch=? ORDER BY id DESC", batch).Scan(&rows)
+	conn.DB.Raw("SELECT filename FROM migrations WHERE connection_name = ? AND batch = ? ORDER BY id DESC", connectionName, batch).Scan(&rows)
 	for _, r := range rows {
 		fmt.Printf("Rolling back: %s\n", r.Filename)
 		if err := RollbackMigrationOnConnection(r.Filename, connectionName); err != nil {
@@ -388,17 +453,13 @@ func FreshMigrationsOnConnection(connectionName string) error {
 		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
 	}
 
-	// Use different truncate syntax for PostgreSQL
-	if conn.IsPostgreSQL() {
-		conn.DB.Exec("TRUNCATE migrations RESTART IDENTITY")
-	} else {
-		conn.DB.Exec("TRUNCATE migrations")
-	}
+	// Delete only records for this connection (don't wipe other connections)
+	conn.DB.Exec("DELETE FROM migrations WHERE connection_name = ?", connectionName)
 
 	return RunAllMigrationsOnConnection(connectionName)
 }
 
-// ShowMigrationStatus displays the status of all migrations
+// ShowMigrationStatus displays the status of all migrations with execution times
 func ShowMigrationStatus(connectionName string) error {
 	if connectionName == "" {
 		connectionName = "mysql"
@@ -407,6 +468,9 @@ func ShowMigrationStatus(connectionName string) error {
 	if err := ensureMigrationsTable(connectionName); err != nil {
 		return err
 	}
+
+	// Ensure migration_logs table exists
+	ensureMigrationLogsTable(connectionName)
 
 	conn, err := facades.GetConnection(connectionName)
 	if err != nil {
@@ -419,23 +483,41 @@ func ShowMigrationStatus(connectionName string) error {
 		return fmt.Errorf("failed to read migrations folder: %v", err)
 	}
 
-	// Get applied migrations
+	// Get applied migrations with execution time
 	var applied []struct {
-		Filename string
-		Batch    int
+		Filename        string
+		Batch           int
+		ExecutionTimeMs int64
 	}
-	conn.DB.Raw("SELECT filename, batch FROM migrations ORDER BY batch, filename").Scan(&applied)
+	conn.DB.Raw(`
+		SELECT m.filename, m.batch, COALESCE(ml.execution_time_ms, 0) as execution_time_ms
+		FROM migrations m
+		LEFT JOIN (
+			SELECT filename, execution_time_ms 
+			FROM migration_logs 
+			WHERE connection_name = ? AND status = 'success'
+			ORDER BY executed_at DESC
+		) ml ON m.filename = ml.filename
+		WHERE m.connection_name = ?
+		ORDER BY m.batch, m.filename
+	`, connectionName, connectionName).Scan(&applied)
 
-	appliedMap := make(map[string]int)
+	appliedMap := make(map[string]struct {
+		Batch           int
+		ExecutionTimeMs int64
+	})
 	for _, a := range applied {
-		appliedMap[a.Filename] = a.Batch
+		appliedMap[a.Filename] = struct {
+			Batch           int
+			ExecutionTimeMs int64
+		}{a.Batch, a.ExecutionTimeMs}
 	}
 
 	fmt.Println()
 	fmt.Println("Migration Status on connection:", connectionName)
-	fmt.Println(strings.Repeat("=", 80))
-	fmt.Printf("%-50s %-10s %-10s\n", "Migration", "Batch", "Status")
-	fmt.Println(strings.Repeat("-", 80))
+	fmt.Println(strings.Repeat("=", 95))
+	fmt.Printf("%-50s %-10s %-15s %-15s\n", "Migration", "Batch", "Status", "Execution Time")
+	fmt.Println(strings.Repeat("-", 95))
 
 	var pending, ran int
 	for _, f := range files {
@@ -443,17 +525,42 @@ func ShowMigrationStatus(connectionName string) error {
 			continue
 		}
 		name := strings.TrimSuffix(f.Name(), ".sql")
-		if batch, ok := appliedMap[name]; ok {
-			fmt.Printf("%-50s %-10d ✅ Ran\n", truncateString(name, 50), batch)
+		if info, ok := appliedMap[name]; ok {
+			timeStr := "-"
+			if info.ExecutionTimeMs > 0 {
+				timeStr = FormatDuration(info.ExecutionTimeMs)
+			}
+			fmt.Printf("%-50s %-10d %-15s %-15s\n", 
+				truncateString(name, 50), 
+				info.Batch, 
+				"✅ Ran", 
+				timeStr)
 			ran++
 		} else {
-			fmt.Printf("%-50s %-10s ⏳ Pending\n", truncateString(name, 50), "-")
+			fmt.Printf("%-50s %-10s %-15s %-15s\n", 
+				truncateString(name, 50), 
+				"-", 
+				"⏳ Pending",
+				"-")
 			pending++
 		}
 	}
 
-	fmt.Println(strings.Repeat("=", 80))
+	fmt.Println(strings.Repeat("=", 95))
 	fmt.Printf("Total: %d migrations (%d ran, %d pending)\n", ran+pending, ran, pending)
+
+	// Show statistics if there are ran migrations
+	if ran > 0 {
+		stats, _ := GetMigrationStats(connectionName)
+		if stats != nil {
+			fmt.Println()
+			fmt.Println("Execution Statistics:")
+			fmt.Printf("  Average Time: %s\n", FormatDuration(int64(stats["avg_time_ms"].(float64))))
+			fmt.Printf("  Fastest: %s\n", FormatDuration(stats["min_time_ms"].(int64)))
+			fmt.Printf("  Slowest: %s\n", FormatDuration(stats["max_time_ms"].(int64)))
+		}
+	}
+
 	fmt.Println()
 	return nil
 }
