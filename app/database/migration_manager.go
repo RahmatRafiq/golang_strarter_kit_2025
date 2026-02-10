@@ -193,11 +193,18 @@ func RunAllMigrations() error {
 	return RunAllMigrationsOnConnection("")
 }
 
-// RunAllMigrationsOnConnection runs all pending migrations on a specified connection
+// RunAllMigrationsOnConnection runs all pending migrations on a specified connection with lock
 func RunAllMigrationsOnConnection(connectionName string) error {
 	if connectionName == "" {
 		connectionName = "mysql" // default connection
 	}
+
+	// Acquire migration lock
+	lock := NewMigrationLock(connectionName)
+	if err := lock.Acquire(); err != nil {
+		return fmt.Errorf("failed to acquire migration lock: %v", err)
+	}
+	defer lock.Release()
 
 	if err := ensureMigrationsTable(connectionName); err != nil {
 		return err

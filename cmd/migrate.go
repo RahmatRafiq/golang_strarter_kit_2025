@@ -196,6 +196,58 @@ var DBConnectionsCommand = &cli.Command{
 	},
 }
 
+var MigrateLockStatusCommand = &cli.Command{
+	Name:  "migrate:lock:status",
+	Usage: "Check migration lock status",
+	Flags: []cli.Flag{
+		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection to check"},
+	},
+	Action: func(c *cli.Context) error {
+		connection := c.String("connection")
+		locked, info, err := database.CheckLockStatus(connection)
+		if err != nil {
+			return fmt.Errorf("failed to check lock status: %v", err)
+		}
+
+		if locked {
+			fmt.Printf("🔒 Migration LOCKED for connection '%s'\n", connection)
+			fmt.Printf("   %s\n", info)
+		} else {
+			fmt.Printf("🔓 Migration NOT locked for connection '%s'\n", connection)
+		}
+		return nil
+	},
+}
+
+var MigrateLockReleaseCommand = &cli.Command{
+	Name:  "migrate:lock:release",
+	Usage: "Force release migration lock (use with caution)",
+	Flags: []cli.Flag{
+		&cli.StringFlag{Name: "connection", Value: "mysql", Usage: "Database connection"},
+		&cli.BoolFlag{Name: "force", Usage: "Force release without confirmation"},
+	},
+	Action: func(c *cli.Context) error {
+		connection := c.String("connection")
+		force := c.Bool("force")
+
+		if !force {
+			fmt.Println("⚠️  WARNING: Force releasing a lock can cause issues if migrations are actually running!")
+			fmt.Printf("Connection: %s\n\n", connection)
+			fmt.Print("Are you sure? (type 'yes' to confirm): ")
+
+			var confirmation string
+			fmt.Scanln(&confirmation)
+
+			if confirmation != "yes" {
+				fmt.Println("❌ Operation cancelled.")
+				return nil
+			}
+		}
+
+		return database.ForceReleaseLock(connection)
+	},
+}
+
 var MigrateStatusCommand = &cli.Command{
 	Name:  "migrate:status",
 	Usage: "Show the status of each migration",
