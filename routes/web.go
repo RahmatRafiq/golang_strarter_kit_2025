@@ -16,6 +16,11 @@ import (
 )
 
 func RegisterRoutes(route *gin.Engine) {
+	// Health check endpoints (no middleware, no auth - for load balancers)
+	healthController := controllers.NewHealthController()
+	route.GET("/health", healthController.GetHealth)
+	route.GET("/health/detailed", healthController.GetDetailedHealth)
+
 	// Apply observability middleware (must be first for accurate metrics)
 	route.Use(middleware.ZerologMiddleware())  // Structured logging
 	route.Use(middleware.MetricsMiddleware())  // Prometheus metrics
@@ -143,32 +148,6 @@ func RegisterRoutes(route *gin.Engine) {
 		databaseRoutes.GET("/health", databaseController.HealthCheck)
 		databaseRoutes.GET("/test", databaseController.TestConnection)
 	}
-
-	// Endpoint untuk mengecek kesehatan koneksi facades
-	route.GET("/health", func(c *gin.Context) {
-		sqlDB, err := facades.DB.DB() // Mengambil facades/sql *DB dari GORM *DB
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "Failed to get facades connection",
-				"error":   err.Error(),
-			})
-			return
-		}
-
-		err = sqlDB.Ping() // Menggunakan sqlDB untuk ping ke facades
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "facades connection failed",
-				"error":   err.Error(),
-			})
-			return
-		}
-
-		c.JSON(200, gin.H{
-			"message": "facades is connected",
-			"facades": "supply_chain_retail", // Sesuaikan dengan nama facades Anda
-		})
-	})
 
 	// Multi-database health check endpoint (public)
 	route.GET("/health/databases", func(c *gin.Context) {
