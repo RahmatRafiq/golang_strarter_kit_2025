@@ -2,8 +2,10 @@ package routes
 
 import (
 	"net/http"
+	"time"
 
 	"golang_starter_kit_2025/app/controllers"
+	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/middleware"
 	"golang_starter_kit_2025/app/repositories"
 	"golang_starter_kit_2025/app/services"
@@ -13,6 +15,12 @@ import (
 )
 
 func RegisterRoutes(route *gin.Engine) {
+	// Apply global middlewares
+	route.Use(middleware.ContextTimeoutMiddleware())
+
+	// Get cache TTL from env (default 5 minutes)
+	cacheTTL := time.Duration(helpers.GetEnvInt("CACHE_TTL_MINUTES", 5)) * time.Minute
+	route.Use(middleware.CacheMiddleware(cacheTTL))
 	userRepo := repositories.NewUserRepository(facades.DB)
 	roleRepo := repositories.NewRoleRepository(facades.DB)
 	permissionRepo := repositories.NewPermissionRepository(facades.DB)
