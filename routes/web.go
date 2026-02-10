@@ -13,6 +13,9 @@ import (
 )
 
 func RegisterRoutes(route *gin.Engine) {
+	// Apply structured logging middleware
+	route.Use(middleware.ZerologMiddleware())
+
 	userRepo := repositories.NewUserRepository(facades.DB)
 	roleRepo := repositories.NewRoleRepository(facades.DB)
 	permissionRepo := repositories.NewPermissionRepository(facades.DB)
