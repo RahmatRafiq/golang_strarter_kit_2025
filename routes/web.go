@@ -13,8 +13,11 @@ import (
 )
 
 func RegisterRoutes(route *gin.Engine) {
-	// Apply global rate limiting to all routes (100 req/min per IP)
-	route.Use(middleware.GlobalRateLimiter())
+	// Apply global security middleware
+	route.Use(middleware.GlobalRateLimiter())          // Rate limiting
+	route.Use(middleware.SQLInjectionCheck())          // SQL injection protection
+	route.Use(middleware.XSSProtection())              // XSS protection
+	route.Use(middleware.SanitizeInput())              // Input sanitization
 
 	userRepo := repositories.NewUserRepository(facades.DB)
 	roleRepo := repositories.NewRoleRepository(facades.DB)
