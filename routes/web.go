@@ -4,20 +4,29 @@ import (
 	"net/http"
 
 	"golang_starter_kit_2025/app/controllers"
+	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/middleware"
 	"golang_starter_kit_2025/app/repositories"
 	"golang_starter_kit_2025/app/services"
 	"golang_starter_kit_2025/facades"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func RegisterRoutes(route *gin.Engine) {
+	// Apply observability middleware (must be first for accurate metrics)
+	route.Use(middleware.ZerologMiddleware())  // Structured logging
+	route.Use(middleware.MetricsMiddleware())  // Prometheus metrics
+
 	// Apply global security middleware
-	route.Use(middleware.GlobalRateLimiter())          // Rate limiting
-	route.Use(middleware.SQLInjectionCheck())          // SQL injection protection
-	route.Use(middleware.XSSProtection())              // XSS protection
-	route.Use(middleware.SanitizeInput())              // Input sanitization
+	route.Use(middleware.GlobalRateLimiter())   // Rate limiting
+	route.Use(middleware.SQLInjectionCheck())   // SQL injection protection
+	route.Use(middleware.XSSProtection())       // XSS protection
+	route.Use(middleware.SanitizeInput())       // Input sanitization
+
+	// Start database metrics collector
+	helpers.CollectDBMetrics()
 
 	userRepo := repositories.NewUserRepository(facades.DB)
 	roleRepo := repositories.NewRoleRepository(facades.DB)
@@ -46,6 +55,9 @@ func RegisterRoutes(route *gin.Engine) {
 
 	controller := controllers.Controller{}
 	route.GET("", controller.HelloWorld)
+
+	// Prometheus metrics endpoint
+	route.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	authController := controllers.NewAuthController(*authService)
 
