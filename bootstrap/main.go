@@ -45,6 +45,7 @@ func Init() {
 		Name:  "Golang Starter Kit",
 		Usage: "CLI tool for managing migrations",
 		Commands: []*cli.Command{
+			// Migration commands
 			cmd.MakeMigrationCommand,
 			cmd.MigrationCommand,
 			cmd.RollbackCommand,
@@ -54,10 +55,24 @@ func Init() {
 			cmd.MigrateResetCommand,
 			cmd.RollbackAllCommand,
 			cmd.RollbackBatchCommand,
-			cmd.DBWipeCommand,
+			cmd.MigrateLogsCommand, // NEW: View migration logs
+
+			// Migration lock commands
+			cmd.MigrateLockStatusCommand,  // NEW: Check lock status
+			cmd.MigrateLockReleaseCommand, // NEW: Force release lock
+
+			// Seeder commands
 			cmd.MakeSeederCommand,
 			cmd.DBSeedCommand,
 			cmd.RollbackSeederCommand,
+
+			// Factory commands
+			cmd.MakeFactoryCommand, // NEW: Generate factories
+
+			// Database commands
+			cmd.DBWipeCommand,
+			cmd.DBStatusCommand,
+			cmd.DBConnectionsCommand,
 		},
 	}
 
