@@ -142,8 +142,8 @@ var MigrateFreshCommand = &cli.Command{
 		}
 
 		if seed {
-			fmt.Println("🌱 Running seeders...")
-			if err := database.RunAllSeeders(); err != nil {
+			fmt.Printf("🌱 Running seeders on connection %s...\n", connection)
+			if err := database.RunAllSeedersOnConnection(connection); err != nil {
 				return fmt.Errorf("failed to run seeders: %v", err)
 			}
 			fmt.Println("✅ Seeders completed successfully!")

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"golang_starter_kit_2025/facades"
+	"gorm.io/gorm"
 )
 
 const (
@@ -27,18 +28,22 @@ func ensureMigrationsTable(connectionName string) error {
 		createTableSQL = `
 			CREATE TABLE IF NOT EXISTS migrations (
 				id SERIAL PRIMARY KEY,
+				connection_name VARCHAR(50) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
 				batch INTEGER NOT NULL,
-				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (connection_name, filename)
 			)`
 	} else {
 		// MySQL/MariaDB
 		createTableSQL = `
 			CREATE TABLE IF NOT EXISTS migrations (
 				id INT PRIMARY KEY AUTO_INCREMENT,
+				connection_name VARCHAR(50) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
 				batch INT NOT NULL,
-				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				migrated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE KEY unique_migration (connection_name, filename)
 			)`
 	}
 
@@ -52,7 +57,7 @@ func getLastBatch(connectionName string) (int, error) {
 	}
 
 	var res struct{ Batch int }
-	if err := conn.DB.Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM migrations").Scan(&res).Error; err != nil {
+	if err := conn.DB.Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM migrations WHERE connection_name = ?", connectionName).Scan(&res).Error; err != nil {
 		return 0, err
 	}
 	return res.Batch, nil
@@ -65,7 +70,7 @@ func isMigrationApplied(filename, connectionName string) (bool, error) {
 	}
 
 	var cnt int64
-	if err := conn.DB.Raw("SELECT COUNT(*) FROM migrations WHERE filename = ?", filename).Scan(&cnt).Error; err != nil {
+	if err := conn.DB.Raw("SELECT COUNT(*) FROM migrations WHERE connection_name = ? AND filename = ?", connectionName, filename).Scan(&cnt).Error; err != nil {
 		return false, err
 	}
 	return cnt > 0, nil
@@ -122,7 +127,7 @@ func RunMigrationOnConnection(filename, connectionName string) error {
 	}
 
 	if err := conn.DB.Exec(
-		"INSERT INTO migrations(filename,batch) VALUES(?,?)", filename, batch,
+		"INSERT INTO migrations(connection_name,filename,batch) VALUES(?,?,?)", connectionName, filename, batch,
 	).Error; err != nil {
 		return fmt.Errorf("gagal mencatat migrasi: %v", err)
 	}
@@ -153,20 +158,24 @@ func RollbackMigrationOnConnection(filename, connectionName string) error {
 		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
 	}
 
+	// Use transaction for atomic rollback
 	_, downs := parseMigrationFile(string(data))
-	for _, sql := range downs {
-		if err := conn.DB.Exec(sql).Error; err != nil {
-			return fmt.Errorf("gagal rollback: %v", err)
+
+	return conn.DB.Transaction(func(tx *gorm.DB) error {
+		for _, sql := range downs {
+			if err := tx.Exec(sql).Error; err != nil {
+				return fmt.Errorf("gagal rollback: %v", err)
+			}
 		}
-	}
 
-	// Remove from migrations table
-	if err := conn.DB.Exec("DELETE FROM migrations WHERE filename=?", filename).Error; err != nil {
-		return fmt.Errorf("gagal menghapus record migrasi: %v", err)
-	}
+		// Remove from migrations table with connection_name filter
+		if err := tx.Exec("DELETE FROM migrations WHERE connection_name = ? AND filename = ?", connectionName, filename).Error; err != nil {
+			return fmt.Errorf("gagal menghapus record migrasi: %v", err)
+		}
 
-	fmt.Printf("Rolled back: %s\n", filename)
-	return nil
+		fmt.Printf("Rolled back: %s\n", filename)
+		return nil
+	})
 }
 
 func parseSQLStatements(content string) []string {
@@ -201,7 +210,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 	}
 
 	if err := conn.DB.Raw(
-		"SELECT COALESCE(MAX(batch),0) AS batch FROM migrations",
+		"SELECT COALESCE(MAX(batch),0) AS batch FROM migrations WHERE connection_name = ?", connectionName,
 	).Scan(&lastBatch).Error; err != nil {
 		return err
 	}
@@ -217,7 +226,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 			name := strings.TrimSuffix(f.Name(), ".sql")
 			var cnt int64
 			conn.DB.Raw(
-				"SELECT COUNT(*) FROM migrations WHERE filename = ?", name,
+				"SELECT COUNT(*) FROM migrations WHERE connection_name = ? AND filename = ?", connectionName, name,
 			).Scan(&cnt)
 			if cnt == 0 {
 				toRun = append(toRun, name)
@@ -249,8 +258,8 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 		}
 
 		if err := conn.DB.Exec(
-			"INSERT INTO migrations(filename,batch) VALUES(?,?)",
-			name, batch,
+			"INSERT INTO migrations(connection_name,filename,batch) VALUES(?,?,?)",
+			connectionName, name, batch,
 		).Error; err != nil {
 			return fmt.Errorf("gagal mencatat %s: %v", name, err)
 		}
@@ -304,7 +313,7 @@ func RollbackBatchOnConnection(batch int, connectionName string) error {
 	}
 
 	var rows []struct{ Filename string }
-	conn.DB.Raw("SELECT filename FROM migrations WHERE batch=? ORDER BY id DESC", batch).Scan(&rows)
+	conn.DB.Raw("SELECT filename FROM migrations WHERE connection_name = ? AND batch = ? ORDER BY id DESC", connectionName, batch).Scan(&rows)
 	for _, r := range rows {
 		fmt.Printf("Rolling back: %s\n", r.Filename)
 		if err := RollbackMigrationOnConnection(r.Filename, connectionName); err != nil {
@@ -388,12 +397,8 @@ func FreshMigrationsOnConnection(connectionName string) error {
 		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
 	}
 
-	// Use different truncate syntax for PostgreSQL
-	if conn.IsPostgreSQL() {
-		conn.DB.Exec("TRUNCATE migrations RESTART IDENTITY")
-	} else {
-		conn.DB.Exec("TRUNCATE migrations")
-	}
+	// Delete only records for this connection (don't wipe other connections)
+	conn.DB.Exec("DELETE FROM migrations WHERE connection_name = ?", connectionName)
 
 	return RunAllMigrationsOnConnection(connectionName)
 }
@@ -419,12 +424,12 @@ func ShowMigrationStatus(connectionName string) error {
 		return fmt.Errorf("failed to read migrations folder: %v", err)
 	}
 
-	// Get applied migrations
+	// Get applied migrations for this connection only
 	var applied []struct {
 		Filename string
 		Batch    int
 	}
-	conn.DB.Raw("SELECT filename, batch FROM migrations ORDER BY batch, filename").Scan(&applied)
+	conn.DB.Raw("SELECT filename, batch FROM migrations WHERE connection_name = ? ORDER BY batch, filename", connectionName).Scan(&applied)
 
 	appliedMap := make(map[string]int)
 	for _, a := range applied {
