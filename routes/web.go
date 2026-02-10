@@ -13,6 +13,9 @@ import (
 )
 
 func RegisterRoutes(route *gin.Engine) {
+	// Apply global rate limiting to all routes (100 req/min per IP)
+	route.Use(middleware.GlobalRateLimiter())
+
 	userRepo := repositories.NewUserRepository(facades.DB)
 	roleRepo := repositories.NewRoleRepository(facades.DB)
 	permissionRepo := repositories.NewPermissionRepository(facades.DB)
@@ -42,15 +45,25 @@ func RegisterRoutes(route *gin.Engine) {
 	route.GET("", controller.HelloWorld)
 
 	authController := controllers.NewAuthController(*authService)
-	route.PUT("/auth/login", authController.Login)
-	route.POST("/auth/refresh", authController.Refresh) // Public endpoint for refresh token
+
+	// Auth routes with stricter rate limiting (5 attempts per 15min)
+	authPublicRoutes := route.Group("/auth")
+	authPublicRoutes.Use(middleware.AuthRateLimiter())
+	{
+		authPublicRoutes.PUT("/login", authController.Login)
+	}
+
+	// Refresh endpoint with moderate rate limiting
+	route.POST("/auth/refresh", authController.Refresh)
+
+	// Protected auth routes
 	authRoutes := route.Group("/auth").Use(middleware.AuthMiddleware())
 	{
 		authRoutes.GET("/logout", authController.Logout)
 	}
 
 	categoryController := controllers.NewCategoryController(*categoryService)
-	categoryRoutes := route.Group("/categories", middleware.AuthMiddleware())
+	categoryRoutes := route.Group("/categories", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
 		categoryRoutes.GET("/", categoryController.List)
 		categoryRoutes.GET("/:id", categoryController.Get)
@@ -59,7 +72,7 @@ func RegisterRoutes(route *gin.Engine) {
 	}
 
 	productController := controllers.NewProductController(*productService)
-	productRoutes := route.Group("/products", middleware.AuthMiddleware())
+	productRoutes := route.Group("/products", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
 		productRoutes.GET("/", productController.GetAll)
 		productRoutes.GET("/:id", productController.GetByID)
@@ -68,7 +81,7 @@ func RegisterRoutes(route *gin.Engine) {
 	}
 
 	userController := controllers.NewUserController(*userService)
-	userRoutes := route.Group("/users", middleware.AuthMiddleware())
+	userRoutes := route.Group("/users", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
 		userRoutes.GET("", userController.List)
 		userRoutes.GET("/:id", userController.Get)
@@ -79,7 +92,7 @@ func RegisterRoutes(route *gin.Engine) {
 	}
 
 	roleController := controllers.NewRoleController(*roleService)
-	roleRoutes := route.Group("/roles", middleware.AuthMiddleware())
+	roleRoutes := route.Group("/roles", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
 		roleRoutes.GET("", roleController.List)
 		roleRoutes.PUT("", roleController.Put)
@@ -89,7 +102,7 @@ func RegisterRoutes(route *gin.Engine) {
 	}
 
 	permissionController := controllers.NewPermissionController(*permissionService)
-	permissionRoutes := route.Group("/permissions", middleware.AuthMiddleware())
+	permissionRoutes := route.Group("/permissions", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
 		permissionRoutes.GET("", permissionController.List)
 		permissionRoutes.PUT("", permissionController.Put)
