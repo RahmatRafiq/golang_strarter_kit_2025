@@ -41,20 +41,25 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 		return nil, errors.New("Email atau password salah")
 	}
 
-	expires := helpers.GetEnvInt("JWT_EXPIRE_MINUTES", 60)
-	expireAt := time.Now().Add(time.Minute * time.Duration(expires)).Unix()
-	tokenString, err := auth.jwt.GenerateToken(casts.NewJwtClaims(user.ID, expireAt))
-
+	// Generate token pair (access + refresh token)
+	tokenPair, err := auth.jwt.GenerateTokenPair(user.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	user.JwtToken = tokenString
+	// Store access token in user table for backward compatibility
+	user.JwtToken = tokenPair.AccessToken
 	if err := auth.repo.UpdateUser(user); err != nil {
 		return nil, err
 	}
 
-	return &casts.Token{Token: tokenString, ExpiredAt: time.Unix(expireAt, 0)}, nil
+	return &casts.Token{
+		Token:        tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiredAt:    time.Now().Add(15 * time.Minute),
+		ExpiresIn:    tokenPair.ExpiresIn,
+		TokenType:    tokenPair.TokenType,
+	}, nil
 }
 
 func (auth *AuthService) Logout(tokenString string) error {
@@ -85,21 +90,33 @@ func (auth *AuthService) Logout(tokenString string) error {
 		return errors.New("user not found")
 	}
 
+	// Clear JWT token in user table
 	user.JwtToken = ""
 	if err := auth.repo.UpdateUser(user); err != nil {
+		return err
+	}
+
+	// Revoke all refresh tokens for this user
+	if err := auth.jwt.RevokeAllUserTokens(userID); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (auth *AuthService) RefreshToken(tokenString string) (*casts.Token, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+func (auth *AuthService) RefreshToken(refreshTokenString string) (*casts.Token, error) {
+	// Use the new refresh token mechanism
+	tokenPair, err := auth.jwt.RefreshAccessToken(refreshTokenString)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract user ID from new access token to update user table
+	token, err := jwt.Parse(tokenPair.AccessToken, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
-
-	if err != nil || !token.Valid {
-		return nil, errors.New("invalid token")
+	if err != nil {
+		return nil, err
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
@@ -120,16 +137,19 @@ func (auth *AuthService) RefreshToken(tokenString string) (*casts.Token, error) 
 		return nil, errors.New("user not found")
 	}
 
-	expires := helpers.GetEnvInt("JWT_EXPIRE_MINUTES", 60)
-	expireAt := time.Now().Add(time.Minute * time.Duration(expires)).Unix()
-	tokenString, err = auth.jwt.GenerateToken(casts.NewJwtClaims(user.ID, expireAt))
-
-	user.JwtToken = tokenString
+	// Update user's access token for backward compatibility
+	user.JwtToken = tokenPair.AccessToken
 	if err := auth.repo.UpdateUser(user); err != nil {
 		return nil, err
 	}
 
-	return &casts.Token{Token: tokenString, ExpiredAt: time.Unix(expireAt, 0)}, nil
+	return &casts.Token{
+		Token:        tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiredAt:    time.Now().Add(15 * time.Minute),
+		ExpiresIn:    tokenPair.ExpiresIn,
+		TokenType:    tokenPair.TokenType,
+	}, nil
 }
 
 func CheckPasswordHash(passwordOrPin, hash string) bool {

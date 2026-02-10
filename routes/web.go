@@ -43,10 +43,10 @@ func RegisterRoutes(route *gin.Engine) {
 
 	authController := controllers.NewAuthController(*authService)
 	route.PUT("/auth/login", authController.Login)
+	route.POST("/auth/refresh", authController.Refresh) // Public endpoint for refresh token
 	authRoutes := route.Group("/auth").Use(middleware.AuthMiddleware())
 	{
 		authRoutes.GET("/logout", authController.Logout)
-		authRoutes.GET("/refresh", authController.Refresh)
 	}
 
 	categoryController := controllers.NewCategoryController(*categoryService)
