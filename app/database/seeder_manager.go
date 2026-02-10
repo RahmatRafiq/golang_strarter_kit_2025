@@ -42,18 +42,22 @@ func ensureSeedsTable(connectionName string) error {
 		createTableSQL = `
 			CREATE TABLE IF NOT EXISTS seeds (
 				id SERIAL PRIMARY KEY,
+				connection_name VARCHAR(50) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
 				batch BIGINT NOT NULL,
-				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (connection_name, filename)
 			)`
 	} else {
 		// MySQL/MariaDB
 		createTableSQL = `
 			CREATE TABLE IF NOT EXISTS seeds (
 				id INT PRIMARY KEY AUTO_INCREMENT,
+				connection_name VARCHAR(50) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
 				batch BIGINT NOT NULL,
-				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE KEY unique_seed (connection_name, filename)
 			)`
 	}
 
@@ -72,7 +76,7 @@ func getLastSeedBatch(connectionName string) (int64, error) {
 
 	var res struct{ Batch int64 }
 	if err := conn.DB.
-		Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM seeds").
+		Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM seeds WHERE connection_name = ?", connectionName).
 		Scan(&res).Error; err != nil {
 		return 0, err
 	}
@@ -91,7 +95,7 @@ func isSeedApplied(name, connectionName string) (bool, error) {
 
 	var cnt int64
 	if err := conn.DB.
-		Raw("SELECT COUNT(*) FROM seeds WHERE filename = ?", name).
+		Raw("SELECT COUNT(*) FROM seeds WHERE connection_name = ? AND filename = ?", connectionName, name).
 		Scan(&cnt).Error; err != nil {
 		return false, err
 	}
@@ -143,7 +147,7 @@ func RunAllSeedersOnConnection(connectionName string) error {
 			return fmt.Errorf("failed to run seeder %s: %w", s.Name, err)
 		}
 		if err := conn.DB.
-			Exec("INSERT INTO seeds (filename, batch) VALUES (?, ?)", s.Name, s.Batch).
+			Exec("INSERT INTO seeds (connection_name, filename, batch) VALUES (?, ?, ?)", connectionName, s.Name, s.Batch).
 			Error; err != nil {
 			return err
 		}
@@ -173,7 +177,7 @@ func RollbackSeedBatchOnConnection(batch int64, connectionName string) error {
 
 	var rows []struct{ Filename string }
 	if err := conn.DB.
-		Raw("SELECT filename FROM seeds WHERE batch = ? ORDER BY id DESC", batch).
+		Raw("SELECT filename FROM seeds WHERE connection_name = ? AND batch = ? ORDER BY id DESC", connectionName, batch).
 		Scan(&rows).Error; err != nil {
 		return err
 	}
@@ -195,7 +199,7 @@ func RollbackSeedBatchOnConnection(batch int64, connectionName string) error {
 			}
 		}
 		if err := conn.DB.
-			Exec("DELETE FROM seeds WHERE filename = ? AND batch = ?", r.Filename, batch).
+			Exec("DELETE FROM seeds WHERE connection_name = ? AND filename = ? AND batch = ?", connectionName, r.Filename, batch).
 			Error; err != nil {
 			return err
 		}
@@ -279,7 +283,7 @@ func RunSpecificSeederOnConnection(name, connectionName string) error {
 	}
 
 	if err := conn.DB.
-		Exec("INSERT INTO seeds (filename, batch) VALUES (?, ?)", name, newBatch).
+		Exec("INSERT INTO seeds (connection_name, filename, batch) VALUES (?, ?, ?)", connectionName, name, newBatch).
 		Error; err != nil {
 		return err
 	}
