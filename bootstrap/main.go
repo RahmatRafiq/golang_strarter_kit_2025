@@ -14,6 +14,7 @@ import (
 	"golang_starter_kit_2025/routes"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
@@ -43,6 +44,12 @@ func Init() {
 
 	facades.ConnectDB()
 	defer facades.CloseDB()
+
+	// Initialize Redis (optional - continues even if Redis is unavailable)
+	if err := helpers.InitRedis(); err != nil {
+		log.Println("⚠️  Redis not available, caching disabled:", err)
+	}
+	defer helpers.CloseRedis()
 
 	app := &cli.App{
 		Name:  "Golang Starter Kit",
@@ -165,12 +172,15 @@ func validateRequiredEnvVars() {
 func Router() *gin.Engine {
 	route := gin.Default()
 
+	// Gzip compression middleware (5-10x smaller responses)
+	route.Use(gzip.Gzip(gzip.DefaultCompression))
+
 	allowedOrigins := helpers.GetEnv("ALLOWED_ORIGINS", "http://localhost:3000")
 	route.Use(cors.New(cors.Config{
 		AllowOrigins:     strings.Split(allowedOrigins, ","),
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Api-Key", "X-Request-ID"},
-		ExposeHeaders:    []string{"Content-Length", "X-Request-ID"},
+		ExposeHeaders:    []string{"Content-Length", "X-Request-ID", "X-Cache"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))

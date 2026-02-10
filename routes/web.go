@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"time"
 
 	"golang_starter_kit_2025/app/controllers"
 	"golang_starter_kit_2025/app/helpers"
@@ -19,6 +20,11 @@ func RegisterRoutes(route *gin.Engine) {
 	route.Use(middleware.ZerologMiddleware())  // Structured logging
 	route.Use(middleware.MetricsMiddleware())  // Prometheus metrics
 
+	// Apply performance middleware
+	route.Use(middleware.ContextTimeoutMiddleware())  // Request timeout
+	cacheTTL := time.Duration(helpers.GetEnvInt("CACHE_TTL_MINUTES", 5)) * time.Minute
+	route.Use(middleware.CacheMiddleware(cacheTTL))   // HTTP caching
+
 	// Apply global security middleware
 	route.Use(middleware.GlobalRateLimiter())   // Rate limiting
 	route.Use(middleware.SQLInjectionCheck())   // SQL injection protection
@@ -27,7 +33,6 @@ func RegisterRoutes(route *gin.Engine) {
 
 	// Start database metrics collector
 	helpers.CollectDBMetrics()
-
 	userRepo := repositories.NewUserRepository(facades.DB)
 	roleRepo := repositories.NewRoleRepository(facades.DB)
 	permissionRepo := repositories.NewPermissionRepository(facades.DB)
