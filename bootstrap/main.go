@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/urfave/cli/v2"
@@ -25,7 +25,7 @@ import (
 func Init() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("No .env file found, using environment variables")
+		log.Info().Msg("No .env file found, using environment variables")
 	}
 
 	// Initialize structured logging
@@ -47,7 +47,7 @@ func Init() {
 
 	// Initialize Redis (optional - continues even if Redis is unavailable)
 	if err := helpers.InitRedis(); err != nil {
-		log.Println("⚠️  Redis not available, caching disabled:", err)
+		log.Warn().Err(err).Msg("Redis not available, caching disabled")
 	}
 	defer helpers.CloseRedis()
 
@@ -88,7 +88,7 @@ func Init() {
 
 	if len(os.Args) > 1 {
 		if err := app.Run(os.Args); err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("CLI command failed")
 		}
 		return
 	}
@@ -152,20 +152,25 @@ func validateRequiredEnvVars() {
 
 	jwtSecret := os.Getenv("JWT_SECRET_KEY")
 	if jwtSecret == "your_jwt_secret_key_here" || jwtSecret == "CHANGE_THIS_TO_RANDOM_STRING_AT_LEAST_32_CHARS" {
-		log.Fatal("❌ SECURITY ERROR: JWT_SECRET_KEY is still using placeholder value. Please generate a strong secret key using: openssl rand -base64 48")
+		log.Fatal().
+			Msg("SECURITY ERROR: JWT_SECRET_KEY is still using placeholder value. Please generate a strong secret key using: openssl rand -base64 48")
 	}
 
 	if len(jwtSecret) < 32 {
-		log.Fatal("❌ SECURITY ERROR: JWT_SECRET_KEY must be at least 32 characters long for adequate security")
+		log.Fatal().
+			Int("length", len(jwtSecret)).
+			Msg("SECURITY ERROR: JWT_SECRET_KEY must be at least 32 characters long for adequate security")
 	}
 
 	// Warn if key appears weak
 	if isWeakSecret(jwtSecret) {
-		log.Println("⚠️  WARNING: JWT_SECRET_KEY appears to be weak. Consider using: openssl rand -base64 48")
+		log.Warn().Msg("JWT_SECRET_KEY appears to be weak. Consider using: openssl rand -base64 48")
 	}
 
 	if len(missing) > 0 {
-		log.Fatalf("❌ ERROR: Required environment variables are not set:\n  - %s", strings.Join(missing, "\n  - "))
+		log.Fatal().
+			Strs("missing_vars", missing).
+			Msg("Required environment variables are not set")
 	}
 }
 
