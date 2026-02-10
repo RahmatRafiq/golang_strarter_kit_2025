@@ -20,6 +20,7 @@ func RegisterRoutes(route *gin.Engine) {
 	healthController := controllers.NewHealthController()
 	route.GET("/health", healthController.GetHealth)
 	route.GET("/health/detailed", healthController.GetDetailedHealth)
+	route.GET("/health/history", healthController.GetHistory)
 
 	// Status dashboard (HTML)
 	statusController := controllers.NewStatusController()

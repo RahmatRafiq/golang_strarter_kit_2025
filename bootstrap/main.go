@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/services"
 	"golang_starter_kit_2025/cmd"
 	"golang_starter_kit_2025/docs"
 	"golang_starter_kit_2025/facades"
@@ -50,6 +51,11 @@ func Init() {
 		log.Warn().Err(err).Msg("Redis not available, caching disabled")
 	}
 	defer helpers.CloseRedis()
+
+	// Start health history collector (only if Redis is available)
+	if helpers.RedisClient != nil {
+		services.StartHealthHistoryCollector()
+	}
 
 	app := &cli.App{
 		Name:  "Golang Starter Kit",

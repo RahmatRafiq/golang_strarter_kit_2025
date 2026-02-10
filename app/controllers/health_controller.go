@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
+	"golang_starter_kit_2025/app/casts"
 	"golang_starter_kit_2025/app/services"
 
 	"github.com/gin-gonic/gin"
@@ -60,4 +62,40 @@ func (c *HealthController) GetDetailedHealth(ctx *gin.Context) {
 	}
 
 	ctx.JSON(statusCode, health)
+}
+
+// GetHistory returns historical health data for services
+// @Summary		Get service health history
+// @Description	Returns aggregated daily health status for the last N days
+// @Tags			Health
+// @Produce		json
+// @Param			service	query		string	false	"Service name (database, redis, api)"
+// @Param			days	query		int		false	"Number of days (default: 90)"
+// @Success		200		{array}		casts.ServiceHistoryResponse
+// @Router			/health/history [get]
+func (c *HealthController) GetHistory(ctx *gin.Context) {
+	service := ctx.Query("service")
+	days := 90 // default
+
+	if daysParam := ctx.Query("days"); daysParam != "" {
+		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
+			days = d
+		}
+	}
+
+	historyService := services.NewHealthHistoryService()
+
+	if service != "" {
+		// Single service
+		history := historyService.GetDailyAggregated(service, days)
+		ctx.JSON(http.StatusOK, history)
+	} else {
+		// All services
+		serviceList := []string{"database", "redis", "api"}
+		result := make([]casts.ServiceHistoryResponse, 0)
+		for _, svc := range serviceList {
+			result = append(result, historyService.GetDailyAggregated(svc, days))
+		}
+		ctx.JSON(http.StatusOK, result)
+	}
 }

@@ -215,16 +215,20 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
     <script>
         async function fetchStatus() {
             try {
-                const res = await fetch('/health/detailed');
-                const data = await res.json();
-                updateUI(data);
+                const statusRes = await fetch('/health/detailed');
+                const statusData = await statusRes.json();
+
+                const historyRes = await fetch('/health/history?days=90');
+                const historyData = await historyRes.json();
+
+                updateUI(statusData, historyData);
             } catch (error) {
                 document.getElementById('status-text').textContent = 'Failed to load status';
             }
         }
 
-        function updateUI(data) {
-            const time = new Date(data.timestamp).toLocaleString('en-US', {
+        function updateUI(statusData, historyData) {
+            const time = new Date(statusData.timestamp).toLocaleString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -235,7 +239,7 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
             document.getElementById('timestamp').textContent = time;
 
             const banner = document.getElementById('status-banner');
-            banner.className = 'status-banner ' + data.status;
+            banner.className = 'status-banner ' + statusData.status;
 
             const statusMessages = {
                 'healthy': 'All systems operational',
@@ -243,11 +247,11 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
                 'unhealthy': 'System outage'
             };
 
-            document.getElementById('status-text').textContent = statusMessages[data.status] || data.status;
-            document.getElementById('status-meta').textContent = 'Uptime: ' + data.uptime + ' · Version ' + data.version;
+            document.getElementById('status-text').textContent = statusMessages[statusData.status] || statusData.status;
+            document.getElementById('status-meta').textContent = 'Uptime: ' + statusData.uptime + ' · Version ' + statusData.version;
 
             let html = '';
-            for (const [name, service] of Object.entries(data.services)) {
+            for (const [name, service] of Object.entries(statusData.services)) {
                 const statusClass = service.status === 'up' ? '' : 'down';
                 const statusText = service.status === 'up' ? 'Operational' : 'Down';
 
@@ -259,9 +263,17 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
                     info += (info ? ' · ' : '') + 'Connections: ' + service.details.active + '/' + service.details.max;
                 }
 
-                // Generate 90 days of uptime bars
-                const bars = generateUptimeBars(service.status, 90);
-                const uptime = calculateUptime(bars);
+                // Find history for this service
+                const serviceHistory = historyData.find(h => h.service === name);
+
+                // Generate bars from real data or fallback
+                const bars = serviceHistory && serviceHistory.daily_history.length > 0
+                    ? generateRealBars(serviceHistory.daily_history)
+                    : generateFallbackBars(90);
+
+                const uptime = serviceHistory && serviceHistory.overall_uptime > 0
+                    ? serviceHistory.overall_uptime.toFixed(2)
+                    : '0.00';
 
                 html += '<div class="service-item">' +
                     '<div class="service-header">' +
@@ -282,34 +294,24 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
             document.getElementById('services').innerHTML = html;
         }
 
-        function generateUptimeBars(currentStatus, days) {
+        function generateRealBars(dailyHistory) {
             let bars = '';
-            for (let i = 0; i < days; i++) {
-                // Simulate uptime history (in production, this would come from real data)
-                let status = 'up';
-                const random = Math.random();
-
-                if (currentStatus === 'down' && i >= days - 5) {
-                    // Show recent downtime if service is currently down
-                    status = random > 0.3 ? 'down' : (random > 0.15 ? 'degraded' : 'up');
-                } else if (currentStatus === 'down') {
-                    // Mostly operational in the past
-                    status = random > 0.97 ? 'down' : (random > 0.95 ? 'degraded' : 'up');
-                } else {
-                    // Mostly operational
-                    status = random > 0.98 ? 'down' : (random > 0.96 ? 'degraded' : 'up');
-                }
-
-                const barClass = status === 'up' ? '' : status;
-                bars += '<div class="uptime-bar ' + barClass + '" title="Day ' + (i + 1) + ': ' + status + '"></div>';
+            for (const day of dailyHistory) {
+                const statusClass = day.status === 'up' ? '' :
+                                  day.status === 'degraded' ? 'degraded' :
+                                  day.status === 'unknown' ? 'unknown' : 'down';
+                const title = day.date + ': ' + (day.uptime > 0 ? day.uptime.toFixed(1) + '% uptime' : 'No data');
+                bars += '<div class="uptime-bar ' + statusClass + '" title="' + title + '"></div>';
             }
             return bars;
         }
 
-        function calculateUptime(barsHtml) {
-            const upBars = (barsHtml.match(/uptime-bar"/g) || []).length;
-            const totalBars = (barsHtml.match(/uptime-bar/g) || []).length;
-            return ((upBars / totalBars) * 100).toFixed(2);
+        function generateFallbackBars(days) {
+            let bars = '';
+            for (let i = 0; i < days; i++) {
+                bars += '<div class="uptime-bar unknown" title="Collecting data..."></div>';
+            }
+            return bars;
         }
 
         fetchStatus();
