@@ -27,6 +27,9 @@ func Init() {
 		log.Println("No .env file found, using environment variables")
 	}
 
+	// Initialize structured logging
+	helpers.InitLogger()
+
 	validateRequiredEnvVars()
 
 	appEnv := helpers.GetEnv("APP_ENV", "production")

@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'golang-starter-kit'
+    environment: 'development'
+
+scrape_configs:
+  - job_name: 'golang-starter-kit'
+    static_configs:
+      - targets: ['host.docker.internal:9999']
+        labels:
+          app: 'golang-starter-kit'
+          instance: 'main'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
