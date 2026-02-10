@@ -49,6 +49,8 @@ logs/
 coverage.out
 coverage.html
 *.coverprofile
+test-report.json
+.trivycache/
 
 # Swagger generated docs (regenerate dengan swag init)
 docs/docs.go
