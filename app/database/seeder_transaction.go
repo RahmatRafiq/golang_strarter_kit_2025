@@ -2,11 +2,11 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"golang_starter_kit_2025/facades"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -19,12 +19,12 @@ func runSeederWithTransaction(seeder Seeder, db *gorm.DB, connectionName string)
 	}
 
 	if !useTransaction {
-		log.Printf("  ↳ Running without transaction")
+		log.Debug().Str("seeder", seeder.Name).Msg("Running without transaction")
 		// Run without transaction
 		if err := seeder.Run(db); err != nil {
 			return err
 		}
-		
+
 		// Record in seeds table
 		return db.Exec(
 			"INSERT INTO seeds (connection_name, filename, batch) VALUES (?, ?, ?)",
@@ -33,11 +33,14 @@ func runSeederWithTransaction(seeder Seeder, db *gorm.DB, connectionName string)
 	}
 
 	// Run with transaction for atomicity
-	log.Printf("  ↳ Running with transaction (atomic)")
+	log.Debug().Str("seeder", seeder.Name).Msg("Running with transaction (atomic)")
 	return db.Transaction(func(tx *gorm.DB) error {
 		// Run the seeder
 		if err := seeder.Run(tx); err != nil {
-			log.Printf("  ✗ Seeder failed, rolling back transaction")
+			log.Error().
+				Str("seeder", seeder.Name).
+				Err(err).
+				Msg("Seeder failed, rolling back transaction")
 			return fmt.Errorf("seeder execution failed: %w", err)
 		}
 
@@ -49,7 +52,7 @@ func runSeederWithTransaction(seeder Seeder, db *gorm.DB, connectionName string)
 			return fmt.Errorf("failed to record seeder: %w", err)
 		}
 
-		log.Printf("  ✓ Seeder completed successfully")
+		log.Debug().Str("seeder", seeder.Name).Msg("Seeder completed successfully")
 		return nil
 	})
 }
@@ -111,21 +114,31 @@ func RunSeederWithDependencies(seederName, connectionName string) error {
 	}
 
 	if len(toRun) == 0 {
-		log.Printf("✅ Seeder '%s' and all dependencies are already applied", seederName)
+		log.Info().
+			Str("seeder", seederName).
+			Msg("Seeder and all dependencies are already applied")
 		return nil
 	}
 
 	// Run seeders in dependency order
 	newBatch := time.Now().Unix()
-	log.Printf("🚀 Running %d seeder(s) for '%s' (including dependencies)\n", len(toRun), seederName)
+	log.Info().
+		Int("count", len(toRun)).
+		Str("target_seeder", seederName).
+		Msg("Running seeder(s) including dependencies")
 
 	for _, s := range toRun {
 		s.Batch = newBatch
 
 		if len(s.DependsOn) > 0 {
-			log.Printf("🌱 Seeding: %s (depends on: %v)", s.Name, s.DependsOn)
+			log.Info().
+				Str("seeder", s.Name).
+				Strs("dependencies", s.DependsOn).
+				Msg("Seeding")
 		} else {
-			log.Printf("🌱 Seeding: %s", s.Name)
+			log.Info().
+				Str("seeder", s.Name).
+				Msg("Seeding")
 		}
 
 		if err := runSeederWithTransaction(s, conn.DB, connectionName); err != nil {
@@ -133,6 +146,8 @@ func RunSeederWithDependencies(seederName, connectionName string) error {
 		}
 	}
 
-	log.Printf("✅ Successfully ran %d seeder(s)\n", len(toRun))
+	log.Info().
+		Int("count", len(toRun)).
+		Msg("Successfully ran seeder(s)")
 	return nil
 }
