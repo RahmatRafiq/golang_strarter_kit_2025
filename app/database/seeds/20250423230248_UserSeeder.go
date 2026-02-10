@@ -1,10 +1,9 @@
 package seeds
 
 import (
-	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/database/factories"
 	"golang_starter_kit_2025/app/models"
 	"log"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -12,24 +11,35 @@ import (
 func SeedUserSeeder(db *gorm.DB) error {
 	log.Println("🌱 Seeding UserSeeder...")
 
-	data := models.User{
-		Reference: helpers.GenerateReference("USR"),
-		Username:  "admin",
-		Email:     "admin@example.com",
-		Password:  "admin@example.com",
-		Pin:       "",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-	if err := db.Create(&data).Error; err != nil {
+	// Initialize user factory
+	userFactory := factories.NewUserFactory(db)
+
+	// Create admin user
+	_, err := userFactory.Create(map[string]interface{}{
+		"username": "admin",
+		"email":    "admin@example.com",
+	})
+	if err != nil {
 		return err
 	}
+	log.Println("  ✓ Created admin user")
+
+	// Create 10 random test users using factory
+	users, err := userFactory.CreateMany(10)
+	if err != nil {
+		return err
+	}
+	log.Printf("  ✓ Created %d test users with random data\n", len(users))
+
 	return nil
 }
+
 func RollbackUserSeeder(db *gorm.DB) error {
-	log.Println("🗑️ Rolling back UserSeeder…")
+	log.Println("🗑️ Rolling back UserSeeder...")
+
+	// Delete all users (admin + test users)
 	return db.Unscoped().
-		Where("username = ?", "admin").
+		Where("username = ? OR username LIKE ?", "admin", "%").
 		Delete(&models.User{}).
 		Error
 }

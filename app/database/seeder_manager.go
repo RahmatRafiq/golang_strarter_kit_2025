@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"log"
-	"sort"
 	"time"
 
 	"golang_starter_kit_2025/app/database/seeds"
@@ -13,16 +12,21 @@ import (
 )
 
 type Seeder struct {
-	Name     string
-	Run      func(db *gorm.DB) error
-	Rollback func(db *gorm.DB) error
-	Batch    int64
+	Name            string
+	Run             func(db *gorm.DB) error
+	Rollback        func(db *gorm.DB) error
+	DependsOn       []string // Dependencies that must run before this seeder
+	WithTransaction bool     // Whether to wrap in transaction (default: true)
+	Batch           int64
 }
 
 var SeederList = []Seeder{
-	{Name: "UserSeeder",
-		Run:      seeds.SeedUserSeeder,
-		Rollback: seeds.RollbackUserSeeder,
+	{
+		Name:            "UserSeeder",
+		Run:             seeds.SeedUserSeeder,
+		Rollback:        seeds.RollbackUserSeeder,
+		DependsOn:       []string{}, // No dependencies
+		WithTransaction: true,       // Use transaction by default
 	},
 }
 
@@ -42,18 +46,22 @@ func ensureSeedsTable(connectionName string) error {
 		createTableSQL = `
 			CREATE TABLE IF NOT EXISTS seeds (
 				id SERIAL PRIMARY KEY,
+				connection_name VARCHAR(50) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
 				batch BIGINT NOT NULL,
-				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (connection_name, filename)
 			)`
 	} else {
 		// MySQL/MariaDB
 		createTableSQL = `
 			CREATE TABLE IF NOT EXISTS seeds (
 				id INT PRIMARY KEY AUTO_INCREMENT,
+				connection_name VARCHAR(50) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
 				batch BIGINT NOT NULL,
-				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE KEY unique_seed (connection_name, filename)
 			)`
 	}
 
@@ -72,7 +80,7 @@ func getLastSeedBatch(connectionName string) (int64, error) {
 
 	var res struct{ Batch int64 }
 	if err := conn.DB.
-		Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM seeds").
+		Raw("SELECT COALESCE(MAX(batch),0) AS batch FROM seeds WHERE connection_name = ?", connectionName).
 		Scan(&res).Error; err != nil {
 		return 0, err
 	}
@@ -91,7 +99,7 @@ func isSeedApplied(name, connectionName string) (bool, error) {
 
 	var cnt int64
 	if err := conn.DB.
-		Raw("SELECT COUNT(*) FROM seeds WHERE filename = ?", name).
+		Raw("SELECT COUNT(*) FROM seeds WHERE connection_name = ? AND filename = ?", connectionName, name).
 		Scan(&cnt).Error; err != nil {
 		return false, err
 	}
@@ -103,7 +111,7 @@ func RunAllSeeders() error {
 	return RunAllSeedersOnConnection("")
 }
 
-// RunAllSeedersOnConnection runs all seeders on a specified connection
+// RunAllSeedersOnConnection runs all seeders on a specified connection with dependency resolution
 func RunAllSeedersOnConnection(connectionName string) error {
 	if connectionName == "" {
 		connectionName = "mysql"
@@ -118,12 +126,7 @@ func RunAllSeedersOnConnection(connectionName string) error {
 		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
 	}
 
-	_, err = getLastSeedBatch(connectionName)
-	if err != nil {
-		return err
-	}
-	newBatch := time.Now().Unix()
-
+	// Get pending seeders
 	var pending []Seeder
 	for _, s := range SeederList {
 		applied, err := isSeedApplied(s.Name, connectionName)
@@ -131,26 +134,63 @@ func RunAllSeedersOnConnection(connectionName string) error {
 			return err
 		}
 		if !applied {
-			s.Batch = newBatch
 			pending = append(pending, s)
 		}
 	}
-	sort.Slice(pending, func(i, j int) bool { return pending[i].Name < pending[j].Name })
 
+	if len(pending) == 0 {
+		log.Println("✅ No pending seeders to run")
+		return nil
+	}
+
+	// Resolve dependencies using topological sort
+	graph := NewDependencyGraph(pending)
+
+	// Validate dependencies first
+	if err := graph.ValidateDependencies(); err != nil {
+		return fmt.Errorf("dependency validation failed: %v", err)
+	}
+
+	// Get correct order
+	orderedNames, err := graph.TopologicalSort()
+	if err != nil {
+		return fmt.Errorf("failed to resolve dependencies: %v", err)
+	}
+
+	// Create ordered seeder list
+	orderedSeeders := make([]Seeder, 0, len(orderedNames))
+	seederMap := make(map[string]Seeder)
 	for _, s := range pending {
-		log.Println("🌱 Seeding:", s.Name)
-		if err := s.Run(conn.DB); err != nil {
+		seederMap[s.Name] = s
+	}
+	for _, name := range orderedNames {
+		orderedSeeders = append(orderedSeeders, seederMap[name])
+	}
+
+	// Run seeders in order with new batch
+	newBatch := time.Now().Unix()
+	log.Printf("🚀 Running %d seeders in dependency order on connection %s\n", len(orderedSeeders), connectionName)
+
+	for _, s := range orderedSeeders {
+		s.Batch = newBatch
+
+		// Show dependency info
+		if len(s.DependsOn) > 0 {
+			log.Printf("🌱 Seeding: %s (depends on: %v)", s.Name, s.DependsOn)
+		} else {
+			log.Printf("🌱 Seeding: %s", s.Name)
+		}
+
+		// Run with or without transaction
+		if err := runSeederWithTransaction(s, conn.DB, connectionName); err != nil {
 			return fmt.Errorf("failed to run seeder %s: %w", s.Name, err)
 		}
-		if err := conn.DB.
-			Exec("INSERT INTO seeds (filename, batch) VALUES (?, ?)", s.Name, s.Batch).
-			Error; err != nil {
-			return err
-		}
 	}
-	log.Printf("✅ Seed batch %d applied on connection %s.\n", newBatch, connectionName)
+
+	log.Printf("✅ Seed batch %d applied successfully on connection %s\n", newBatch, connectionName)
 	return nil
 }
+
 // RollbackSeedBatch rolls back a specific seed batch on default connection
 func RollbackSeedBatch(batch int64) error {
 	return RollbackSeedBatchOnConnection(batch, "")
@@ -173,7 +213,7 @@ func RollbackSeedBatchOnConnection(batch int64, connectionName string) error {
 
 	var rows []struct{ Filename string }
 	if err := conn.DB.
-		Raw("SELECT filename FROM seeds WHERE batch = ? ORDER BY id DESC", batch).
+		Raw("SELECT filename FROM seeds WHERE connection_name = ? AND batch = ? ORDER BY id DESC", connectionName, batch).
 		Scan(&rows).Error; err != nil {
 		return err
 	}
@@ -195,7 +235,7 @@ func RollbackSeedBatchOnConnection(batch int64, connectionName string) error {
 			}
 		}
 		if err := conn.DB.
-			Exec("DELETE FROM seeds WHERE filename = ? AND batch = ?", r.Filename, batch).
+			Exec("DELETE FROM seeds WHERE connection_name = ? AND filename = ? AND batch = ?", connectionName, r.Filename, batch).
 			Error; err != nil {
 			return err
 		}
@@ -279,7 +319,7 @@ func RunSpecificSeederOnConnection(name, connectionName string) error {
 	}
 
 	if err := conn.DB.
-		Exec("INSERT INTO seeds (filename, batch) VALUES (?, ?)", name, newBatch).
+		Exec("INSERT INTO seeds (connection_name, filename, batch) VALUES (?, ?, ?)", connectionName, name, newBatch).
 		Error; err != nil {
 		return err
 	}
