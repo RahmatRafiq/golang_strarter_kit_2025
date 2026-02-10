@@ -95,6 +95,37 @@ func Init() {
 	r.Run(":" + appPort)
 }
 
+func isWeakSecret(secret string) bool {
+	// Check for common weak patterns
+	weakPatterns := []string{
+		"secret", "password", "test", "demo", "admin",
+		"12345", "qwerty", "abc123", "changeme",
+	}
+
+	lowerSecret := strings.ToLower(secret)
+	for _, pattern := range weakPatterns {
+		if strings.Contains(lowerSecret, pattern) {
+			return true
+		}
+	}
+
+	// Check if it's too simple (all same character, sequential, etc)
+	if len(secret) > 0 {
+		allSame := true
+		for i := 1; i < len(secret); i++ {
+			if secret[i] != secret[0] {
+				allSame = false
+				break
+			}
+		}
+		if allSame {
+			return true
+		}
+	}
+
+	return false
+}
+
 func validateRequiredEnvVars() {
 	required := map[string]string{
 		"DB_CONNECTION":  "Database connection type",
@@ -112,6 +143,15 @@ func validateRequiredEnvVars() {
 	jwtSecret := os.Getenv("JWT_SECRET_KEY")
 	if jwtSecret == "your_jwt_secret_key_here" || jwtSecret == "CHANGE_THIS_TO_RANDOM_STRING_AT_LEAST_32_CHARS" {
 		log.Fatal("❌ SECURITY ERROR: JWT_SECRET_KEY is still using placeholder value. Please generate a strong secret key using: openssl rand -base64 48")
+	}
+
+	if len(jwtSecret) < 32 {
+		log.Fatal("❌ SECURITY ERROR: JWT_SECRET_KEY must be at least 32 characters long for adequate security")
+	}
+
+	// Warn if key appears weak
+	if isWeakSecret(jwtSecret) {
+		log.Println("⚠️  WARNING: JWT_SECRET_KEY appears to be weak. Consider using: openssl rand -base64 48")
 	}
 
 	if len(missing) > 0 {
