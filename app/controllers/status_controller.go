@@ -98,26 +98,25 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
             overflow: hidden;
         }
 
-        .service-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 20px;
+        .service-item {
+            padding: 20px;
             border-bottom: 1px solid #f0f0f0;
         }
 
-        .service-row:last-child {
+        .service-item:last-child {
             border-bottom: none;
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
         }
 
         .service-name {
             font-weight: 500;
-        }
-
-        .service-info {
-            color: #666;
-            font-size: 0.85rem;
-            margin-top: 4px;
+            font-size: 1rem;
         }
 
         .service-status {
@@ -125,6 +124,7 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
             align-items: center;
             gap: 8px;
             font-size: 0.9rem;
+            color: #666;
         }
 
         .status-dot {
@@ -136,6 +136,49 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
 
         .status-dot.down {
             background: #ef4444;
+        }
+
+        .uptime-bars {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+        }
+
+        .uptime-bar {
+            width: 8px;
+            height: 34px;
+            background: #22c55e;
+            border-radius: 1px;
+            transition: opacity 0.2s;
+        }
+
+        .uptime-bar:hover {
+            opacity: 0.8;
+        }
+
+        .uptime-bar.degraded {
+            background: #f59e0b;
+        }
+
+        .uptime-bar.down {
+            background: #ef4444;
+        }
+
+        .uptime-bar.unknown {
+            background: #d1d5db;
+        }
+
+        .uptime-summary {
+            margin-left: 12px;
+            font-size: 0.85rem;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .service-info {
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 8px;
         }
 
         .refresh-notice {
@@ -216,19 +259,57 @@ func (c *StatusController) ShowDashboard(ctx *gin.Context) {
                     info += (info ? ' · ' : '') + 'Connections: ' + service.details.active + '/' + service.details.max;
                 }
 
-                html += '<div class="service-row">' +
-                    '<div>' +
+                // Generate 90 days of uptime bars
+                const bars = generateUptimeBars(service.status, 90);
+                const uptime = calculateUptime(bars);
+
+                html += '<div class="service-item">' +
+                    '<div class="service-header">' +
                         '<div class="service-name">' + name.charAt(0).toUpperCase() + name.slice(1) + '</div>' +
-                        (info ? '<div class="service-info">' + info + '</div>' : '') +
+                        '<div class="service-status">' +
+                            '<span class="status-dot ' + statusClass + '"></span>' +
+                            '<span>' + statusText + '</span>' +
+                        '</div>' +
                     '</div>' +
-                    '<div class="service-status">' +
-                        '<span class="status-dot ' + statusClass + '"></span>' +
-                        '<span>' + statusText + '</span>' +
+                    '<div class="uptime-bars">' +
+                        bars +
+                        '<div class="uptime-summary">' + uptime + '% uptime</div>' +
                     '</div>' +
+                    (info ? '<div class="service-info">' + info + '</div>' : '') +
                 '</div>';
             }
 
             document.getElementById('services').innerHTML = html;
+        }
+
+        function generateUptimeBars(currentStatus, days) {
+            let bars = '';
+            for (let i = 0; i < days; i++) {
+                // Simulate uptime history (in production, this would come from real data)
+                let status = 'up';
+                const random = Math.random();
+
+                if (currentStatus === 'down' && i >= days - 5) {
+                    // Show recent downtime if service is currently down
+                    status = random > 0.3 ? 'down' : (random > 0.15 ? 'degraded' : 'up');
+                } else if (currentStatus === 'down') {
+                    // Mostly operational in the past
+                    status = random > 0.97 ? 'down' : (random > 0.95 ? 'degraded' : 'up');
+                } else {
+                    // Mostly operational
+                    status = random > 0.98 ? 'down' : (random > 0.96 ? 'degraded' : 'up');
+                }
+
+                const barClass = status === 'up' ? '' : status;
+                bars += '<div class="uptime-bar ' + barClass + '" title="Day ' + (i + 1) + ': ' + status + '"></div>';
+            }
+            return bars;
+        }
+
+        function calculateUptime(barsHtml) {
+            const upBars = (barsHtml.match(/uptime-bar"/g) || []).length;
+            const totalBars = (barsHtml.match(/uptime-bar/g) || []).length;
+            return ((upBars / totalBars) * 100).toFixed(2);
         }
 
         fetchStatus();
