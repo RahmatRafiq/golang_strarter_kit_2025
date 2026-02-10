@@ -21,6 +21,10 @@ func RegisterRoutes(route *gin.Engine) {
 	route.GET("/health", healthController.GetHealth)
 	route.GET("/health/detailed", healthController.GetDetailedHealth)
 
+	// Status dashboard (HTML)
+	statusController := controllers.NewStatusController()
+	route.GET("/status", statusController.ShowDashboard)
+
 	// Apply observability middleware (must be first for accurate metrics)
 	route.Use(middleware.ZerologMiddleware())  // Structured logging
 	route.Use(middleware.MetricsMiddleware())  // Prometheus metrics
