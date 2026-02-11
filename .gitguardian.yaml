@@ -11,7 +11,7 @@ paths-ignore:
 # Specific secrets to ignore (by SHA)
 matches-ignore:
   - name: Test Database Password in setup_test_db.sh
-    match: Duriang_1  # Test password - already rotated
+    match: [REDACTED]  # Test password - already rotated
   - name: Test Database Password in .env.testing
     match: your_mysql_password_here  # Placeholder only
 
