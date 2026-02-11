@@ -20,6 +20,8 @@ func RegisterV1Routes(
 	authService *services.AuthService,
 	passwordResetService *services.PasswordResetService,
 	emailVerificationService *services.EmailVerificationService,
+	oauthService *services.OAuthService,
+	storageService *services.StorageService,
 ) {
 	// API v1 group
 	v1 := route.Group("/api/v1")
@@ -35,11 +37,20 @@ func RegisterV1Routes(
 	authPublicRoutes := v1.Group("/auth")
 	authPublicRoutes.Use(middleware.AuthRateLimiter())
 	{
-		authPublicRoutes.POST("/login", authController.Login)                             // Changed from PUT to POST (RESTful)
-		authPublicRoutes.POST("/refresh", authController.Refresh)                         // Refresh token
-		authPublicRoutes.POST("/forgot-password", passwordResetController.ForgotPassword) // Request password reset
-		authPublicRoutes.POST("/reset-password", passwordResetController.ResetPassword)   // Reset password with token
-		authPublicRoutes.POST("/verify-email", emailVerificationController.VerifyEmail)   // Verify email with token
+		authPublicRoutes.POST("/login", authController.Login)
+		authPublicRoutes.POST("/refresh", authController.Refresh)
+		authPublicRoutes.POST("/forgot-password", passwordResetController.ForgotPassword)
+		authPublicRoutes.POST("/reset-password", passwordResetController.ResetPassword)
+		authPublicRoutes.POST("/verify-email", emailVerificationController.VerifyEmail)
+	}
+
+	oauthController := controllers.NewOAuthController(oauthService)
+	oauthRoutes := v1.Group("/auth")
+	{
+		oauthRoutes.GET("/google", oauthController.GoogleLogin)
+		oauthRoutes.GET("/google/callback", oauthController.GoogleCallback)
+		oauthRoutes.GET("/github", oauthController.GitHubLogin)
+		oauthRoutes.GET("/github/callback", oauthController.GitHubCallback)
 	}
 
 	// ====================
@@ -124,5 +135,17 @@ func RegisterV1Routes(
 		databaseRoutes.GET("/status", databaseController.GetConnectionStatus)
 		databaseRoutes.GET("/health", databaseController.HealthCheck)
 		databaseRoutes.GET("/test", databaseController.TestConnection)
+	}
+
+	// Storage routes (file upload/download)
+	if storageService != nil {
+		storageController := controllers.NewStorageController(storageService)
+		storageRoutes := v1.Group("/storage")
+		storageRoutes.Use(middleware.AuthMiddleware())
+		{
+			storageRoutes.POST("/upload", storageController.UploadFile)
+			storageRoutes.GET("/url/:filename", storageController.GetFileURL)
+			storageRoutes.DELETE("/:filename", storageController.DeleteFile)
+		}
 	}
 }

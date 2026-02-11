@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog/log"
 )
 
 func RegisterRoutes(route *gin.Engine) {
@@ -54,6 +55,14 @@ func RegisterRoutes(route *gin.Engine) {
 	authService := services.NewAuthService(authRepo)
 	passwordResetService := services.NewPasswordResetService(passwordResetRepo, userRepo)
 	emailVerificationService := services.NewEmailVerificationService(emailVerificationRepo, userRepo)
+	oauthService := services.NewOAuthService(userRepo)
+
+	var storageService *services.StorageService
+	var storageErr error
+	storageService, storageErr = services.NewStorageService()
+	if storageErr != nil {
+		log.Warn().Err(storageErr).Msg("Storage service not available")
+	}
 
 	// ========================================
 	// Demo/Testing Routes (PostgreSQL Example)
@@ -81,7 +90,7 @@ func RegisterRoutes(route *gin.Engine) {
 	// ========================================
 	// API v1 Routes (Recommended)
 	// ========================================
-	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService, passwordResetService, emailVerificationService)
+	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService, passwordResetService, emailVerificationService, oauthService, storageService)
 
 	// ========================================
 	// Legacy Routes (Deprecated - For Backward Compatibility)

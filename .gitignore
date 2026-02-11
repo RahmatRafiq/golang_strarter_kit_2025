@@ -57,4 +57,4 @@ test-report.json
 # To regenerate: swag init
 
 # Air tmp files
-.air/
+.air/golang_starter_kit_2025

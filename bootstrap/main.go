@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/middleware"
 	"golang_starter_kit_2025/app/services"
 	"golang_starter_kit_2025/app/workers"
 	"golang_starter_kit_2025/app/workers/tasks"
@@ -241,6 +242,25 @@ func validateRequiredEnvVars() {
 
 func Router() *gin.Engine {
 	route := gin.Default()
+
+	// Initialize tracing service if enabled
+	tracingConfig := config.GetTracingConfig()
+	if tracingConfig.Enabled {
+		tracingService, err := services.NewTracingService()
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to initialize tracing service")
+		} else {
+			log.Info().Str("service", tracingConfig.ServiceName).Msg("Tracing service initialized")
+			defer func() {
+				if err := tracingService.Shutdown(context.Background()); err != nil {
+					log.Error().Err(err).Msg("Failed to shutdown tracing service")
+				}
+			}()
+
+			// Add tracing middleware
+			route.Use(middleware.TracingMiddleware())
+		}
+	}
 
 	// Gzip compression middleware (5-10x smaller responses)
 	route.Use(gzip.Gzip(gzip.DefaultCompression))
