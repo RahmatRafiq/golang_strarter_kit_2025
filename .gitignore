@@ -53,10 +53,8 @@ coverage.html
 test-report.json
 .trivycache/
 
-# Swagger generated docs (regenerate dengan swag init)
-docs/docs.go
-docs/swagger.json
-docs/swagger.yaml
+# Swagger generated docs (committed to repo for CI/CD)
+# To regenerate: swag init
 
 # Air tmp files
 .air/
