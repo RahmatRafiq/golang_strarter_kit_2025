@@ -1,9 +1,10 @@
 package controllers
 
 import (
+	"net/http"
+
 	"golang_starter_kit_2025/app/requests"
 	"golang_starter_kit_2025/app/services"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"

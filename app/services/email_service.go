@@ -32,10 +32,10 @@ type EmailData struct {
 	AppName     string
 	Subject     string
 	Body        template.HTML
-	Year        int
 	Username    string
 	VerifyURL   string
 	ResetURL    string
+	Year        int
 	ExpiryHours int
 }
 
@@ -146,7 +146,7 @@ func (s *EmailService) renderTemplate(templateName, subject string, data map[str
 	baseData := EmailData{
 		AppName: helpers.GetEnv("APP_NAME", "Application"),
 		Subject: subject,
-		Body:    template.HTML(contentBuf.String()),
+		Body:    template.HTML(contentBuf.String()), // #nosec G203 - Content is from our own templates, not user input
 		Year:    time.Now().Year(),
 	}
 

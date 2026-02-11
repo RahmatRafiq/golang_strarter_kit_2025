@@ -4,9 +4,9 @@ type StorageConfig struct {
 	Endpoint        string
 	AccessKeyID     string
 	SecretAccessKey string
-	UseSSL          bool
 	BucketName      string
 	Region          string
+	UseSSL          bool
 }
 
 func GetStorageConfig() *StorageConfig {

@@ -1,10 +1,10 @@
 package config
 
 type TracingConfig struct {
-	Enabled     bool
 	ServiceName string
 	JaegerURL   string
 	Environment string
+	Enabled     bool
 }
 
 func GetTracingConfig() *TracingConfig {

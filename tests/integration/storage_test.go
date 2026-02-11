@@ -97,7 +97,7 @@ func TestStorageService_BucketConfiguration_Integration(t *testing.T) {
 }
 
 // NOTE: Full integration tests for file operations (upload/download/delete) require:
-// 1. MinIO server running on localhost:9000 
+// 1. MinIO server running on localhost:9000
 // 2. Valid credentials (minioadmin/minioadmin by default)
 // 3. Network connectivity
 //

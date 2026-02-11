@@ -8,17 +8,17 @@ import (
 // EmailConfig holds the SMTP configuration
 type EmailConfig struct {
 	SMTPHost     string
-	SMTPPort     int
 	SMTPUsername string
 	SMTPPassword string
 	FromAddress  string
 	FromName     string
+	SMTPPort     int
 }
 
 // GetEmailConfig returns email configuration from environment variables
 func GetEmailConfig() *EmailConfig {
-	port, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
-	if port == 0 {
+	port, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
+	if err != nil || port == 0 {
 		port = 587 // Default SMTP port for TLS
 	}
 

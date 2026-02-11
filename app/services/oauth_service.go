@@ -22,17 +22,17 @@ type OAuthService struct {
 type GoogleUserInfo struct {
 	ID            string `json:"id"`
 	Email         string `json:"email"`
-	VerifiedEmail bool   `json:"verified_email"`
 	Name          string `json:"name"`
 	Picture       string `json:"picture"`
+	VerifiedEmail bool   `json:"verified_email"`
 }
 
 type GitHubUserInfo struct {
-	ID        int64  `json:"id"`
 	Login     string `json:"login"`
 	Email     string `json:"email"`
 	Name      string `json:"name"`
 	AvatarURL string `json:"avatar_url"`
+	ID        int64  `json:"id"`
 }
 
 func NewOAuthService(userRepo interfaces.UserRepositoryInterface) *OAuthService {
@@ -63,7 +63,11 @@ func (s *OAuthService) HandleGoogleCallback(code string) (*models.User, string, 
 	}
 	defer resp.Body.Close()
 
-	data, _ := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
 	var userInfo GoogleUserInfo
 	if err := json.Unmarshal(data, &userInfo); err != nil {
 		return nil, "", fmt.Errorf("failed to parse user info: %w", err)
@@ -85,7 +89,11 @@ func (s *OAuthService) HandleGitHubCallback(code string) (*models.User, string, 
 	}
 	defer resp.Body.Close()
 
-	data, _ := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
 	var userInfo GitHubUserInfo
 	if err := json.Unmarshal(data, &userInfo); err != nil {
 		return nil, "", fmt.Errorf("failed to parse user info: %w", err)
@@ -105,13 +113,15 @@ func (s *OAuthService) findOrCreateUser(email, name, provider string) (*models.U
 		now := time.Now()
 		if user.EmailVerifiedAt == nil {
 			user.EmailVerifiedAt = &now
-			_ = s.userRepo.Update(user)
+			if updateErr := s.userRepo.Update(user); updateErr != nil {
+				log.Warn().Err(updateErr).Msg("Failed to update email verification")
+			}
 		}
 
 		jwtService := &JwtService{}
-		tokenPair, err := jwtService.GenerateTokenPair(user.ID)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to generate token: %w", err)
+		tokenPair, tokenErr := jwtService.GenerateTokenPair(user.ID)
+		if tokenErr != nil {
+			return nil, "", fmt.Errorf("failed to generate token: %w", tokenErr)
 		}
 
 		log.Info().Str("email", email).Str("provider", provider).Msg("OAuth login successful")
@@ -131,14 +141,14 @@ func (s *OAuthService) findOrCreateUser(email, name, provider string) (*models.U
 		EmailVerifiedAt: &now,
 	}
 
-	if err := s.userRepo.Create(user); err != nil {
-		return nil, "", fmt.Errorf("failed to create user: %w", err)
+	if createErr := s.userRepo.Create(user); createErr != nil {
+		return nil, "", fmt.Errorf("failed to create user: %w", createErr)
 	}
 
 	jwtService := &JwtService{}
-	tokenPair, err := jwtService.GenerateTokenPair(user.ID)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to generate token: %w", err)
+	tokenPair, tokenErr := jwtService.GenerateTokenPair(user.ID)
+	if tokenErr != nil {
+		return nil, "", fmt.Errorf("failed to generate token: %w", tokenErr)
 	}
 
 	log.Info().Str("email", email).Str("provider", provider).Msg("OAuth user created")

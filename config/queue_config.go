@@ -9,22 +9,22 @@ import (
 
 // QueueConfig holds the configuration for job queue system
 type QueueConfig struct {
+	Queues        map[string]int
 	RedisAddr     string
 	RedisPassword string
 	RedisDB       int
 	Concurrency   int
-	Queues        map[string]int
 }
 
 // GetQueueConfig returns queue configuration from environment variables
 func GetQueueConfig() *QueueConfig {
-	redisDB, _ := strconv.Atoi(os.Getenv("QUEUE_REDIS_DB"))
-	if redisDB == 0 {
+	redisDB, err := strconv.Atoi(os.Getenv("QUEUE_REDIS_DB"))
+	if err != nil || redisDB == 0 {
 		redisDB = 1 // Default to DB 1 for queue (separate from cache)
 	}
 
-	concurrency, _ := strconv.Atoi(os.Getenv("QUEUE_CONCURRENCY"))
-	if concurrency == 0 {
+	concurrency, err := strconv.Atoi(os.Getenv("QUEUE_CONCURRENCY"))
+	if err != nil || concurrency == 0 {
 		concurrency = 10 // Default 10 concurrent workers
 	}
 

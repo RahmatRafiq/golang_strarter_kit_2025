@@ -55,7 +55,10 @@ func (c *StorageController) UploadFile(ctx *gin.Context) {
 		return
 	}
 
-	url, _ := c.storageService.GetFileURL(filename, 24*time.Hour)
+	url, err := c.storageService.GetFileURL(filename, 24*time.Hour)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to generate file URL")
+	}
 
 	item := any(map[string]interface{}{"filename": filename, "url": url})
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{

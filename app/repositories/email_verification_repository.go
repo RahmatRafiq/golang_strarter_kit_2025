@@ -1,8 +1,9 @@
 package repositories
 
 import (
-	"golang_starter_kit_2025/app/models"
 	"time"
+
+	"golang_starter_kit_2025/app/models"
 
 	"gorm.io/gorm"
 )

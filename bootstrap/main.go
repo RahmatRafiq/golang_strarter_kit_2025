@@ -141,8 +141,9 @@ func Init() {
 	helpers.PrintServerStartupInfo()
 
 	srv := &http.Server{
-		Addr:    ":" + appPort,
-		Handler: r,
+		Addr:              ":" + appPort,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	quit := make(chan os.Signal, 1)

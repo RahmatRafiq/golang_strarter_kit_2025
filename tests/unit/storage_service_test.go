@@ -64,7 +64,7 @@ func TestStorageConfig_Unit(t *testing.T) {
 			t.Error("region should have default value")
 		}
 
-		t.Logf("Configuration loaded: Endpoint=%s, Bucket=%s, Region=%s", 
+		t.Logf("Configuration loaded: Endpoint=%s, Bucket=%s, Region=%s",
 			cfg.Endpoint, cfg.BucketName, cfg.Region)
 	})
 

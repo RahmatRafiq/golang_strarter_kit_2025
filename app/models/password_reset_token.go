@@ -4,12 +4,12 @@ import "time"
 
 // PasswordResetToken represents a password reset token record
 type PasswordResetToken struct {
-	ID        uint       `gorm:"primaryKey" json:"id"`
+	UsedAt    *time.Time `gorm:"index" json:"used_at,omitempty"`
+	ExpiresAt time.Time  `gorm:"not null;index" json:"expires_at"`
+	CreatedAt time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	Email     string     `gorm:"size:255;not null;index" json:"email"`
 	Token     string     `gorm:"size:255;not null;uniqueIndex" json:"token"`
-	ExpiresAt time.Time  `gorm:"not null;index" json:"expires_at"`
-	UsedAt    *time.Time `gorm:"index" json:"used_at,omitempty"`
-	CreatedAt time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	ID        uint       `gorm:"primaryKey" json:"id"`
 }
 
 // TableName specifies the table name for GORM

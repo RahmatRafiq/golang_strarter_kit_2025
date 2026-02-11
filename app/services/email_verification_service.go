@@ -86,7 +86,9 @@ func (s *EmailVerificationService) SendVerificationEmail(userID uint) error {
 
 	if s.emailService != nil && s.emailService.config.IsConfigured() {
 		go func() {
-			_ = s.emailService.SendVerificationEmail(user.Email, user.Username, verifyURL, expiryHours)
+			if err := s.emailService.SendVerificationEmail(user.Email, user.Username, verifyURL, expiryHours); err != nil {
+				log.Error().Err(err).Str("email", user.Email).Msg("Failed to send verification email")
+			}
 		}()
 	}
 

@@ -3,7 +3,9 @@ package controllers
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"net/http"
+	"time"
 
 	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/services"
@@ -35,7 +37,14 @@ func (c *OAuthController) GoogleLogin(ctx *gin.Context) {
 
 func (c *OAuthController) GoogleCallback(ctx *gin.Context) {
 	state := ctx.Query("state")
-	cookie, _ := ctx.Cookie("oauth_state")
+	cookie, err := ctx.Cookie("oauth_state")
+	if err != nil {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "Invalid state parameter",
+			Errors:  map[string]string{"state": "OAuth state cookie not found"},
+		}, http.StatusBadRequest)
+		return
+	}
 
 	if state != cookie {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
@@ -78,7 +87,14 @@ func (c *OAuthController) GitHubLogin(ctx *gin.Context) {
 
 func (c *OAuthController) GitHubCallback(ctx *gin.Context) {
 	state := ctx.Query("state")
-	cookie, _ := ctx.Cookie("oauth_state")
+	cookie, err := ctx.Cookie("oauth_state")
+	if err != nil {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "Invalid state parameter",
+			Errors:  map[string]string{"state": "OAuth state cookie not found"},
+		}, http.StatusBadRequest)
+		return
+	}
 
 	if state != cookie {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
@@ -108,6 +124,10 @@ func (c *OAuthController) GitHubCallback(ctx *gin.Context) {
 
 func generateState() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		log.Error().Err(err).Msg("Failed to generate random state")
+		// Return a fallback using timestamp
+		return hex.EncodeToString([]byte(fmt.Sprintf("%d", time.Now().UnixNano())))
+	}
 	return hex.EncodeToString(b)
 }

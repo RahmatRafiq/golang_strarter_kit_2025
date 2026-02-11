@@ -105,7 +105,9 @@ func (s *PasswordResetService) RequestPasswordReset(email string) error {
 	// Also send via email service directly as fallback
 	if s.emailService != nil && s.emailService.config.IsConfigured() {
 		go func() {
-			_ = s.emailService.SendPasswordResetEmail(email, user.Username, resetURL, expiryHours)
+			if err := s.emailService.SendPasswordResetEmail(email, user.Username, resetURL, expiryHours); err != nil {
+				log.Error().Err(err).Str("email", email).Msg("Failed to send password reset email")
+			}
 		}()
 	}
 
