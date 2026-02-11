@@ -12,8 +12,8 @@ func GetFileURL(key string, path string) string {
 	expires := GetEnvInt("IMAGE_EXPIRE_MINUTES", 2)
 	expiredAt := time.Now().Add(time.Minute * time.Duration(expires)).Unix()
 	signature := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"key":       key,
-		"path":      path,
+		"key":        key,
+		"path":       path,
 		"expired_at": expiredAt,
 	})
 	token, _ := signature.SignedString(jwtKey)

@@ -73,7 +73,7 @@ func MetricsMiddleware() gin.HandlerFunc {
 		// Record metrics
 		httpRequestsTotal.WithLabelValues(method, path, status).Inc()
 		httpRequestDuration.WithLabelValues(method, path).Observe(duration)
-		
+
 		if responseSize > 0 {
 			httpResponseSize.WithLabelValues(method, path).Observe(responseSize)
 		}
