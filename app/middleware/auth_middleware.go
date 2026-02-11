@@ -16,8 +16,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var JwtKey = []byte("your_secret_key")
-
 var jwtService services.JwtService
 
 func AuthMiddleware() gin.HandlerFunc {

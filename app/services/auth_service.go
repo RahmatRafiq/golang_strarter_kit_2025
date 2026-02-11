@@ -13,7 +13,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
@@ -286,9 +285,4 @@ func (auth *AuthService) RefreshToken(refreshTokenString string) (*casts.Token, 
 		ExpiresIn:    tokenPair.ExpiresIn,
 		TokenType:    tokenPair.TokenType,
 	}, nil
-}
-
-func CheckPasswordHash(passwordOrPin, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(passwordOrPin))
-	return err == nil
 }
