@@ -26,7 +26,7 @@ func GenerateSignedURL(path string) string {
 }
 
 func generateHMACSignature(data string, secret string) string {
-    h := hmac.New(sha256.New, []byte(secret))
-    h.Write([]byte(data))
-    return hex.EncodeToString(h.Sum(nil))
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(data))
+	return hex.EncodeToString(h.Sum(nil))
 }

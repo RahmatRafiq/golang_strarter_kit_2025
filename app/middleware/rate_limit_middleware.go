@@ -74,7 +74,7 @@ func UserRateLimiter() gin.HandlerFunc {
 		res, err := limiterInstance.Get(c.Request.Context(), key)
 		if err != nil {
 			c.JSON(500, gin.H{
-				"error": "rate limit error",
+				"error":   "rate limit error",
 				"message": err.Error(),
 			})
 			c.Abort()
@@ -92,10 +92,10 @@ func UserRateLimiter() gin.HandlerFunc {
 			c.Header("Retry-After", strconv.FormatInt(int64(retryAfter.Seconds()), 10))
 
 			c.JSON(429, gin.H{
-				"error": "rate limit exceeded",
-				"message": fmt.Sprintf("Too many requests. Please try again in %v", retryAfter.Round(time.Second)),
+				"error":       "rate limit exceeded",
+				"message":     fmt.Sprintf("Too many requests. Please try again in %v", retryAfter.Round(time.Second)),
 				"retry_after": res.Reset,
-				"limit": res.Limit,
+				"limit":       res.Limit,
 			})
 			c.Abort()
 			return

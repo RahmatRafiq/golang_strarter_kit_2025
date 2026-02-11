@@ -53,8 +53,8 @@ func RegisterV1Routes(
 	{
 		userRoutes.GET("", userController.List)
 		userRoutes.GET("/:id", userController.Get)
-		userRoutes.POST("", userController.Put)         // Changed from PUT to POST for create
-		userRoutes.PUT("/:id", userController.Put)      // PUT for update
+		userRoutes.POST("", userController.Put)    // Changed from PUT to POST for create
+		userRoutes.PUT("/:id", userController.Put) // PUT for update
 		userRoutes.DELETE("/:id", userController.Delete)
 		userRoutes.POST("/:id/roles", userController.AssignRoles)
 		userRoutes.GET("/:id/roles", userController.GetRoles)
@@ -66,8 +66,8 @@ func RegisterV1Routes(
 	roleRoutes.Use(middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
 		roleRoutes.GET("", roleController.List)
-		roleRoutes.POST("", roleController.Put)         // Changed from PUT to POST for create
-		roleRoutes.PUT("/:id", roleController.Put)      // PUT for update
+		roleRoutes.POST("", roleController.Put)    // Changed from PUT to POST for create
+		roleRoutes.PUT("/:id", roleController.Put) // PUT for update
 		roleRoutes.DELETE("/:id", roleController.Delete)
 		roleRoutes.POST("/:id/permissions", roleController.AssignPermissions)
 		roleRoutes.GET("/:id/permissions", roleController.GetPermissions)
@@ -79,8 +79,8 @@ func RegisterV1Routes(
 	permissionRoutes.Use(middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
 		permissionRoutes.GET("", permissionController.List)
-		permissionRoutes.POST("", permissionController.Put)         // Changed from PUT to POST for create
-		permissionRoutes.PUT("/:id", permissionController.Put)      // PUT for update
+		permissionRoutes.POST("", permissionController.Put)    // Changed from PUT to POST for create
+		permissionRoutes.PUT("/:id", permissionController.Put) // PUT for update
 		permissionRoutes.DELETE("/:id", permissionController.Delete)
 	}
 
@@ -91,8 +91,8 @@ func RegisterV1Routes(
 	{
 		productRoutes.GET("", productController.GetAll)
 		productRoutes.GET("/:id", productController.GetByID)
-		productRoutes.POST("", productController.Put)         // Changed from PUT to POST for create
-		productRoutes.PUT("/:id", productController.Put)      // PUT for update
+		productRoutes.POST("", productController.Put)    // Changed from PUT to POST for create
+		productRoutes.PUT("/:id", productController.Put) // PUT for update
 		productRoutes.DELETE("/:id", productController.Delete)
 	}
 
@@ -103,8 +103,8 @@ func RegisterV1Routes(
 	{
 		categoryRoutes.GET("", categoryController.List)
 		categoryRoutes.GET("/:id", categoryController.Get)
-		categoryRoutes.POST("", categoryController.Put)         // Changed from PUT to POST for create
-		categoryRoutes.PUT("/:id", categoryController.Put)      // PUT for update
+		categoryRoutes.POST("", categoryController.Put)    // Changed from PUT to POST for create
+		categoryRoutes.PUT("/:id", categoryController.Put) // PUT for update
 		categoryRoutes.DELETE("/:id", categoryController.Delete)
 	}
 
