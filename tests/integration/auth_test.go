@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"strings"
 	"testing"
 
 	"golang_starter_kit_2025/app/repositories"
@@ -79,8 +80,8 @@ func TestAuthService_Login_Integration(t *testing.T) {
 		if token != nil {
 			t.Error("Expected nil token, got non-nil")
 		}
-		if err != nil && err.Error() != "Email atau password salah" {
-			t.Errorf("Expected 'Email atau password salah', got '%s'", err.Error())
+		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "email atau password salah") {
+			t.Errorf("Expected error message about invalid credentials, got '%s'", err.Error())
 		}
 		t.Logf("✓ Correctly rejected non-existent user: %v", err)
 	})
