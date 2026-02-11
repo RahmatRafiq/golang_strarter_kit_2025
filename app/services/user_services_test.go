@@ -105,7 +105,7 @@ func TestUserService_Find(t *testing.T) {
 			FindByID(uint(1)).
 			Return(expectedUser, nil)
 
-		user, err := userService.Find("1")
+		user, err := userService.FindByID(1)
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
@@ -118,20 +118,12 @@ func TestUserService_Find(t *testing.T) {
 		}
 	})
 
-	t.Run("error - invalid id format", func(t *testing.T) {
-		_, err := userService.Find("invalid")
-
-		if err == nil {
-			t.Error("expected error for invalid ID, got nil")
-		}
-	})
-
 	t.Run("error - user not found", func(t *testing.T) {
 		mockRepo.EXPECT().
 			FindByID(uint(999)).
 			Return(nil, errors.New("user not found"))
 
-		_, err := userService.Find("999")
+		_, err := userService.FindByID(999)
 
 		if err == nil {
 			t.Error("expected error, got nil")
@@ -151,18 +143,10 @@ func TestUserService_Delete(t *testing.T) {
 			Delete(uint(1)).
 			Return(nil)
 
-		err := userService.Delete("1")
+		err := userService.DeleteByID(1)
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
-		}
-	})
-
-	t.Run("error - invalid id format", func(t *testing.T) {
-		err := userService.Delete("invalid")
-
-		if err == nil {
-			t.Error("expected error for invalid ID, got nil")
 		}
 	})
 
@@ -173,7 +157,7 @@ func TestUserService_Delete(t *testing.T) {
 			Delete(uint(999)).
 			Return(expectedErr)
 
-		err := userService.Delete("999")
+		err := userService.DeleteByID(999)
 
 		if err == nil {
 			t.Error("expected error, got nil")
@@ -195,7 +179,7 @@ func TestUserService_AssignRolesToUser(t *testing.T) {
 			AssignRoles(uint(1), roleIDs).
 			Return(nil)
 
-		err := userService.AssignRolesToUser("1", roleIDs)
+		err := userService.AssignRoles(1, roleIDs)
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
@@ -205,7 +189,7 @@ func TestUserService_AssignRolesToUser(t *testing.T) {
 	t.Run("error - invalid user id", func(t *testing.T) {
 		roleIDs := []uint{1, 2}
 
-		err := userService.AssignRolesToUser("invalid", roleIDs)
+		err := userService.AssignRoles((0), roleIDs)
 
 		if err == nil {
 			t.Error("expected error for invalid ID, got nil")
@@ -220,7 +204,7 @@ func TestUserService_AssignRolesToUser(t *testing.T) {
 			AssignRoles(uint(1), roleIDs).
 			Return(expectedErr)
 
-		err := userService.AssignRolesToUser("1", roleIDs)
+		err := userService.AssignRoles((1), roleIDs)
 
 		if err == nil {
 			t.Error("expected error, got nil")
@@ -245,7 +229,7 @@ func TestUserService_GetRolesByUserID(t *testing.T) {
 			GetRoles(uint(1)).
 			Return(expectedRoles, nil)
 
-		roles, err := userService.GetRolesByUserID("1")
+		roles, err := userService.GetRoles((1))
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
@@ -256,7 +240,7 @@ func TestUserService_GetRolesByUserID(t *testing.T) {
 	})
 
 	t.Run("error - invalid user id", func(t *testing.T) {
-		_, err := userService.GetRolesByUserID("invalid")
+		_, err := userService.GetRoles((0))
 
 		if err == nil {
 			t.Error("expected error for invalid ID, got nil")
@@ -268,7 +252,7 @@ func TestUserService_GetRolesByUserID(t *testing.T) {
 			GetRoles(uint(999)).
 			Return(nil, errors.New("user not found"))
 
-		_, err := userService.GetRolesByUserID("999")
+		_, err := userService.GetRoles((999))
 
 		if err == nil {
 			t.Error("expected error, got nil")

@@ -1,8 +1,6 @@
 package services
 
 import (
-	"strconv"
-
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
 
@@ -77,73 +75,12 @@ func (s *RoleService) Update(role *models.Role) error {
 	return s.roleRepo.Update(role)
 }
 
-func (s *RoleService) Delete(id string) error {
-	roleID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Str("id", id).
-			Msg("Invalid role ID format for deletion")
-		return err
-	}
-
-	err = s.roleRepo.Delete(uint(roleID))
-	if err != nil {
-		log.Error().
-			Err(err).
-			Uint("role_id", uint(roleID)).
-			Msg("Failed to delete role")
-		return err
-	}
-
-	log.Info().
-		Uint("role_id", uint(roleID)).
-		Msg("Role deleted successfully")
-	return nil
-}
-
 func (s *RoleService) DeleteByID(id uint) error {
 	return s.roleRepo.Delete(id)
 }
 
-func (s *RoleService) AssignPermissionsToRole(roleID string, permissionIDs []uint) error {
-	roleIDNum, err := strconv.ParseUint(roleID, 10, 32)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Str("role_id", roleID).
-			Msg("Invalid role ID format for permission assignment")
-		return err
-	}
-
-	err = s.roleRepo.AssignPermissions(uint(roleIDNum), permissionIDs)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Uint("role_id", uint(roleIDNum)).
-			Interface("permission_ids", permissionIDs).
-			Msg("Failed to assign permissions to role")
-		return err
-	}
-
-	log.Info().
-		Uint("role_id", uint(roleIDNum)).
-		Interface("permission_ids", permissionIDs).
-		Msg("Permissions assigned to role successfully")
-	return nil
-}
-
 func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint) error {
 	return s.roleRepo.AssignPermissions(roleID, permissionIDs)
-}
-
-func (s *RoleService) GetPermissionsByRoleID(roleID string) ([]models.Permission, error) {
-	roleIDNum, err := strconv.ParseUint(roleID, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.roleRepo.GetPermissions(uint(roleIDNum))
 }
 
 func (s *RoleService) GetPermissions(roleID uint) ([]models.Permission, error) {

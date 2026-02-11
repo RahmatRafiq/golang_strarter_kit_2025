@@ -41,8 +41,11 @@ func (c *UserController) List(ctx *gin.Context) {
 // @Success	200	{object}	models.User
 // @Router		/users/{id} [get]
 func (c *UserController) Get(ctx *gin.Context) {
-	id := ctx.Param("id")
-	user, err := c.service.Find(id)
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	user, err := c.service.FindByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -79,8 +82,11 @@ func (c *UserController) Put(ctx *gin.Context) {
 // @Success	204	{string}	string	"User deleted"
 // @Router		/users/{id} [delete]
 func (c *UserController) Delete(ctx *gin.Context) {
-	id := ctx.Param("id")
-	if err := c.service.Delete(id); err != nil {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	if err := c.service.DeleteByID(id); err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -99,8 +105,11 @@ func (c *UserController) AssignRoles(ctx *gin.Context) {
 		return
 	}
 
-	userID := ctx.Param("id")
-	err := c.service.AssignRolesToUser(userID, req.Roles)
+	userID, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	err := c.service.AssignRoles(userID, req.Roles)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -109,8 +118,11 @@ func (c *UserController) AssignRoles(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Roles assigned to user"})
 }
 func (c *UserController) GetRoles(ctx *gin.Context) {
-	userID := ctx.Param("id")
-	roles, err := c.service.GetRolesByUserID(userID)
+	userID, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	roles, err := c.service.GetRoles(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
