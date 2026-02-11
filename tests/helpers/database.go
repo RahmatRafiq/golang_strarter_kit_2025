@@ -14,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -44,6 +45,9 @@ func SetupTestDB(t *testing.T) *TestDB {
 
 	// Setup database based on connection type
 	switch connection {
+	case "sqlite":
+		dbName = ":memory:"
+		db, err = setupSQLiteTestDB()
 	case "mysql":
 		dbName = os.Getenv("MYSQL_DB")
 		db, err = setupMySQLTestDB(dbName)
@@ -72,6 +76,45 @@ func SetupTestDB(t *testing.T) *TestDB {
 	RunMigrations(t, testDB)
 
 	return testDB
+}
+
+// setupSQLiteTestDB creates SQLite in-memory test database connection
+// Similar to Laravel's :memory: database for fast testing
+func setupSQLiteTestDB() (*gorm.DB, error) {
+	// Use shared cache mode for better concurrent access
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SQLite in-memory database: %w", err)
+	}
+
+	// Enable foreign keys and optimize for concurrent access
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database connection: %w", err)
+	}
+
+	// Enable WAL mode for better concurrent access
+	if _, err := sqlDB.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		return nil, fmt.Errorf("failed to set WAL mode: %w", err)
+	}
+
+	// Enable foreign keys
+	if _, err := sqlDB.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
+	}
+
+	// Set busy timeout to handle concurrent access (5 seconds)
+	if _, err := sqlDB.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		return nil, fmt.Errorf("failed to set busy timeout: %w", err)
+	}
+
+	// Set connection pool for concurrency
+	sqlDB.SetMaxOpenConns(1) // SQLite works best with 1 connection
+	sqlDB.SetMaxIdleConns(1)
+
+	return db, nil
 }
 
 // setupMySQLTestDB creates MySQL test database connection

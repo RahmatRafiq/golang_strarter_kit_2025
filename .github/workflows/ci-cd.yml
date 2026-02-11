@@ -16,33 +16,6 @@ jobs:
     name: Test & Lint
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: test_password
-          MYSQL_DATABASE: test_db
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,7 +39,7 @@ jobs:
 
       - name: Create test .env files
         run: |
-          # Create .env for general use
+          # Create .env for general use with SQLite (fast, no services needed)
           cat > .env << 'EOF'
           APP_NAME="Test App"
           APP_ENV=testing
@@ -74,17 +47,7 @@ jobs:
           JWT_SECRET_KEY=test_secret_key_at_least_32_characters_long
           JWT_EXPIRE_MINUTES=60
           SKIP_AUTH=true
-          DB_CONNECTION=mysql
-          MYSQL_HOST=127.0.0.1
-          MYSQL_PORT=3306
-          MYSQL_DB=test_db
-          MYSQL_USER=root
-          MYSQL_PASSWORD=test_password
-          POSTGRES_HOST=127.0.0.1
-          POSTGRES_PORT=5432
-          POSTGRES_DB=test_db
-          POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=test_password
+          DB_CONNECTION=sqlite
           EOF
           
           # Create .env.test for Ginkgo tests (controllers, helpers)

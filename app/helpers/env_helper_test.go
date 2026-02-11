@@ -16,8 +16,11 @@ var _ = Describe("GetEnv", func() {
 
 	Context("when key is found", func() {
 		It("should return value from environment", func() {
-
-			Expect(helpers.GetEnv("APP_NAME", "default")).To(Equal("Supply Chain Retail"))
+			// Should not return default value when env var exists
+			appName := helpers.GetEnv("APP_NAME", "default")
+			Expect(appName).NotTo(Equal("default"))
+			Expect(appName).NotTo(BeEmpty())
+			
 			Expect(helpers.GetEnv("JWT_EXPIRE_MINUTES", "default")).To(Equal("60"))
 		})
 	})

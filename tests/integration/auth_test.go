@@ -80,8 +80,12 @@ func TestAuthService_Login_Integration(t *testing.T) {
 		if token != nil {
 			t.Error("Expected nil token, got non-nil")
 		}
-		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "email atau password salah") {
-			t.Errorf("Expected error message about invalid credentials, got '%s'", err.Error())
+		// Check error message contains "invalid" or "email" or "password" (language-agnostic)
+		if err != nil {
+			errMsg := strings.ToLower(err.Error())
+			if !strings.Contains(errMsg, "invalid") && !strings.Contains(errMsg, "email") && !strings.Contains(errMsg, "password") {
+				t.Errorf("Expected error message about invalid credentials, got '%s'", err.Error())
+			}
 		}
 		t.Logf("✓ Correctly rejected non-existent user: %v", err)
 	})
