@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -14,8 +13,10 @@ import (
 	"golang_starter_kit_2025/routes"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/urfave/cli/v2"
@@ -24,8 +25,11 @@ import (
 func Init() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("No .env file found, using environment variables")
+		log.Info().Msg("No .env file found, using environment variables")
 	}
+
+	// Initialize structured logging
+	helpers.InitLogger()
 
 	validateRequiredEnvVars()
 
@@ -40,6 +44,12 @@ func Init() {
 
 	facades.ConnectDB()
 	defer facades.CloseDB()
+
+	// Initialize Redis (optional - continues even if Redis is unavailable)
+	if err := helpers.InitRedis(); err != nil {
+		log.Warn().Err(err).Msg("Redis not available, caching disabled")
+	}
+	defer helpers.CloseRedis()
 
 	app := &cli.App{
 		Name:  "Golang Starter Kit",
@@ -78,7 +88,7 @@ func Init() {
 
 	if len(os.Args) > 1 {
 		if err := app.Run(os.Args); err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("CLI command failed")
 		}
 		return
 	}
@@ -93,6 +103,37 @@ func Init() {
 	helpers.PrintServerStartupInfo()
 
 	r.Run(":" + appPort)
+}
+
+func isWeakSecret(secret string) bool {
+	// Check for common weak patterns
+	weakPatterns := []string{
+		"secret", "password", "test", "demo", "admin",
+		"12345", "qwerty", "abc123", "changeme",
+	}
+
+	lowerSecret := strings.ToLower(secret)
+	for _, pattern := range weakPatterns {
+		if strings.Contains(lowerSecret, pattern) {
+			return true
+		}
+	}
+
+	// Check if it's too simple (all same character, sequential, etc)
+	if len(secret) > 0 {
+		allSame := true
+		for i := 1; i < len(secret); i++ {
+			if secret[i] != secret[0] {
+				allSame = false
+				break
+			}
+		}
+		if allSame {
+			return true
+		}
+	}
+
+	return false
 }
 
 func validateRequiredEnvVars() {
@@ -111,23 +152,40 @@ func validateRequiredEnvVars() {
 
 	jwtSecret := os.Getenv("JWT_SECRET_KEY")
 	if jwtSecret == "your_jwt_secret_key_here" || jwtSecret == "CHANGE_THIS_TO_RANDOM_STRING_AT_LEAST_32_CHARS" {
-		log.Fatal("❌ SECURITY ERROR: JWT_SECRET_KEY is still using placeholder value. Please generate a strong secret key using: openssl rand -base64 48")
+		log.Fatal().
+			Msg("SECURITY ERROR: JWT_SECRET_KEY is still using placeholder value. Please generate a strong secret key using: openssl rand -base64 48")
+	}
+
+	if len(jwtSecret) < 32 {
+		log.Fatal().
+			Int("length", len(jwtSecret)).
+			Msg("SECURITY ERROR: JWT_SECRET_KEY must be at least 32 characters long for adequate security")
+	}
+
+	// Warn if key appears weak
+	if isWeakSecret(jwtSecret) {
+		log.Warn().Msg("JWT_SECRET_KEY appears to be weak. Consider using: openssl rand -base64 48")
 	}
 
 	if len(missing) > 0 {
-		log.Fatalf("❌ ERROR: Required environment variables are not set:\n  - %s", strings.Join(missing, "\n  - "))
+		log.Fatal().
+			Strs("missing_vars", missing).
+			Msg("Required environment variables are not set")
 	}
 }
 
 func Router() *gin.Engine {
 	route := gin.Default()
 
+	// Gzip compression middleware (5-10x smaller responses)
+	route.Use(gzip.Gzip(gzip.DefaultCompression))
+
 	allowedOrigins := helpers.GetEnv("ALLOWED_ORIGINS", "http://localhost:3000")
 	route.Use(cors.New(cors.Config{
 		AllowOrigins:     strings.Split(allowedOrigins, ","),
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Api-Key", "X-Request-ID"},
-		ExposeHeaders:    []string{"Content-Length", "X-Request-ID"},
+		ExposeHeaders:    []string{"Content-Length", "X-Request-ID", "X-Cache"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))

@@ -63,16 +63,21 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 }
 
 // @Summary		Refresh Token
-// @Description	API untuk refresh token, membutuhkan token yang valid
+// @Description	API untuk refresh token menggunakan refresh token
 // @Tags			Auth
 // @Accept			json
 // @Produce		json
-// @Success		200	{object}	helpers.ResponseParams[any]
-// @Router			/auth/refresh [get]
+// @Param			body	body		requests.RefreshTokenRequest	true	"Refresh token"
+// @Success		200		{object}	helpers.ResponseParams[any]
+// @Router			/auth/refresh [post]
 func (c *AuthController) Refresh(ctx *gin.Context) {
-	tokenString, _ := ctx.Get("token")
+	var refreshRequest requests.RefreshTokenRequest
+	if err := ctx.ShouldBindJSON(&refreshRequest); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "refresh_token is required"})
+		return
+	}
 
-	token, err := c.service.RefreshToken(tokenString.(string))
+	token, err := c.service.RefreshToken(refreshRequest.RefreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

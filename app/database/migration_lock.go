@@ -2,11 +2,12 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"golang_starter_kit_2025/facades"
+
+	"github.com/rs/zerolog/log"
 )
 
 // MigrationLock manages migration locking to prevent concurrent migrations
@@ -104,7 +105,7 @@ func (ml *MigrationLock) Acquire() error {
 	}
 
 	ml.acquired = true
-	log.Printf("🔒 Migration lock acquired for connection '%s'", ml.connectionName)
+	log.Info().Str("connection", ml.connectionName).Msg("Migration lock acquired")
 	return nil
 }
 
@@ -129,7 +130,7 @@ func (ml *MigrationLock) Release() error {
 	}
 
 	ml.acquired = false
-	log.Printf("🔓 Migration lock released for connection '%s'", ml.connectionName)
+	log.Info().Str("connection", ml.connectionName).Msg("Migration lock released")
 	return nil
 }
 
@@ -154,9 +155,9 @@ func ForceReleaseLock(connectionName string) error {
 	}
 
 	if result.RowsAffected == 0 {
-		log.Printf("⚠️  No lock found for connection '%s'", connectionName)
+		log.Warn().Str("connection", connectionName).Msg("No lock found")
 	} else {
-		log.Printf("✅ Forcefully released lock for connection '%s'", connectionName)
+		log.Info().Str("connection", connectionName).Msg("Forcefully released lock")
 	}
 
 	return nil
