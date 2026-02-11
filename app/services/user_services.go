@@ -4,6 +4,8 @@ import (
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 )
 
 type UserService struct {
@@ -47,10 +49,32 @@ func (s *UserService) FindByEmail(email string) (*models.User, error) {
 func (s *UserService) Put(user models.User) (models.User, error) {
 	if user.ID == 0 {
 		err := s.repo.Create(&user)
-		return user, err
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("email", user.Email).
+				Msg("Failed to create user")
+			return user, err
+		}
+		log.Info().
+			Uint("user_id", user.ID).
+			Str("email", user.Email).
+			Msg("User created successfully")
+		return user, nil
 	} else {
 		err := s.repo.Update(&user)
-		return user, err
+		if err != nil {
+			log.Error().
+				Err(err).
+				Uint("user_id", user.ID).
+				Msg("Failed to update user")
+			return user, err
+		}
+		log.Info().
+			Uint("user_id", user.ID).
+			Str("email", user.Email).
+			Msg("User updated successfully")
+		return user, nil
 	}
 }
 
@@ -65,10 +89,26 @@ func (s *UserService) Update(user *models.User) error {
 func (s *UserService) Delete(id string) error {
 	userID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("id", id).
+			Msg("Invalid user ID format for deletion")
 		return err
 	}
 
-	return s.repo.Delete(uint(userID))
+	err = s.repo.Delete(uint(userID))
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("user_id", uint(userID)).
+			Msg("Failed to delete user")
+		return err
+	}
+
+	log.Info().
+		Uint("user_id", uint(userID)).
+		Msg("User deleted successfully")
+	return nil
 }
 
 func (s *UserService) DeleteByID(id uint) error {
@@ -78,10 +118,28 @@ func (s *UserService) DeleteByID(id uint) error {
 func (s *UserService) AssignRolesToUser(userId string, roleIDs []uint) error {
 	userID, err := strconv.ParseUint(userId, 10, 32)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("user_id", userId).
+			Msg("Invalid user ID format for role assignment")
 		return err
 	}
 
-	return s.repo.AssignRoles(uint(userID), roleIDs)
+	err = s.repo.AssignRoles(uint(userID), roleIDs)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("user_id", uint(userID)).
+			Interface("role_ids", roleIDs).
+			Msg("Failed to assign roles to user")
+		return err
+	}
+
+	log.Info().
+		Uint("user_id", uint(userID)).
+		Interface("role_ids", roleIDs).
+		Msg("Roles assigned to user successfully")
+	return nil
 }
 
 func (s *UserService) AssignRoles(userID uint, roleIDs []uint) error {

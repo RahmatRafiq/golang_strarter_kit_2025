@@ -4,6 +4,8 @@ import (
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 )
 
 type CategoryService struct {
@@ -50,10 +52,32 @@ func (s *CategoryService) FindByIDWithProducts(id uint) (*models.Category, error
 func (s *CategoryService) PutCategory(category models.Category) (models.Category, error) {
 	if category.ID == 0 {
 		err := s.categoryRepo.Create(&category)
-		return category, err
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("category", category.Category).
+				Msg("Failed to create category")
+			return category, err
+		}
+		log.Info().
+			Uint("category_id", category.ID).
+			Str("category", category.Category).
+			Msg("Category created successfully")
+		return category, nil
 	} else {
 		err := s.categoryRepo.Update(&category)
-		return category, err
+		if err != nil {
+			log.Error().
+				Err(err).
+				Uint("category_id", category.ID).
+				Msg("Failed to update category")
+			return category, err
+		}
+		log.Info().
+			Uint("category_id", category.ID).
+			Str("category", category.Category).
+			Msg("Category updated successfully")
+		return category, nil
 	}
 }
 
@@ -68,9 +92,26 @@ func (s *CategoryService) Update(category *models.Category) error {
 func (s *CategoryService) DeleteCategory(id string) error {
 	categoryID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("id", id).
+			Msg("Invalid category ID format for deletion")
 		return err
 	}
-	return s.categoryRepo.Delete(uint(categoryID))
+
+	err = s.categoryRepo.Delete(uint(categoryID))
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("category_id", uint(categoryID)).
+			Msg("Failed to delete category")
+		return err
+	}
+
+	log.Info().
+		Uint("category_id", uint(categoryID)).
+		Msg("Category deleted successfully")
+	return nil
 }
 
 func (s *CategoryService) DeleteByID(id uint) error {

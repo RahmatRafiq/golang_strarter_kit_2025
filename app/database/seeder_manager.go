@@ -2,12 +2,12 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"golang_starter_kit_2025/app/database/seeds"
 	"golang_starter_kit_2025/facades"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -139,7 +139,7 @@ func RunAllSeedersOnConnection(connectionName string) error {
 	}
 
 	if len(pending) == 0 {
-		log.Println("✅ No pending seeders to run")
+		log.Info().Msg("No pending seeders to run")
 		return nil
 	}
 
@@ -169,16 +169,24 @@ func RunAllSeedersOnConnection(connectionName string) error {
 
 	// Run seeders in order with new batch
 	newBatch := time.Now().Unix()
-	log.Printf("🚀 Running %d seeders in dependency order on connection %s\n", len(orderedSeeders), connectionName)
+	log.Info().
+		Int("count", len(orderedSeeders)).
+		Str("connection", connectionName).
+		Msg("Running seeders in dependency order")
 
 	for _, s := range orderedSeeders {
 		s.Batch = newBatch
 
 		// Show dependency info
 		if len(s.DependsOn) > 0 {
-			log.Printf("🌱 Seeding: %s (depends on: %v)", s.Name, s.DependsOn)
+			log.Info().
+				Str("seeder", s.Name).
+				Strs("dependencies", s.DependsOn).
+				Msg("Seeding")
 		} else {
-			log.Printf("🌱 Seeding: %s", s.Name)
+			log.Info().
+				Str("seeder", s.Name).
+				Msg("Seeding")
 		}
 
 		// Run with or without transaction
@@ -187,7 +195,10 @@ func RunAllSeedersOnConnection(connectionName string) error {
 		}
 	}
 
-	log.Printf("✅ Seed batch %d applied successfully on connection %s\n", newBatch, connectionName)
+	log.Info().
+		Int64("batch", newBatch).
+		Str("connection", connectionName).
+		Msg("Seed batch applied successfully")
 	return nil
 }
 
@@ -218,12 +229,12 @@ func RollbackSeedBatchOnConnection(batch int64, connectionName string) error {
 		return err
 	}
 	if len(rows) == 0 {
-		log.Printf("⚠️ No seeders in batch %d\n", batch)
+		log.Warn().Int64("batch", batch).Msg("No seeders in batch")
 		return nil
 	}
 
 	for _, r := range rows {
-		log.Println("🔄 Rolling back seeder:", r.Filename)
+		log.Info().Str("seeder", r.Filename).Msg("Rolling back seeder")
 		for _, s := range SeederList {
 			if s.Name == r.Filename {
 				if s.Rollback != nil {
@@ -240,7 +251,10 @@ func RollbackSeedBatchOnConnection(batch int64, connectionName string) error {
 			return err
 		}
 	}
-	log.Printf("✅ Seeder batch %d rolled back on connection %s.\n", batch, connectionName)
+	log.Info().
+		Int64("batch", batch).
+		Str("connection", connectionName).
+		Msg("Seeder batch rolled back")
 	return nil
 }
 
@@ -260,7 +274,7 @@ func RollbackLastSeedBatchOnConnection(connectionName string) error {
 		return err
 	}
 	if b == 0 {
-		log.Println("⚠️ No seed batch to rollback.")
+		log.Warn().Msg("No seed batch to rollback")
 		return nil
 	}
 	return RollbackSeedBatchOnConnection(b, connectionName)
@@ -306,13 +320,13 @@ func RunSpecificSeederOnConnection(name, connectionName string) error {
 	}
 
 	if applied {
-		log.Printf("⚠️ Seeder '%s' has already been run\n", name)
+		log.Warn().Str("seeder", name).Msg("Seeder has already been run")
 		return nil
 	}
 
 	// Run the seeder
 	newBatch := time.Now().Unix()
-	log.Printf("🌱 Running seeder: %s\n", name)
+	log.Info().Str("seeder", name).Msg("Running seeder")
 
 	if err := seeder.Run(conn.DB); err != nil {
 		return fmt.Errorf("failed to run seeder %s: %w", name, err)
@@ -324,6 +338,9 @@ func RunSpecificSeederOnConnection(name, connectionName string) error {
 		return err
 	}
 
-	log.Printf("✅ Seeder '%s' completed successfully on connection %s\n", name, connectionName)
+	log.Info().
+		Str("seeder", name).
+		Str("connection", connectionName).
+		Msg("Seeder completed successfully")
 	return nil
 }

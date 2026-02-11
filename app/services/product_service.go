@@ -1,7 +1,6 @@
 package services
 
 import (
-	"log"
 	"strconv"
 
 	"golang_starter_kit_2025/app/models"
@@ -9,6 +8,7 @@ import (
 	"golang_starter_kit_2025/app/requests"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 type ProductService struct {
@@ -62,7 +62,7 @@ func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) 
 				return nil, err
 			}
 			filenames = append(filenames, *filename)
-			log.Println(&filename)
+			log.Debug().Str("filename", *filename).Msg("Stored product image")
 		}
 	}
 
@@ -99,16 +99,39 @@ func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) 
 
 	if request.ID == 0 {
 		err := s.productRepo.Create(&product)
-		return &product, err
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("name", product.Name).
+				Msg("Failed to create product")
+			return &product, err
+		}
+		log.Info().
+			Uint("product_id", product.ID).
+			Str("name", product.Name).
+			Msg("Product created successfully")
+		return &product, nil
 	} else {
 		err := s.productRepo.Update(&product)
 		if err != nil {
+			log.Error().
+				Err(err).
+				Uint("product_id", product.ID).
+				Msg("Failed to update product")
 			return &product, err
 		}
 		updated, err := s.productRepo.FindByID(request.ID)
 		if err != nil {
+			log.Error().
+				Err(err).
+				Uint("product_id", request.ID).
+				Msg("Failed to fetch updated product")
 			return &product, err
 		}
+		log.Info().
+			Uint("product_id", product.ID).
+			Str("name", product.Name).
+			Msg("Product updated successfully")
 		return updated, nil
 	}
 }
@@ -124,9 +147,26 @@ func (s *ProductService) Update(product *models.Product) error {
 func (s *ProductService) Delete(id string) error {
 	productID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("id", id).
+			Msg("Invalid product ID format for deletion")
 		return err
 	}
-	return s.productRepo.Delete(uint(productID))
+
+	err = s.productRepo.Delete(uint(productID))
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", uint(productID)).
+			Msg("Failed to delete product")
+		return err
+	}
+
+	log.Info().
+		Uint("product_id", uint(productID)).
+		Msg("Product deleted successfully")
+	return nil
 }
 
 func (s *ProductService) DeleteByID(id uint) error {

@@ -3,13 +3,13 @@ package seeds
 import (
 	"golang_starter_kit_2025/app/database/factories"
 	"golang_starter_kit_2025/app/models"
-	"log"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
 func SeedUserSeeder(db *gorm.DB) error {
-	log.Println("🌱 Seeding UserSeeder...")
+	log.Debug().Msg("Seeding UserSeeder")
 
 	// Initialize user factory
 	userFactory := factories.NewUserFactory(db)
@@ -22,20 +22,20 @@ func SeedUserSeeder(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
-	log.Println("  ✓ Created admin user")
+	log.Debug().Msg("Created admin user")
 
 	// Create 10 random test users using factory
 	users, err := userFactory.CreateMany(10)
 	if err != nil {
 		return err
 	}
-	log.Printf("  ✓ Created %d test users with random data\n", len(users))
+	log.Debug().Int("count", len(users)).Msg("Created test users with random data")
 
 	return nil
 }
 
 func RollbackUserSeeder(db *gorm.DB) error {
-	log.Println("🗑️ Rolling back UserSeeder...")
+	log.Debug().Msg("Rolling back UserSeeder")
 
 	// Delete all users (admin + test users)
 	return db.Unscoped().
