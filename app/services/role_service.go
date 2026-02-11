@@ -1,9 +1,10 @@
 package services
 
 import (
+	"strconv"
+
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
-	"strconv"
 
 	"github.com/rs/zerolog/log"
 )
@@ -43,29 +44,29 @@ func (s *RoleService) Put(updatedRole models.Role) (models.Role, error) {
 			Str("name", updatedRole.Name).
 			Msg("Role created successfully")
 		return updatedRole, nil
-	} else {
-		err := s.roleRepo.Update(&updatedRole)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("role_id", updatedRole.ID).
-				Msg("Failed to update role")
-			return updatedRole, err
-		}
-		role, err := s.roleRepo.FindByID(updatedRole.ID)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("role_id", updatedRole.ID).
-				Msg("Failed to fetch updated role")
-			return updatedRole, err
-		}
-		log.Info().
-			Uint("role_id", updatedRole.ID).
-			Str("name", updatedRole.Name).
-			Msg("Role updated successfully")
-		return *role, nil
 	}
+
+	err := s.roleRepo.Update(&updatedRole)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("role_id", updatedRole.ID).
+			Msg("Failed to update role")
+		return updatedRole, err
+	}
+	role, err := s.roleRepo.FindByID(updatedRole.ID)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("role_id", updatedRole.ID).
+			Msg("Failed to fetch updated role")
+		return updatedRole, err
+	}
+	log.Info().
+		Uint("role_id", updatedRole.ID).
+		Str("name", updatedRole.Name).
+		Msg("Role updated successfully")
+	return *role, nil
 }
 
 func (s *RoleService) Create(role *models.Role) error {
@@ -105,28 +106,28 @@ func (s *RoleService) DeleteByID(id uint) error {
 	return s.roleRepo.Delete(id)
 }
 
-func (s *RoleService) AssignPermissionsToRole(roleId string, permissionIDs []uint) error {
-	roleID, err := strconv.ParseUint(roleId, 10, 32)
+func (s *RoleService) AssignPermissionsToRole(roleID string, permissionIDs []uint) error {
+	roleIDNum, err := strconv.ParseUint(roleID, 10, 32)
 	if err != nil {
 		log.Error().
 			Err(err).
-			Str("role_id", roleId).
+			Str("role_id", roleID).
 			Msg("Invalid role ID format for permission assignment")
 		return err
 	}
 
-	err = s.roleRepo.AssignPermissions(uint(roleID), permissionIDs)
+	err = s.roleRepo.AssignPermissions(uint(roleIDNum), permissionIDs)
 	if err != nil {
 		log.Error().
 			Err(err).
-			Uint("role_id", uint(roleID)).
+			Uint("role_id", uint(roleIDNum)).
 			Interface("permission_ids", permissionIDs).
 			Msg("Failed to assign permissions to role")
 		return err
 	}
 
 	log.Info().
-		Uint("role_id", uint(roleID)).
+		Uint("role_id", uint(roleIDNum)).
 		Interface("permission_ids", permissionIDs).
 		Msg("Permissions assigned to role successfully")
 	return nil
@@ -136,13 +137,13 @@ func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint) error
 	return s.roleRepo.AssignPermissions(roleID, permissionIDs)
 }
 
-func (s *RoleService) GetPermissionsByRoleId(roleId string) ([]models.Permission, error) {
-	roleID, err := strconv.ParseUint(roleId, 10, 32)
+func (s *RoleService) GetPermissionsByRoleID(roleID string) ([]models.Permission, error) {
+	roleIDNum, err := strconv.ParseUint(roleID, 10, 32)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.roleRepo.GetPermissions(uint(roleID))
+	return s.roleRepo.GetPermissions(uint(roleIDNum))
 }
 
 func (s *RoleService) GetPermissions(roleID uint) ([]models.Permission, error) {

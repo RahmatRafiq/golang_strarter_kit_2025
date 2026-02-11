@@ -1,9 +1,10 @@
 package services
 
 import (
+	"strconv"
+
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
-	"strconv"
 
 	"github.com/rs/zerolog/log"
 )
@@ -64,21 +65,21 @@ func (s *CategoryService) PutCategory(category models.Category) (models.Category
 			Str("category", category.Category).
 			Msg("Category created successfully")
 		return category, nil
-	} else {
-		err := s.categoryRepo.Update(&category)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("category_id", category.ID).
-				Msg("Failed to update category")
-			return category, err
-		}
-		log.Info().
-			Uint("category_id", category.ID).
-			Str("category", category.Category).
-			Msg("Category updated successfully")
-		return category, nil
 	}
+
+	err := s.categoryRepo.Update(&category)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("category_id", category.ID).
+			Msg("Failed to update category")
+		return category, err
+	}
+	log.Info().
+		Uint("category_id", category.ID).
+		Str("category", category.Category).
+		Msg("Category updated successfully")
+	return category, nil
 }
 
 func (s *CategoryService) Create(category *models.Category) error {

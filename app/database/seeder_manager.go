@@ -129,9 +129,9 @@ func RunAllSeedersOnConnection(connectionName string) error {
 	// Get pending seeders
 	var pending []Seeder
 	for _, s := range SeederList {
-		applied, err := isSeedApplied(s.Name, connectionName)
-		if err != nil {
-			return err
+		applied, checkErr := isSeedApplied(s.Name, connectionName)
+		if checkErr != nil {
+			return checkErr
 		}
 		if !applied {
 			pending = append(pending, s)
@@ -147,8 +147,8 @@ func RunAllSeedersOnConnection(connectionName string) error {
 	graph := NewDependencyGraph(pending)
 
 	// Validate dependencies first
-	if err := graph.ValidateDependencies(); err != nil {
-		return fmt.Errorf("dependency validation failed: %v", err)
+	if validateErr := graph.ValidateDependencies(); validateErr != nil {
+		return fmt.Errorf("dependency validation failed: %v", validateErr)
 	}
 
 	// Get correct order

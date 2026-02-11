@@ -115,8 +115,8 @@ func (c *RoleController) AssignPermissions(ctx *gin.Context) {
 		return
 	}
 
-	roleId := ctx.Param("id")
-	err := c.service.AssignPermissionsToRole(roleId, req.Permissions)
+	roleID := ctx.Param("id")
+	err := c.service.AssignPermissionsToRole(roleID, req.Permissions)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -126,8 +126,8 @@ func (c *RoleController) AssignPermissions(ctx *gin.Context) {
 }
 
 func (c *RoleController) GetPermissions(ctx *gin.Context) {
-	roleId := ctx.Param("id")
-	permissions, err := c.service.GetPermissionsByRoleId(roleId)
+	roleID := ctx.Param("id")
+	permissions, err := c.service.GetPermissionsByRoleID(roleID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

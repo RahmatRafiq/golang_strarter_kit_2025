@@ -175,17 +175,6 @@ func TestAuthService_RefreshToken(t *testing.T) {
 	})
 }
 
-// Helper function to create test user with hashed password
-func createTestUserWithPassword(t *testing.T, email, username, password string) *models.User {
-	// In real implementation, use helpers.HashPasswordArgon2
-	return &models.User{
-		ID:       1,
-		Email:    email,
-		Username: username,
-		Password: "hashed_" + password, // Mock hash
-	}
-}
-
 func TestAuthService_Integration(t *testing.T) {
 	// This would be an integration test with real database
 	// Demonstrates testing complete auth flows

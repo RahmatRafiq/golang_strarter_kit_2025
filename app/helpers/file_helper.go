@@ -21,6 +21,6 @@ func GetFileURL(key string, path string) string {
 		return ""
 	}
 
-	mainUrl := GetEnv("APP_URL", "http://localhost:8080")
-	return fmt.Sprintf("%s/file/%s/%s?signature=%s", mainUrl, path, key, token)
+	mainURL := GetEnv("APP_URL", "http://localhost:8080")
+	return fmt.Sprintf("%s/file/%s/%s?signature=%s", mainURL, path, key, token)
 }

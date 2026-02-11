@@ -99,8 +99,8 @@ func (c *UserController) AssignRoles(ctx *gin.Context) {
 		return
 	}
 
-	userId := ctx.Param("id")
-	err := c.service.AssignRolesToUser(userId, req.Roles)
+	userID := ctx.Param("id")
+	err := c.service.AssignRolesToUser(userID, req.Roles)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -109,8 +109,8 @@ func (c *UserController) AssignRoles(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Roles assigned to user"})
 }
 func (c *UserController) GetRoles(ctx *gin.Context) {
-	userId := ctx.Param("id")
-	roles, err := c.service.GetRolesByUserId(userId)
+	userID := ctx.Param("id")
+	roles, err := c.service.GetRolesByUserID(userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

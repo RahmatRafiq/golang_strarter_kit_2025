@@ -100,8 +100,8 @@ func setupMySQLTestDB(dbName string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to get database connection: %w", err)
 	}
 
-	if _, err := sqlDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName)); err != nil {
-		fmt.Printf("Warning: failed to drop test database: %v\n", err)
+	if _, dropErr := sqlDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName)); dropErr != nil {
+		fmt.Printf("Warning: failed to drop test database: %v\n", dropErr)
 	}
 
 	_, err = sqlDB.Exec(fmt.Sprintf("CREATE DATABASE %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", dbName))
@@ -145,8 +145,8 @@ func setupPostgresTestDB(dbName string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to get database connection: %w", err)
 	}
 
-	if _, err := sqlDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName)); err != nil {
-		fmt.Printf("Warning: failed to drop test database: %v\n", err)
+	if _, dropErr := sqlDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName)); dropErr != nil {
+		fmt.Printf("Warning: failed to drop test database: %v\n", dropErr)
 	}
 	_, err = sqlDB.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
 	if err != nil {

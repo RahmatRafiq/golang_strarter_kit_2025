@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"strings"
 	"time"
+	"unicode"
 
 	"golang_starter_kit_2025/app/database"
 
@@ -39,8 +39,17 @@ var MakeSeederCommand = &cli.Command{
 		}
 		filePath := path.Join(dir, fileName)
 
-		structName := strings.Title(strings.ReplaceAll(name, "_", " "))
-		structName = strings.ReplaceAll(structName, " ", "")
+		// Convert snake_case to PascalCase
+		words := strings.Split(name, "_")
+		var parts []string
+		for _, word := range words {
+			if len(word) > 0 {
+				runes := []rune(word)
+				runes[0] = unicode.ToUpper(runes[0])
+				parts = append(parts, string(runes))
+			}
+		}
+		structName := strings.Join(parts, "")
 		modelName := strings.TrimSuffix(structName, "Seeder")
 		content := fmt.Sprintf(`package seeds
 
@@ -77,7 +86,7 @@ func Rollback%[1]s(db *gorm.DB) error {
 }
 `, structName, modelName)
 
-		if err := ioutil.WriteFile(filePath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
 			log.Fatal("❌ Gagal membuat file seeder:", err)
 		}
 

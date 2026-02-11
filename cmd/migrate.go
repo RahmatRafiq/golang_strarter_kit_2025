@@ -176,7 +176,7 @@ var DBWipeCommand = &cli.Command{
 			}
 
 			if confirmation != "yes" {
-				fmt.Println("❌ Operation cancelled.")
+				fmt.Println("❌ Operation canceled.")
 				return nil
 			}
 		}
@@ -245,7 +245,7 @@ var MigrateLockReleaseCommand = &cli.Command{
 			}
 
 			if confirmation != "yes" {
-				fmt.Println("❌ Operation cancelled.")
+				fmt.Println("❌ Operation canceled.")
 				return nil
 			}
 		}
@@ -391,7 +391,7 @@ func CreateMigration(name string) error {
 	path := fmt.Sprintf("%s/app/database/migrations/%s", dir, fname)
 	up, down := getMigrationTemplate(name)
 	content := fmt.Sprintf("%s\n%s\n%s\n%s", upMarker, up, downMarker, down)
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 var upMarker = "-- +++ UP Migration"

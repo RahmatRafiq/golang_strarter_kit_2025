@@ -228,7 +228,7 @@ func TestUserService_AssignRolesToUser(t *testing.T) {
 	})
 }
 
-func TestUserService_GetRolesByUserId(t *testing.T) {
+func TestUserService_GetRolesByUserID(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -245,7 +245,7 @@ func TestUserService_GetRolesByUserId(t *testing.T) {
 			GetRoles(uint(1)).
 			Return(expectedRoles, nil)
 
-		roles, err := userService.GetRolesByUserId("1")
+		roles, err := userService.GetRolesByUserID("1")
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
@@ -256,7 +256,7 @@ func TestUserService_GetRolesByUserId(t *testing.T) {
 	})
 
 	t.Run("error - invalid user id", func(t *testing.T) {
-		_, err := userService.GetRolesByUserId("invalid")
+		_, err := userService.GetRolesByUserID("invalid")
 
 		if err == nil {
 			t.Error("expected error for invalid ID, got nil")
@@ -268,7 +268,7 @@ func TestUserService_GetRolesByUserId(t *testing.T) {
 			GetRoles(uint(999)).
 			Return(nil, errors.New("user not found"))
 
-		_, err := userService.GetRolesByUserId("999")
+		_, err := userService.GetRolesByUserID("999")
 
 		if err == nil {
 			t.Error("expected error, got nil")

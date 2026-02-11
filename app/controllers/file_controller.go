@@ -5,14 +5,12 @@ import (
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
-	"golang_starter_kit_2025/app/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type FileController struct {
-	jwtService services.JwtService
 }
 
 func NewFileController() *FileController {

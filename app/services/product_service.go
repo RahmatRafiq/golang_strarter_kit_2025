@@ -111,29 +111,29 @@ func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) 
 			Str("name", product.Name).
 			Msg("Product created successfully")
 		return &product, nil
-	} else {
-		err := s.productRepo.Update(&product)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("product_id", product.ID).
-				Msg("Failed to update product")
-			return &product, err
-		}
-		updated, err := s.productRepo.FindByID(request.ID)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("product_id", request.ID).
-				Msg("Failed to fetch updated product")
-			return &product, err
-		}
-		log.Info().
-			Uint("product_id", product.ID).
-			Str("name", product.Name).
-			Msg("Product updated successfully")
-		return updated, nil
 	}
+
+	err := s.productRepo.Update(&product)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", product.ID).
+			Msg("Failed to update product")
+		return &product, err
+	}
+	updated, err := s.productRepo.FindByID(request.ID)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", request.ID).
+			Msg("Failed to fetch updated product")
+		return &product, err
+	}
+	log.Info().
+		Uint("product_id", product.ID).
+		Str("name", product.Name).
+		Msg("Product updated successfully")
+	return updated, nil
 }
 
 func (s *ProductService) Create(product *models.Product) error {
