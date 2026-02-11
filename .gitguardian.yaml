@@ -1,0 +1,22 @@
+# GitGuardian Configuration
+# https://docs.gitguardian.com/internal-repositories-monitoring/integrations/git_hooks/pre_commit#configuration-file
+
+version: 2
+
+# Paths to exclude from scanning
+paths-ignore:
+  - tests/setup_test_db.sh  # Test database setup - uses credentials from .env.testing (now gitignored)
+  - .env.testing.example    # Template file with placeholder passwords only
+
+# Specific secrets to ignore (by SHA)
+matches-ignore:
+  - name: Test Database Password in setup_test_db.sh
+    match: Duriang_1  # Test password - already rotated
+  - name: Test Database Password in .env.testing
+    match: your_mysql_password_here  # Placeholder only
+
+# Exclude old commits from scanning (committed before security fix)
+# These secrets have been removed in latest commits
+commit-ranges-ignore:
+  - "85c9ad2065c61ffbef0ad8ddae5717fb6f68b17d"  # Old commit with test credentials
+  - "399b4786a19fe0db301e75ed7513fa133db91761"  # Old .env.testing commit
