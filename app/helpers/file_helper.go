@@ -16,7 +16,10 @@ func GetFileURL(key string, path string) string {
 		"path":       path,
 		"expired_at": expiredAt,
 	})
-	token, _ := signature.SignedString(jwtKey)
+	token, err := signature.SignedString(jwtKey)
+	if err != nil {
+		return ""
+	}
 
 	mainUrl := GetEnv("APP_URL", "http://localhost:8080")
 	return fmt.Sprintf("%s/file/%s/%s?signature=%s", mainUrl, path, key, token)

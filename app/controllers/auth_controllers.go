@@ -51,9 +51,19 @@ func (c *AuthController) Login(ctx *gin.Context) {
 // @Router			/auth/logout [get]
 func (c *AuthController) Logout(ctx *gin.Context) {
 	// get token from context
-	tokenString, _ := ctx.Get("token")
+	tokenString, exists := ctx.Get("token")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Token not found"})
+		return
+	}
 
-	err := c.service.Logout(tokenString.(string))
+	token, ok := tokenString.(string)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
+		return
+	}
+
+	err := c.service.Logout(token)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
