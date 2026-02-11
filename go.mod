@@ -20,6 +20,7 @@ require (
 	github.com/ulule/limiter/v3 v3.11.2
 	github.com/urfave/cli/v2 v2.27.6
 	go.mongodb.org/mongo-driver v1.17.4
+	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.43.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.9
