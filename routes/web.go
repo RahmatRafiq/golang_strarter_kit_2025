@@ -64,28 +64,37 @@ func RegisterRoutes(route *gin.Engine) {
 	// Prometheus metrics endpoint
 	route.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
+	// ========================================
+	// API v1 Routes (Recommended)
+	// ========================================
+	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService)
+
+	// ========================================
+	// Legacy Routes (Deprecated - For Backward Compatibility)
+	// TODO: Remove these in v2.0.0
+	// ========================================
 	authController := controllers.NewAuthController(*authService)
 
 	// Auth routes with stricter rate limiting (5 attempts per 15min)
 	authPublicRoutes := route.Group("/auth")
 	authPublicRoutes.Use(middleware.AuthRateLimiter())
 	{
-		authPublicRoutes.PUT("/login", authController.Login)
+		authPublicRoutes.PUT("/login", authController.Login) // DEPRECATED: Use POST /api/v1/auth/login
 	}
 
 	// Refresh endpoint with moderate rate limiting
-	route.POST("/auth/refresh", authController.Refresh)
+	route.POST("/auth/refresh", authController.Refresh) // DEPRECATED: Use /api/v1/auth/refresh
 
 	// Protected auth routes
 	authRoutes := route.Group("/auth").Use(middleware.AuthMiddleware())
 	{
-		authRoutes.GET("/logout", authController.Logout)
+		authRoutes.GET("/logout", authController.Logout) // DEPRECATED: Use POST /api/v1/auth/logout
 	}
 
 	categoryController := controllers.NewCategoryController(*categoryService)
 	categoryRoutes := route.Group("/categories", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		categoryRoutes.GET("/", categoryController.List)
+		categoryRoutes.GET("/", categoryController.List)   // DEPRECATED: Use /api/v1/categories
 		categoryRoutes.GET("/:id", categoryController.Get)
 		categoryRoutes.PUT("/", categoryController.Put)
 		categoryRoutes.DELETE("/:id", categoryController.Delete)
@@ -94,7 +103,7 @@ func RegisterRoutes(route *gin.Engine) {
 	productController := controllers.NewProductController(*productService)
 	productRoutes := route.Group("/products", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		productRoutes.GET("/", productController.GetAll)
+		productRoutes.GET("/", productController.GetAll)   // DEPRECATED: Use /api/v1/products
 		productRoutes.GET("/:id", productController.GetByID)
 		productRoutes.PUT("/", productController.Put)
 		productRoutes.DELETE("/:id", productController.Delete)
@@ -103,7 +112,7 @@ func RegisterRoutes(route *gin.Engine) {
 	userController := controllers.NewUserController(*userService)
 	userRoutes := route.Group("/users", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		userRoutes.GET("", userController.List)
+		userRoutes.GET("", userController.List)           // DEPRECATED: Use /api/v1/users
 		userRoutes.GET("/:id", userController.Get)
 		userRoutes.PUT("", userController.Put)
 		userRoutes.DELETE("/:id", userController.Delete)
@@ -114,7 +123,7 @@ func RegisterRoutes(route *gin.Engine) {
 	roleController := controllers.NewRoleController(*roleService)
 	roleRoutes := route.Group("/roles", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		roleRoutes.GET("", roleController.List)
+		roleRoutes.GET("", roleController.List)           // DEPRECATED: Use /api/v1/roles
 		roleRoutes.PUT("", roleController.Put)
 		roleRoutes.DELETE("/:id", roleController.Delete)
 		roleRoutes.POST("/:id/permissions", roleController.AssignPermissions)
@@ -124,24 +133,16 @@ func RegisterRoutes(route *gin.Engine) {
 	permissionController := controllers.NewPermissionController(*permissionService)
 	permissionRoutes := route.Group("/permissions", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		permissionRoutes.GET("", permissionController.List)
+		permissionRoutes.GET("", permissionController.List) // DEPRECATED: Use /api/v1/permissions
 		permissionRoutes.PUT("", permissionController.Put)
 		permissionRoutes.DELETE("/:id", permissionController.Delete)
 	}
 
+	// File serving (not versioned - utility endpoint)
 	fileController := controllers.NewFileController()
 	fileRoutes := route.Group("/file")
 	{
 		fileRoutes.GET("/:key/:filename", fileController.ServeFile)
-	}
-
-	// Database management routes (protected by AuthMiddleware)
-	databaseController := controllers.NewDatabaseController()
-	databaseRoutes := route.Group("/api/database")
-	{
-		databaseRoutes.GET("/status", databaseController.GetConnectionStatus)
-		databaseRoutes.GET("/health", databaseController.HealthCheck)
-		databaseRoutes.GET("/test", databaseController.TestConnection)
 	}
 
 	// Endpoint untuk mengecek kesehatan koneksi facades
