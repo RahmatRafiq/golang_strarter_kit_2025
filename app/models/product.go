@@ -9,25 +9,22 @@ import (
 )
 
 type Product struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	Reference   string    `gorm:"unique" json:"reference"`
-	StoreID     uint      `json:"store_id"`
-	CategoryID  uint      `json:"category_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       float64   `json:"price"`
-	Margin      float64   `json:"margin"`
-	Stock       int       `json:"stock"`
-	Sold        int       `json:"sold"`
-	Images      []string  `json:"images" gorm:"serializer:json"`
-	ReceivedAt  time.Time `json:"received_at"`
-
-	// Store    *Store    `json:"store"`
-	Category *Category `json:"category"`
-
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at" swaggerignore:"true"`
+	ReceivedAt  time.Time      `json:"received_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	Category    *Category      `json:"category"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at" swaggerignore:"true"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Reference   string         `gorm:"unique" json:"reference"`
+	Images      []string       `json:"images" gorm:"serializer:json"`
+	Price       float64        `json:"price"`
+	Margin      float64        `json:"margin"`
+	Stock       int            `json:"stock"`
+	Sold        int            `json:"sold"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	CategoryID  uint           `json:"category_id"`
+	StoreID     uint           `json:"store_id"`
 }
 
 // BeforeCreate hook

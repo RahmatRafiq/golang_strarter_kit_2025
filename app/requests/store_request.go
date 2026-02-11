@@ -1,7 +1,6 @@
 package requests
 
 type StoreRequestPut struct {
-	ID      uint   `json:"id" form:"id"`
 	Name    string `json:"name" form:"name" example:"John Doe"`
 	Phone   string `json:"phone" form:"phone" example:"08123456789"`
 	Address string `json:"address" form:"address" example:"Jl. Raya No. 1"`
@@ -9,6 +8,7 @@ type StoreRequestPut struct {
 	State   string `json:"state" form:"state" example:"DKI Jakarta"`
 	Country string `json:"country" form:"country" example:"Indonesia"`
 	Zip     string `json:"zip" form:"zip" example:"12345"`
+	ID      uint   `json:"id" form:"id"`
 }
 
 type StoreRequestMember struct {

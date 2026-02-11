@@ -1,9 +1,9 @@
 package requests
 
 type RoleRequestPut struct {
-	ID    uint   `json:"id" form:"id"`
 	Name  string `json:"name" form:"name" binding:"required" example:"Admin" validate:"required"`
 	Group string `json:"group" form:"group" binding:"required" example:"User" validate:"required"`
+	ID    uint   `json:"id" form:"id"`
 }
 
 type RoleRequestAssignPermissions struct {

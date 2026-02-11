@@ -12,9 +12,9 @@ import (
 )
 
 type ProductService struct {
+	fileService  FileService
 	productRepo  interfaces.ProductRepositoryInterface
 	categoryRepo interfaces.CategoryRepositoryInterface
-	fileService  FileService
 }
 
 func NewProductService(productRepo interfaces.ProductRepositoryInterface, categoryRepo interfaces.CategoryRepositoryInterface) *ProductService {

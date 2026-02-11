@@ -7,12 +7,10 @@ import (
 )
 
 type Category struct {
-	ID       uint   `gorm:"primaryKey" json:"id"`
-	Category string `json:"category"`
-
-	Products *[]Product `gorm:"foreignKey:CategoryID" json:"products,omitempty" swaggerignore:"true"`
-
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
+	Products  *[]Product     `gorm:"foreignKey:CategoryID" json:"products,omitempty" swaggerignore:"true"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at" swaggerignore:"true"`
+	Category  string         `json:"category"`
+	ID        uint           `gorm:"primaryKey" json:"id"`
 }
