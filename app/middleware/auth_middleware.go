@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog/log"
 )
 
 var JwtKey = []byte("your_secret_key")
@@ -21,8 +23,34 @@ var jwtService services.JwtService
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		skipAuth := os.Getenv("SKIP_AUTH")
+		appEnv := os.Getenv("APP_ENV")
+
+		// SECURITY: Prevent SKIP_AUTH in production
+		if skipAuth == "true" && appEnv == "production" {
+			log.Fatal().Msg("SECURITY ERROR: SKIP_AUTH cannot be 'true' in production environment")
+		}
+
+		// Development bypass (with security warning)
 		if skipAuth == "true" {
-			c.Set("user_id", uint(1))
+			log.Warn().
+				Str("ip", c.ClientIP()).
+				Str("path", c.Request.URL.Path).
+				Msg("AUTH BYPASS: Using SKIP_AUTH=true (development only)")
+
+			// Use user_id from header if provided (for testing different users)
+			userIDStr := c.GetHeader("X-Test-User-ID")
+			if userIDStr == "" {
+				userIDStr = "1"
+			}
+
+			// Convert string to uint
+			userID, err := strconv.ParseUint(userIDStr, 10, 32)
+			if err != nil {
+				userID = 1 // Default to 1 if parse fails
+			}
+
+			c.Set("user_id", uint(userID))
+			c.Set("auth_bypassed", true)
 			c.Next()
 			return
 		}
