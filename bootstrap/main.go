@@ -1,7 +1,9 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -137,24 +139,32 @@ func Init() {
 
 	helpers.PrintServerStartupInfo()
 
-	// Setup graceful shutdown
+	srv := &http.Server{
+		Addr:    ":" + appPort,
+		Handler: r,
+	}
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start server in goroutine
 	go func() {
-		if err := r.Run(":" + appPort); err != nil {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
 
-	// Wait for interrupt signal
 	<-quit
 	log.Info().Msg("Shutting down gracefully...")
 
-	// Shutdown worker manager
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	if workerManager != nil {
 		workerManager.Shutdown()
+	}
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error().Err(err).Msg("Server forced to shutdown")
 	}
 
 	log.Info().Msg("Server stopped")

@@ -43,6 +43,8 @@ func RegisterRoutes(route *gin.Engine) {
 	productRepo := repositories.NewProductRepository(facades.DB)
 	categoryRepo := repositories.NewCategoryRepository(facades.DB)
 	authRepo := repositories.NewAuthRepository(facades.DB)
+	passwordResetRepo := repositories.NewPasswordResetRepository(facades.DB)
+	emailVerificationRepo := repositories.NewEmailVerificationRepository(facades.DB)
 
 	userService := services.NewUserService(userRepo)
 	roleService := services.NewRoleService(roleRepo, permissionRepo)
@@ -50,6 +52,8 @@ func RegisterRoutes(route *gin.Engine) {
 	productService := services.NewProductService(productRepo, categoryRepo)
 	categoryService := services.NewCategoryService(categoryRepo, productRepo)
 	authService := services.NewAuthService(authRepo)
+	passwordResetService := services.NewPasswordResetService(passwordResetRepo, userRepo)
+	emailVerificationService := services.NewEmailVerificationService(emailVerificationRepo, userRepo)
 
 	// ========================================
 	// Demo/Testing Routes (PostgreSQL Example)
@@ -77,7 +81,7 @@ func RegisterRoutes(route *gin.Engine) {
 	// ========================================
 	// API v1 Routes (Recommended)
 	// ========================================
-	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService)
+	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService, passwordResetService, emailVerificationService)
 
 	// ========================================
 	// Legacy Routes (Deprecated - For Backward Compatibility)

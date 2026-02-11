@@ -18,6 +18,8 @@ func RegisterV1Routes(
 	productService *services.ProductService,
 	categoryService *services.CategoryService,
 	authService *services.AuthService,
+	passwordResetService *services.PasswordResetService,
+	emailVerificationService *services.EmailVerificationService,
 ) {
 	// API v1 group
 	v1 := route.Group("/api/v1")
@@ -28,11 +30,16 @@ func RegisterV1Routes(
 
 	// Auth routes with stricter rate limiting (5 attempts per 15min)
 	authController := controllers.NewAuthController(*authService)
+	passwordResetController := controllers.NewPasswordResetController(passwordResetService)
+	emailVerificationController := controllers.NewEmailVerificationController(emailVerificationService)
 	authPublicRoutes := v1.Group("/auth")
 	authPublicRoutes.Use(middleware.AuthRateLimiter())
 	{
-		authPublicRoutes.POST("/login", authController.Login)     // Changed from PUT to POST (RESTful)
-		authPublicRoutes.POST("/refresh", authController.Refresh) // Refresh token
+		authPublicRoutes.POST("/login", authController.Login)                             // Changed from PUT to POST (RESTful)
+		authPublicRoutes.POST("/refresh", authController.Refresh)                         // Refresh token
+		authPublicRoutes.POST("/forgot-password", passwordResetController.ForgotPassword) // Request password reset
+		authPublicRoutes.POST("/reset-password", passwordResetController.ResetPassword)   // Reset password with token
+		authPublicRoutes.POST("/verify-email", emailVerificationController.VerifyEmail)   // Verify email with token
 	}
 
 	// ====================
@@ -44,6 +51,7 @@ func RegisterV1Routes(
 	authRoutes.Use(middleware.AuthMiddleware())
 	{
 		authRoutes.POST("/logout", authController.Logout)
+		authRoutes.POST("/resend-verification", emailVerificationController.SendVerification)
 	}
 
 	// User routes
