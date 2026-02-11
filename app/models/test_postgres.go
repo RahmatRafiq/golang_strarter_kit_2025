@@ -13,8 +13,8 @@ type Test struct {
 	IsActive    bool      `json:"is_active"`
 	BirthDate   time.Time `json:"birth_date"`
 	LoginTime   string    `json:"login_time"`
-	IpAddress   string    `json:"ip_address"`
-	DataJson    string    `json:"data_json"`
+	IPAddress   string    `json:"ip_address"`
+	DataJSON    string    `json:"data_json"`
 	FileBytea   []byte    `json:"file_bytea"`
 }
 

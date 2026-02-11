@@ -1,9 +1,10 @@
 package services
 
 import (
+	"strconv"
+
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
-	"strconv"
 
 	"github.com/rs/zerolog/log"
 )
@@ -61,21 +62,21 @@ func (s *UserService) Put(user models.User) (models.User, error) {
 			Str("email", user.Email).
 			Msg("User created successfully")
 		return user, nil
-	} else {
-		err := s.repo.Update(&user)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("user_id", user.ID).
-				Msg("Failed to update user")
-			return user, err
-		}
-		log.Info().
-			Uint("user_id", user.ID).
-			Str("email", user.Email).
-			Msg("User updated successfully")
-		return user, nil
 	}
+
+	err := s.repo.Update(&user)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("user_id", user.ID).
+			Msg("Failed to update user")
+		return user, err
+	}
+	log.Info().
+		Uint("user_id", user.ID).
+		Str("email", user.Email).
+		Msg("User updated successfully")
+	return user, nil
 }
 
 func (s *UserService) Create(user *models.User) error {
@@ -115,28 +116,28 @@ func (s *UserService) DeleteByID(id uint) error {
 	return s.repo.Delete(id)
 }
 
-func (s *UserService) AssignRolesToUser(userId string, roleIDs []uint) error {
-	userID, err := strconv.ParseUint(userId, 10, 32)
+func (s *UserService) AssignRolesToUser(userID string, roleIDs []uint) error {
+	userIDNum, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
 		log.Error().
 			Err(err).
-			Str("user_id", userId).
+			Str("user_id", userID).
 			Msg("Invalid user ID format for role assignment")
 		return err
 	}
 
-	err = s.repo.AssignRoles(uint(userID), roleIDs)
+	err = s.repo.AssignRoles(uint(userIDNum), roleIDs)
 	if err != nil {
 		log.Error().
 			Err(err).
-			Uint("user_id", uint(userID)).
+			Uint("user_id", uint(userIDNum)).
 			Interface("role_ids", roleIDs).
 			Msg("Failed to assign roles to user")
 		return err
 	}
 
 	log.Info().
-		Uint("user_id", uint(userID)).
+		Uint("user_id", uint(userIDNum)).
 		Interface("role_ids", roleIDs).
 		Msg("Roles assigned to user successfully")
 	return nil
@@ -146,13 +147,13 @@ func (s *UserService) AssignRoles(userID uint, roleIDs []uint) error {
 	return s.repo.AssignRoles(userID, roleIDs)
 }
 
-func (s *UserService) GetRolesByUserId(userId string) ([]models.Role, error) {
-	userID, err := strconv.ParseUint(userId, 10, 32)
+func (s *UserService) GetRolesByUserID(userID string) ([]models.Role, error) {
+	userIDNum, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.repo.GetRoles(uint(userID))
+	return s.repo.GetRoles(uint(userIDNum))
 }
 
 func (s *UserService) GetRoles(userID uint) ([]models.Role, error) {

@@ -234,10 +234,10 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 		return fmt.Errorf("failed to get connection '%s': %v", connectionName, err)
 	}
 
-	if err := conn.DB.Raw(
+	if queryErr := conn.DB.Raw(
 		"SELECT COALESCE(MAX(batch),0) AS batch FROM migrations WHERE connection_name = ?", connectionName,
-	).Scan(&lastBatch).Error; err != nil {
-		return err
+	).Scan(&lastBatch).Error; queryErr != nil {
+		return queryErr
 	}
 	batch := lastBatch.Batch + 1
 

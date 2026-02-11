@@ -50,7 +50,7 @@ func (c *TestController) List(ctx *gin.Context) {
 func (c *TestController) Get(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
-	if err != nil {
+	if err != nil || id < 0 {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": "Invalid ID"},
 			Message:   "ID tidak valid",
@@ -115,7 +115,7 @@ func (c *TestController) Create(ctx *gin.Context) {
 func (c *TestController) Update(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
-	if err != nil {
+	if err != nil || id < 0 {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": "Invalid ID"},
 			Message:   "ID tidak valid",
@@ -155,7 +155,7 @@ func (c *TestController) Update(ctx *gin.Context) {
 func (c *TestController) Delete(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
-	if err != nil {
+	if err != nil || id < 0 {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": "Invalid ID"},
 			Message:   "ID tidak valid",

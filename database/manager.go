@@ -26,7 +26,7 @@ type Manager struct {
 // Connection wraps GORM DB with additional metadata
 type Connection struct {
 	DB     *gorm.DB
-	SqlDB  *sql.DB
+	SQLDB  *sql.DB
 	Config *config.DatabaseConfig
 	Name   string
 }
@@ -115,7 +115,7 @@ func (m *Manager) Connect(connectionName string) (*Connection, error) {
 	// Create connection object
 	connection := &Connection{
 		DB:     db,
-		SqlDB:  sqlDB,
+		SQLDB:  sqlDB,
 		Config: cfg,
 		Name:   connectionName,
 	}
@@ -150,7 +150,7 @@ func (m *Manager) CloseConnection(connectionName string) error {
 	defer m.mutex.Unlock()
 
 	if conn, exists := m.connections[connectionName]; exists {
-		if err := conn.SqlDB.Close(); err != nil {
+		if err := conn.SQLDB.Close(); err != nil {
 			log.Printf("Error closing connection '%s': %v", connectionName, err)
 			return err
 		}
@@ -167,7 +167,7 @@ func (m *Manager) CloseAllConnections() {
 	defer m.mutex.Unlock()
 
 	for name, conn := range m.connections {
-		if err := conn.SqlDB.Close(); err != nil {
+		if err := conn.SQLDB.Close(); err != nil {
 			log.Printf("Error closing connection '%s': %v", name, err)
 		} else {
 			log.Printf("✅ Database connection '%s' closed successfully", name)
@@ -192,7 +192,7 @@ func (m *Manager) IsConnected(connectionName string) bool {
 	defer m.mutex.RUnlock()
 
 	if conn, exists := m.connections[connectionName]; exists {
-		if err := conn.SqlDB.Ping(); err == nil {
+		if err := conn.SQLDB.Ping(); err == nil {
 			return true
 		}
 	}
@@ -205,7 +205,7 @@ func (m *Manager) GetConnectionStats(connectionName string) (sql.DBStats, error)
 	defer m.mutex.RUnlock()
 
 	if conn, exists := m.connections[connectionName]; exists {
-		return conn.SqlDB.Stats(), nil
+		return conn.SQLDB.Stats(), nil
 	}
 
 	return sql.DBStats{}, fmt.Errorf("connection '%s' not found", connectionName)

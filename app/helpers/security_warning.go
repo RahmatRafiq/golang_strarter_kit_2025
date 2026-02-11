@@ -59,7 +59,7 @@ func CheckSecurityWarning() bool {
 		input = strings.TrimSpace(strings.ToLower(input))
 
 		if input != "yes" {
-			fmt.Printf("\n%s%s❌ Application startup cancelled for security reasons.%s\n", ColorBold, ColorRed, ColorReset)
+			fmt.Printf("\n%s%s❌ Application startup canceled for security reasons.%s\n", ColorBold, ColorRed, ColorReset)
 			fmt.Printf("%sPlease update your .env file:%s\n", ColorYellow, ColorReset)
 			fmt.Printf("%s  SKIP_AUTH=false%s\n\n", ColorGreen, ColorReset)
 			return false

@@ -103,7 +103,7 @@ func InvalidateCache(url string) error {
 	}
 
 	cacheKey := generateCacheKey(url)
-	return helpers.RedisClient.Del(nil, cacheKey).Err()
+	return helpers.RedisClient.Del(context.TODO(), cacheKey).Err()
 }
 
 // InvalidateCachePattern removes cache entries matching a pattern

@@ -54,7 +54,7 @@ func SanitizeInput() gin.HandlerFunc {
 
 		// Try to parse as JSON
 		var body interface{}
-		if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		if jsonErr := json.Unmarshal(bodyBytes, &body); jsonErr != nil {
 			c.Next()
 			return
 		}

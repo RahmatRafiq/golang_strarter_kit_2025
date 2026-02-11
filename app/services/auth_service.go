@@ -34,7 +34,7 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 		log.Warn().
 			Str("email", request.Email).
 			Msg("Login attempt with non-existent email")
-		return nil, errors.New("Email atau password salah")
+		return nil, errors.New("email atau password salah")
 	}
 
 	check, err := helpers.ComparePasswordArgon2(request.Password, user.Password)
@@ -43,7 +43,7 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 			Uint("user_id", user.ID).
 			Str("email", request.Email).
 			Msg("Login attempt with invalid password")
-		return nil, errors.New("Email atau password salah")
+		return nil, errors.New("email atau password salah")
 	}
 
 	// Generate token pair (access + refresh token)
@@ -99,17 +99,17 @@ func (auth *AuthService) Logout(tokenString string) error {
 		return errors.New("invalid claims type")
 	}
 
-	userId := claims["user_id"]
+	userIDVal := claims["user_id"]
 
 	var userID uint
-	switch v := userId.(type) {
+	switch v := userIDVal.(type) {
 	case float64:
 		userID = uint(v)
 	case uint:
 		userID = v
 	default:
 		log.Error().
-			Interface("user_id", userId).
+			Interface("user_id", userIDVal).
 			Msg("Invalid user ID type in token")
 		return errors.New("invalid user id")
 	}
@@ -175,17 +175,17 @@ func (auth *AuthService) RefreshToken(refreshTokenString string) (*casts.Token, 
 		return nil, errors.New("invalid claims type")
 	}
 
-	userId := claims["user_id"]
+	userIDVal := claims["user_id"]
 
 	var userID uint
-	switch v := userId.(type) {
+	switch v := userIDVal.(type) {
 	case float64:
 		userID = uint(v)
 	case uint:
 		userID = v
 	default:
 		log.Error().
-			Interface("user_id", userId).
+			Interface("user_id", userIDVal).
 			Msg("Invalid user ID type in refreshed token")
 		return nil, errors.New("invalid user id")
 	}

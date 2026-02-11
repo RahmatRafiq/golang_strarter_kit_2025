@@ -132,7 +132,7 @@ func TestUserService_RoleAssignment_Integration(t *testing.T) {
 		user, role := helpers.CreateUserWithRole(t, testDB, "viewer")
 
 		// Act: Get user roles
-		roles, err := userService.GetRolesByUserId(strconv.Itoa(int(user.ID)))
+		roles, err := userService.GetRolesByUserID(strconv.Itoa(int(user.ID)))
 
 		// Assert
 		if err != nil {
@@ -166,7 +166,7 @@ func TestUserService_RoleAssignment_Integration(t *testing.T) {
 		}
 
 		// Verify new roles assigned (old role should be replaced)
-		roles, _ := userService.GetRolesByUserId(strconv.Itoa(int(user.ID)))
+		roles, _ := userService.GetRolesByUserID(strconv.Itoa(int(user.ID)))
 		if len(roles) != 2 {
 			t.Errorf("Expected 2 roles after reassignment, got %d", len(roles))
 		}

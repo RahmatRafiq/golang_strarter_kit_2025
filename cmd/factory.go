@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"unicode"
 
 	"github.com/urfave/cli/v2"
 )
@@ -41,7 +42,12 @@ var MakeFactoryCommand = &cli.Command{
 			return fmt.Errorf("factory already exists: %s", filePath)
 		}
 
-		structName := strings.Title(name)
+		// Capitalize first letter
+		runes := []rune(name)
+		if len(runes) > 0 {
+			runes[0] = unicode.ToUpper(runes[0])
+		}
+		structName := string(runes)
 		content := fmt.Sprintf(`package factories
 
 import (
@@ -125,7 +131,7 @@ func (f *%[1]sFactory) CreateInBatches(count, batchSize int, overrides ...map[st
 }
 `, structName, strings.ToUpper(name[:3]))
 
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
 			return fmt.Errorf("failed to create factory file: %w", err)
 		}
 
