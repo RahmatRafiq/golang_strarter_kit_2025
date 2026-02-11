@@ -79,6 +79,9 @@ func Init() {
 			// Factory commands
 			cmd.MakeFactoryCommand, // NEW: Generate factories
 
+			// Testing commands
+			cmd.TestCommand, // NEW: Run tests (like php artisan test)
+
 			// Database commands
 			cmd.DBWipeCommand,
 			cmd.DBStatusCommand,
