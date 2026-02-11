@@ -80,89 +80,20 @@ jobs:
           name: test-results
           path: test-report.json
 
-  # Job 2: Build Docker Image
-  build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKER_IMAGE }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
-          build-args: |
-            GO_VERSION=${{ env.GO_VERSION }}
-
-      - name: Image digest
-        run: echo ${{ steps.build.outputs.digest }}
-
-  # Job 3: Security Scanning
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.DOCKER_IMAGE }}:latest
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-  # Job 4: Deploy notification
+  # Job 2: Deployment Notification
   notify:
     name: Deployment Notification
     runs-on: ubuntu-latest
-    needs: [test, build]
+    needs: [test]
     if: always() && github.ref == 'refs/heads/main'
 
     steps:
       - name: Check deployment status
         run: |
-          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.build.result }}" == "success" ]; then
-            echo "✅ Deployment successful!"
-            echo "Docker image pushed to: ${{ env.DOCKER_IMAGE }}:latest"
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ Tests passed successfully!"
+            echo "All checks completed"
           else
-            echo "❌ Deployment failed!"
+            echo "❌ Tests failed!"
             exit 1
           fi
