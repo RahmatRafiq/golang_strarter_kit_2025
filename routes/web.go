@@ -47,6 +47,12 @@ func RegisterRoutes(route *gin.Engine) {
 	categoryService := services.NewCategoryService(categoryRepo, productRepo)
 	authService := services.NewAuthService(authRepo)
 
+	// ========================================
+	// Demo/Testing Routes (PostgreSQL Example)
+	// ========================================
+	// These routes demonstrate multi-database support with PostgreSQL
+	// Useful for testing PostgreSQL connection and as reference implementation
+	// TODO: Consider moving to /api/v1/demo or removing in production
 	testService := services.TestService{}
 	testController := controllers.NewTestController(testService)
 	testRoutes := route.Group("/tests")
