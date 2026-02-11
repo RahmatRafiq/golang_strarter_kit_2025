@@ -39,8 +39,12 @@ func (*JwtService) ValidateToken(tokenString string) (*jwt.Token, error) {
 	})
 }
 
-func (*JwtService) ExtractClaims(token *jwt.Token) jwt.MapClaims {
-	return token.Claims.(jwt.MapClaims)
+func (*JwtService) ExtractClaims(token *jwt.Token) (jwt.MapClaims, error) {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("invalid claims type")
+	}
+	return claims, nil
 }
 
 // GenerateTokenPair generates access token and refresh token

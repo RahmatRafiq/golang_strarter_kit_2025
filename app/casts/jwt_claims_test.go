@@ -33,8 +33,9 @@ var _ = Describe("ParseJwtClaims", func() {
 				"expired_at": float64(expiredAt),
 			}
 
-			parsedClaims := casts.ParseJwtClaims(claims)
+			parsedClaims, err := casts.ParseJwtClaims(claims)
 
+			Expect(err).To(BeNil())
 			Expect(parsedClaims.UserID).To(Equal(userID))
 			Expect(parsedClaims.ExpiredAt).To(Equal(expiredAt))
 		})
@@ -45,13 +46,10 @@ var _ = Describe("ParseJwtClaims", func() {
 				"expired_at": "invalid_expired_at",
 			}
 
-			defer func() {
-				if r := recover(); r != nil {
-					Expect(r).To(HaveOccurred())
-				}
-			}()
+			_, err := casts.ParseJwtClaims(claims)
 
-			casts.ParseJwtClaims(claims)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid"))
 		})
 	})
 })

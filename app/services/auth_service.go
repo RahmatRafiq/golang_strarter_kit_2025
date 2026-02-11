@@ -93,7 +93,12 @@ func (auth *AuthService) Logout(tokenString string) error {
 		return errors.New("invalid token")
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		log.Error().Msg("Invalid claims type in token")
+		return errors.New("invalid claims type")
+	}
+
 	userId := claims["user_id"]
 
 	var userID uint
@@ -164,7 +169,12 @@ func (auth *AuthService) RefreshToken(refreshTokenString string) (*casts.Token, 
 		return nil, err
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		log.Error().Msg("Invalid claims type in refreshed token")
+		return nil, errors.New("invalid claims type")
+	}
+
 	userId := claims["user_id"]
 
 	var userID uint

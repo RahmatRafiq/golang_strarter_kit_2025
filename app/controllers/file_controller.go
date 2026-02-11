@@ -63,7 +63,16 @@ func (controller FileController) ServeFile(ctx *gin.Context) {
 		return
 	}
 
-	expiredAt := int64(tokenClaims["expired_at"].(float64))
+	expiredAtFloat, ok := tokenClaims["expired_at"].(float64)
+	if !ok {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message:   "Invalid token format",
+			Reference: "ERROR-9",
+		}, 400)
+		return
+	}
+
+	expiredAt := int64(expiredAtFloat)
 	if expiredAt < time.Now().Unix() {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "File not found",

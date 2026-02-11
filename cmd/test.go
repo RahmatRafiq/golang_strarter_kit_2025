@@ -169,7 +169,9 @@ func showCoverage() {
 	cmd := exec.Command("go", "tool", "cover", "-func=coverage.out")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Run()
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Warning: failed to generate coverage report: %v\n", err)
+	}
 
 	fmt.Println()
 	fmt.Println("💡 View HTML coverage report:")

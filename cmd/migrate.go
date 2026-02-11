@@ -170,7 +170,10 @@ var DBWipeCommand = &cli.Command{
 			fmt.Print("Are you sure you want to continue? (type 'yes' to confirm): ")
 
 			var confirmation string
-			fmt.Scanln(&confirmation)
+			if _, err := fmt.Scanln(&confirmation); err != nil {
+				fmt.Printf("❌ Error reading input: %v\n", err)
+				return err
+			}
 
 			if confirmation != "yes" {
 				fmt.Println("❌ Operation cancelled.")
@@ -236,7 +239,10 @@ var MigrateLockReleaseCommand = &cli.Command{
 			fmt.Print("Are you sure? (type 'yes' to confirm): ")
 
 			var confirmation string
-			fmt.Scanln(&confirmation)
+			if _, err := fmt.Scanln(&confirmation); err != nil {
+				fmt.Printf("❌ Error reading input: %v\n", err)
+				return err
+			}
 
 			if confirmation != "yes" {
 				fmt.Println("❌ Operation cancelled.")
@@ -357,7 +363,11 @@ var DBStatusCommand = &cli.Command{
 
 		// Check if connected
 		if manager.IsConnected(connection) {
-			stats, _ := manager.GetConnectionStats(connection)
+			stats, err := manager.GetConnectionStats(connection)
+			if err != nil {
+				fmt.Printf("⚠️  Connection '%s' is connected but stats unavailable: %v\n", connection, err)
+				return err
+			}
 			fmt.Printf("✅ Connection '%s' is healthy\n", connection)
 			fmt.Printf("   Database Type: %s\n", conn.GetType())
 			fmt.Printf("   Open Connections: %d\n", stats.OpenConnections)
@@ -374,7 +384,10 @@ var DBStatusCommand = &cli.Command{
 func CreateMigration(name string) error {
 	ts := time.Now().Format("20060102150405")
 	fname := fmt.Sprintf("%s_%s.sql", ts, name)
-	dir, _ := os.Getwd()
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
 	path := fmt.Sprintf("%s/app/database/migrations/%s", dir, fname)
 	up, down := getMigrationTemplate(name)
 	content := fmt.Sprintf("%s\n%s\n%s\n%s", upMarker, up, downMarker, down)

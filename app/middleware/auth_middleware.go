@@ -72,7 +72,25 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims := casts.ParseJwtClaims(jwtService.ExtractClaims(token))
+		mapClaims, err := jwtService.ExtractClaims(token)
+		if err != nil {
+			helpers.ResponseError(c, &helpers.ResponseParams[any]{
+				Reference: "ERROR-4",
+				Message:   "Token tidak valid",
+			}, http.StatusUnauthorized)
+			c.Abort()
+			return
+		}
+
+		claims, err := casts.ParseJwtClaims(mapClaims)
+		if err != nil {
+			helpers.ResponseError(c, &helpers.ResponseParams[any]{
+				Reference: "ERROR-4",
+				Message:   "Token tidak valid",
+			}, http.StatusUnauthorized)
+			c.Abort()
+			return
+		}
 
 		if claims.ExpiredAt < time.Now().Unix() {
 			helpers.ResponseError(c, &helpers.ResponseParams[any]{
