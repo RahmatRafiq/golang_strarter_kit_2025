@@ -3,11 +3,16 @@ package bootstrap
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/workers"
+	"golang_starter_kit_2025/app/workers/tasks"
 	"golang_starter_kit_2025/cmd"
+	"golang_starter_kit_2025/config"
 	"golang_starter_kit_2025/docs"
 	"golang_starter_kit_2025/facades"
 	"golang_starter_kit_2025/routes"
@@ -104,14 +109,51 @@ func Init() {
 		os.Exit(0)
 	}
 
+	// Initialize worker manager if queue is enabled
+	var workerManager *workers.WorkerManager
+	if helpers.GetEnv("QUEUE_ENABLED", "false") == "true" {
+		queueCfg := config.GetQueueConfig()
+		workerManager = workers.NewWorkerManager(queueCfg)
+
+		// Register task handlers
+		workerManager.RegisterHandler(tasks.TypeSendEmail, &tasks.HandleSendEmailTask{})
+
+		// Start workers in background
+		go func() {
+			if err := workerManager.Start(); err != nil {
+				log.Fatal().Err(err).Msg("Failed to start worker manager")
+			}
+		}()
+
+		log.Info().Msg("Worker manager started")
+	}
+
 	r := Router()
 	appPort := helpers.GetEnv("APP_PORT", "8080")
 
 	helpers.PrintServerStartupInfo()
 
-	if err := r.Run(":" + appPort); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start server")
+	// Setup graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start server in goroutine
+	go func() {
+		if err := r.Run(":" + appPort); err != nil {
+			log.Fatal().Err(err).Msg("Failed to start server")
+		}
+	}()
+
+	// Wait for interrupt signal
+	<-quit
+	log.Info().Msg("Shutting down gracefully...")
+
+	// Shutdown worker manager
+	if workerManager != nil {
+		workerManager.Shutdown()
 	}
+
+	log.Info().Msg("Server stopped")
 }
 
 func isWeakSecret(secret string) bool {
