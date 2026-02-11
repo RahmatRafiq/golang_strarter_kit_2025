@@ -73,9 +73,9 @@ func (f *UserFactory) Create() *models.User {
 
 	// Store plain password in a temporary field for testing purposes
 	// (so tests can use the plain password to login)
-	f.t.Logf("Created test user: ID=%d, Email=%s, PlainPassword=%s", 
+	f.t.Logf("Created test user: ID=%d, Email=%s, PlainPassword=%s",
 		f.user.ID, f.user.Email, plainPassword)
-	
+
 	return f.user
 }
 

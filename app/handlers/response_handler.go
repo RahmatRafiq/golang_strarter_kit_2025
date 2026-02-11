@@ -10,7 +10,6 @@ import (
 // Handler will set `X-Response-Time` header in response.
 func Response(c *gin.Context) {
 	startTime := time.Now()
-	
 
 	c.Next()
 	duration := int(time.Since(startTime).Milliseconds())

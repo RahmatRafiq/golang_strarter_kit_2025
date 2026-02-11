@@ -58,7 +58,7 @@ func ComparePasswordArgon2(password, encodedHash string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	
+
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return false, err
