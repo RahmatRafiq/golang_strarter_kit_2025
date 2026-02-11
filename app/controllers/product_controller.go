@@ -35,7 +35,7 @@ func (c *ProductController) GetAll(ctx *gin.Context) {
 	var filters requests.FilterRequest
 	if err := ctx.ShouldBindQuery(&filters); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
-			Message:   "Parameter tidak valid",
+			Message:   "Invalid parameters",
 			Reference: "ERROR-4",
 		}, http.StatusBadRequest)
 		return
@@ -44,7 +44,7 @@ func (c *ProductController) GetAll(ctx *gin.Context) {
 	products, err := c.service.GetAll(filters)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
-			Message:   "Gagal mendapatkan daftar produk",
+			Message:   "Failed to get products list",
 			Reference: "ERROR-3",
 			Errors:    map[string]string{"error": err.Error()},
 		}, http.StatusInternalServerError)
@@ -63,18 +63,21 @@ func (c *ProductController) GetAll(ctx *gin.Context) {
 // @Success		200	{object}	helpers.ResponseParams[models.Product]{item=models.Product}
 // @Router			/products/{id} [get]
 func (c *ProductController) GetByID(ctx *gin.Context) {
-	id := ctx.Param("id")
-	product, err := c.service.GetByID(id)
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	product, err := c.service.FindByID(id)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
-			Message:   "Gagal mendapatkan produk",
+			Message:   "Failed to get product",
 			Reference: "ERROR-2",
 			Errors:    map[string]string{"error": err.Error()},
 		}, http.StatusNotFound)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: &product}, http.StatusOK)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: product}, http.StatusOK)
 }
 
 // @Summary		Create/Update product
@@ -102,7 +105,7 @@ func (c *ProductController) Put(ctx *gin.Context) {
 	product, err := c.service.Put(ctx, request)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
-			Message:   "Gagal membuat atau mengupdate produk",
+			Message:   "Failed to create or update product",
 			Reference: "ERROR-3",
 			Errors:    map[string]string{"error": err.Error()},
 		}, http.StatusInternalServerError)
@@ -121,10 +124,13 @@ func (c *ProductController) Put(ctx *gin.Context) {
 // @Success		200	{object}	helpers.ResponseParams[models.Product]
 // @Router			/products/{id} [delete]
 func (c *ProductController) Delete(ctx *gin.Context) {
-	id := ctx.Param("id")
-	if err := c.service.Delete(id); err != nil {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	if err := c.service.DeleteByID(id); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
-			Message:   "Gagal menghapus produk",
+			Message:   "Failed to delete product",
 			Reference: "ERROR-3",
 			Errors:    map[string]string{"error": err.Error()},
 		}, http.StatusNotFound)

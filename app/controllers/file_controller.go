@@ -5,14 +5,12 @@ import (
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
-	"golang_starter_kit_2025/app/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type FileController struct {
-	jwtService services.JwtService
 }
 
 func NewFileController() *FileController {
@@ -63,7 +61,16 @@ func (controller FileController) ServeFile(ctx *gin.Context) {
 		return
 	}
 
-	expiredAt := int64(tokenClaims["expired_at"].(float64))
+	expiredAtFloat, ok := tokenClaims["expired_at"].(float64)
+	if !ok {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message:   "Invalid token format",
+			Reference: "ERROR-9",
+		}, 400)
+		return
+	}
+
+	expiredAt := int64(expiredAtFloat)
 	if expiredAt < time.Now().Unix() {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "File not found",

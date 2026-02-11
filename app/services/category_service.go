@@ -3,7 +3,6 @@ package services
 import (
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
-	"strconv"
 
 	"github.com/rs/zerolog/log"
 )
@@ -28,13 +27,8 @@ func (s *CategoryService) List(page, limit int) ([]models.Category, int64, error
 	return s.categoryRepo.List(page, limit)
 }
 
-func (s *CategoryService) GetCategoryByID(id string) (models.Category, error) {
-	categoryID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		return models.Category{}, err
-	}
-
-	category, err := s.categoryRepo.FindByID(uint(categoryID))
+func (s *CategoryService) GetCategoryByIDUint(id uint) (models.Category, error) {
+	category, err := s.categoryRepo.FindByID(id)
 	if err != nil {
 		return models.Category{}, err
 	}
@@ -64,21 +58,21 @@ func (s *CategoryService) PutCategory(category models.Category) (models.Category
 			Str("category", category.Category).
 			Msg("Category created successfully")
 		return category, nil
-	} else {
-		err := s.categoryRepo.Update(&category)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("category_id", category.ID).
-				Msg("Failed to update category")
-			return category, err
-		}
-		log.Info().
-			Uint("category_id", category.ID).
-			Str("category", category.Category).
-			Msg("Category updated successfully")
-		return category, nil
 	}
+
+	err := s.categoryRepo.Update(&category)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("category_id", category.ID).
+			Msg("Failed to update category")
+		return category, err
+	}
+	log.Info().
+		Uint("category_id", category.ID).
+		Str("category", category.Category).
+		Msg("Category updated successfully")
+	return category, nil
 }
 
 func (s *CategoryService) Create(category *models.Category) error {
@@ -89,27 +83,18 @@ func (s *CategoryService) Update(category *models.Category) error {
 	return s.categoryRepo.Update(category)
 }
 
-func (s *CategoryService) DeleteCategory(id string) error {
-	categoryID, err := strconv.ParseUint(id, 10, 32)
+func (s *CategoryService) DeleteCategoryByID(id uint) error {
+	err := s.categoryRepo.Delete(id)
 	if err != nil {
 		log.Error().
 			Err(err).
-			Str("id", id).
-			Msg("Invalid category ID format for deletion")
-		return err
-	}
-
-	err = s.categoryRepo.Delete(uint(categoryID))
-	if err != nil {
-		log.Error().
-			Err(err).
-			Uint("category_id", uint(categoryID)).
+			Uint("category_id", id).
 			Msg("Failed to delete category")
 		return err
 	}
 
 	log.Info().
-		Uint("category_id", uint(categoryID)).
+		Uint("category_id", id).
 		Msg("Category deleted successfully")
 	return nil
 }

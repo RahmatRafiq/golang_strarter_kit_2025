@@ -19,30 +19,20 @@ var (
 		},
 		[]string{"connection", "metric"},
 	)
-
-	// Database query duration
-	dbQueryDuration = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "db_query_duration_seconds",
-			Help:    "Database query duration in seconds",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"connection", "operation"},
-	)
 )
 
 // CollectDBMetrics starts a background goroutine to collect database metrics
 func CollectDBMetrics() {
 	ticker := time.NewTicker(10 * time.Second)
-	
+
 	go func() {
 		defer ticker.Stop()
-		
+
 		for range ticker.C {
 			collectCurrentDBStats()
 		}
 	}()
-	
+
 	log.Info().Msg("Database metrics collector started")
 }
 

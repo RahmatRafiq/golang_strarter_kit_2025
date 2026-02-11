@@ -37,19 +37,29 @@ func (f *UserFactory) Make(overrides ...map[string]interface{}) *models.User {
 	if len(overrides) > 0 {
 		override := overrides[0]
 		if val, ok := override["username"]; ok {
-			user.Username = val.(string)
+			if strVal, ok := val.(string); ok {
+				user.Username = strVal
+			}
 		}
 		if val, ok := override["email"]; ok {
-			user.Email = val.(string)
+			if strVal, ok := val.(string); ok {
+				user.Email = strVal
+			}
 		}
 		if val, ok := override["password"]; ok {
-			user.Password = val.(string)
+			if strVal, ok := val.(string); ok {
+				user.Password = strVal
+			}
 		}
 		if val, ok := override["pin"]; ok {
-			user.Pin = val.(string)
+			if strVal, ok := val.(string); ok {
+				user.Pin = strVal
+			}
 		}
 		if val, ok := override["reference"]; ok {
-			user.Reference = val.(string)
+			if strVal, ok := val.(string); ok {
+				user.Reference = strVal
+			}
 		}
 	}
 

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"unicode"
 
 	"github.com/urfave/cli/v2"
 )
@@ -29,11 +30,11 @@ var MakeFactoryCommand = &cli.Command{
 		// Generate factory file
 		fileName := fmt.Sprintf("%s_factory.go", strings.ToLower(name))
 		dir := path.Join("app", "database", "factories")
-		
+
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create factories directory: %w", err)
 		}
-		
+
 		filePath := path.Join(dir, fileName)
 
 		// Check if file already exists
@@ -41,7 +42,12 @@ var MakeFactoryCommand = &cli.Command{
 			return fmt.Errorf("factory already exists: %s", filePath)
 		}
 
-		structName := strings.Title(name)
+		// Capitalize first letter
+		runes := []rune(name)
+		if len(runes) > 0 {
+			runes[0] = unicode.ToUpper(runes[0])
+		}
+		structName := string(runes)
 		content := fmt.Sprintf(`package factories
 
 import (
@@ -125,7 +131,7 @@ func (f *%[1]sFactory) CreateInBatches(count, batchSize int, overrides ...map[st
 }
 `, structName, strings.ToUpper(name[:3]))
 
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
 			return fmt.Errorf("failed to create factory file: %w", err)
 		}
 
@@ -134,7 +140,7 @@ func (f *%[1]sFactory) CreateInBatches(count, batchSize int, overrides ...map[st
 		fmt.Println("   1. Update the Make() method with your model fields")
 		fmt.Println("   2. Add override handling for your fields")
 		fmt.Println("   3. Use in seeders: factory := factories.New" + structName + "Factory(db)")
-		
+
 		return nil
 	},
 }

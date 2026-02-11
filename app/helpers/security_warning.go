@@ -51,11 +51,15 @@ func CheckSecurityWarning() bool {
 		fmt.Printf("%sDo you want to continue anyway? (type 'yes' to continue, anything else to exit): %s", ColorRed, ColorReset)
 
 		reader := bufio.NewReader(os.Stdin)
-		input, _ := reader.ReadString('\n')
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("\n%s%s❌ Error reading input: %v%s\n", ColorBold, ColorRed, err, ColorReset)
+			return false
+		}
 		input = strings.TrimSpace(strings.ToLower(input))
 
 		if input != "yes" {
-			fmt.Printf("\n%s%s❌ Application startup cancelled for security reasons.%s\n", ColorBold, ColorRed, ColorReset)
+			fmt.Printf("\n%s%s❌ Application startup canceled for security reasons.%s\n", ColorBold, ColorRed, ColorReset)
 			fmt.Printf("%sPlease update your .env file:%s\n", ColorYellow, ColorReset)
 			fmt.Printf("%s  SKIP_AUTH=false%s\n\n", ColorGreen, ColorReset)
 			return false

@@ -85,8 +85,8 @@ func (ml *MigrationLock) Acquire() error {
 	if result.Error != nil {
 		// Check if lock already exists
 		var existingLock struct {
-			LockedBy string
 			LockedAt time.Time
+			LockedBy string
 		}
 
 		conn.DB.Raw(`
@@ -175,8 +175,8 @@ func CheckLockStatus(connectionName string) (bool, string, error) {
 	}
 
 	var lock struct {
-		LockedBy string
 		LockedAt time.Time
+		LockedBy string
 	}
 
 	result := conn.DB.Raw(`

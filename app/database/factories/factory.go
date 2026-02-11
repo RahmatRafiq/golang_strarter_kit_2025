@@ -41,7 +41,12 @@ func RandomInt(min, max int) int {
 
 // RandomString generates a random string of specified length
 func RandomString(length int) string {
-	return gofakeit.LetterN(uint(length))
+	// Validate length to prevent overflow when converting to uint
+	if length < 0 || length > int(^uint(0)>>1) {
+		length = 10 // default to safe value if out of range
+	}
+	// Safe to convert now that we've validated the range
+	return gofakeit.LetterN(uint(length)) // #nosec G115 -- validated above
 }
 
 // RandomEmail generates a random email address

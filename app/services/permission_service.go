@@ -3,7 +3,6 @@ package services
 import (
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
-	"strconv"
 )
 
 type PermissionService struct {
@@ -26,17 +25,17 @@ func (s *PermissionService) Put(updatedPermission models.Permission) (models.Per
 	if updatedPermission.ID == 0 {
 		err := s.repo.Create(&updatedPermission)
 		return updatedPermission, err
-	} else {
-		err := s.repo.Update(&updatedPermission)
-		if err != nil {
-			return updatedPermission, err
-		}
-		permission, err := s.repo.FindByID(updatedPermission.ID)
-		if err != nil {
-			return updatedPermission, err
-		}
-		return *permission, nil
 	}
+
+	err := s.repo.Update(&updatedPermission)
+	if err != nil {
+		return updatedPermission, err
+	}
+	permission, err := s.repo.FindByID(updatedPermission.ID)
+	if err != nil {
+		return updatedPermission, err
+	}
+	return *permission, nil
 }
 
 func (s *PermissionService) Create(permission *models.Permission) error {
@@ -45,14 +44,6 @@ func (s *PermissionService) Create(permission *models.Permission) error {
 
 func (s *PermissionService) Update(permission *models.Permission) error {
 	return s.repo.Update(permission)
-}
-
-func (s *PermissionService) Delete(id string) error {
-	permissionID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		return err
-	}
-	return s.repo.Delete(uint(permissionID))
 }
 
 func (s *PermissionService) DeleteByID(id uint) error {

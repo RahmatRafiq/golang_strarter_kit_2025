@@ -46,8 +46,11 @@ func (c *CategoryController) List(ctx *gin.Context) {
 // @Failure		404	{object}	map[string]string	"Category not found"
 // @Router			/categories/{id} [get]
 func (c *CategoryController) Get(ctx *gin.Context) {
-	id := ctx.Param("id")
-	category, err := c.service.GetCategoryByID(id)
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	category, err := c.service.GetCategoryByIDUint(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
 		return
@@ -100,8 +103,11 @@ func (c *CategoryController) Put(ctx *gin.Context) {
 // @Failure		500	{object}	map[string]string	"Internal Server Error"
 // @Router			/categories/{id} [delete]
 func (c *CategoryController) Delete(ctx *gin.Context) {
-	id := ctx.Param("id")
-	if err := c.service.DeleteCategory(id); err != nil {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	if err := c.service.DeleteCategoryByID(id); err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Category not found"})
 		return
 	}

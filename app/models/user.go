@@ -9,7 +9,9 @@ import (
 )
 
 type User struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
+	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" swaggerignore:"true"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" swaggerignore:"true"`
+	DeletedAt gorm.DeletedAt `json:"deleted_at" swaggerignore:"true"`
 	Reference string         `gorm:"type:varchar(100);uniqueIndex" json:"reference"`
 	Username  string         `gorm:"type:varchar(100);uniqueIndex" json:"username"`
 	Email     string         `gorm:"type:varchar(100);uniqueIndex" json:"email"`
@@ -17,11 +19,8 @@ type User struct {
 	JwtToken  string         `gorm:"type:varchar(255)" json:"jwt_token" swaggerignore:"true"`
 	FcmToken  string         `gorm:"type:varchar(255)" json:"fcm_token" swaggerignore:"true"`
 	Pin       string         `gorm:"type:varchar(255)" json:"pin"`
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" swaggerignore:"true"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" swaggerignore:"true"`
-	DeletedAt gorm.DeletedAt `json:"deleted_at" swaggerignore:"true"`
-
-	Roles []Role `gorm:"many2many:user_has_roles;" json:"roles" swaggerignore:"true"`
+	Roles     []Role         `gorm:"many2many:user_has_roles;" json:"roles" swaggerignore:"true"`
+	ID        uint           `gorm:"primaryKey" json:"id"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {

@@ -58,7 +58,7 @@ func ComparePasswordArgon2(password, encodedHash string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	
+
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return false, err
@@ -69,7 +69,11 @@ func ComparePasswordArgon2(password, encodedHash string) (bool, error) {
 		return false, err
 	}
 
-	computedHash := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(len(hash)))
+	hashLen := len(hash)
+	if hashLen < 0 || hashLen > 0xFFFFFFFF {
+		return false, fmt.Errorf("invalid hash length")
+	}
+	computedHash := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(hashLen))
 
 	if subtle.ConstantTimeCompare(hash, computedHash) == 1 {
 		return true, nil

@@ -1,8 +1,6 @@
 package services
 
 import (
-	"strconv"
-
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
 	"golang_starter_kit_2025/app/requests"
@@ -12,9 +10,9 @@ import (
 )
 
 type ProductService struct {
+	fileService  FileService
 	productRepo  interfaces.ProductRepositoryInterface
 	categoryRepo interfaces.CategoryRepositoryInterface
-	fileService  FileService
 }
 
 func NewProductService(productRepo interfaces.ProductRepositoryInterface, categoryRepo interfaces.CategoryRepositoryInterface) *ProductService {
@@ -32,19 +30,6 @@ func (s *ProductService) GetAll(filters requests.FilterRequest) ([]models.Produc
 
 func (s *ProductService) List(page, limit int) ([]models.Product, int64, error) {
 	return s.productRepo.ListWithCategory(page, limit)
-}
-
-func (s *ProductService) GetByID(id string) (models.Product, error) {
-	productID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		return models.Product{}, err
-	}
-
-	product, err := s.productRepo.FindByIDWithCategory(uint(productID))
-	if err != nil {
-		return models.Product{}, err
-	}
-	return *product, nil
 }
 
 func (s *ProductService) FindByID(id uint) (*models.Product, error) {
@@ -111,29 +96,29 @@ func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) 
 			Str("name", product.Name).
 			Msg("Product created successfully")
 		return &product, nil
-	} else {
-		err := s.productRepo.Update(&product)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("product_id", product.ID).
-				Msg("Failed to update product")
-			return &product, err
-		}
-		updated, err := s.productRepo.FindByID(request.ID)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Uint("product_id", request.ID).
-				Msg("Failed to fetch updated product")
-			return &product, err
-		}
-		log.Info().
-			Uint("product_id", product.ID).
-			Str("name", product.Name).
-			Msg("Product updated successfully")
-		return updated, nil
 	}
+
+	err := s.productRepo.Update(&product)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", product.ID).
+			Msg("Failed to update product")
+		return &product, err
+	}
+	updated, err := s.productRepo.FindByID(request.ID)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", request.ID).
+			Msg("Failed to fetch updated product")
+		return &product, err
+	}
+	log.Info().
+		Uint("product_id", product.ID).
+		Str("name", product.Name).
+		Msg("Product updated successfully")
+	return updated, nil
 }
 
 func (s *ProductService) Create(product *models.Product) error {
@@ -142,31 +127,6 @@ func (s *ProductService) Create(product *models.Product) error {
 
 func (s *ProductService) Update(product *models.Product) error {
 	return s.productRepo.Update(product)
-}
-
-func (s *ProductService) Delete(id string) error {
-	productID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Str("id", id).
-			Msg("Invalid product ID format for deletion")
-		return err
-	}
-
-	err = s.productRepo.Delete(uint(productID))
-	if err != nil {
-		log.Error().
-			Err(err).
-			Uint("product_id", uint(productID)).
-			Msg("Failed to delete product")
-		return err
-	}
-
-	log.Info().
-		Uint("product_id", uint(productID)).
-		Msg("Product deleted successfully")
-	return nil
 }
 
 func (s *ProductService) DeleteByID(id uint) error {

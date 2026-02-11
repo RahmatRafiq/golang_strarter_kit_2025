@@ -49,7 +49,11 @@ func Init() {
 	if err := helpers.InitRedis(); err != nil {
 		log.Warn().Err(err).Msg("Redis not available, caching disabled")
 	}
-	defer helpers.CloseRedis()
+	defer func() {
+		if err := helpers.CloseRedis(); err != nil {
+			log.Error().Err(err).Msg("Failed to close Redis connection")
+		}
+	}()
 
 	app := &cli.App{
 		Name:  "Golang Starter Kit",
@@ -79,6 +83,9 @@ func Init() {
 			// Factory commands
 			cmd.MakeFactoryCommand, // NEW: Generate factories
 
+			// Testing commands
+			cmd.TestCommand, // NEW: Run tests (like php artisan test)
+
 			// Database commands
 			cmd.DBWipeCommand,
 			cmd.DBStatusCommand,
@@ -102,7 +109,9 @@ func Init() {
 
 	helpers.PrintServerStartupInfo()
 
-	r.Run(":" + appPort)
+	if err := r.Run(":" + appPort); err != nil {
+		log.Fatal().Err(err).Msg("Failed to start server")
+	}
 }
 
 func isWeakSecret(secret string) bool {

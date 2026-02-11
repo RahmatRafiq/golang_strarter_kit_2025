@@ -32,7 +32,7 @@ func (c *RoleController) List(ctx *gin.Context) {
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal mendapatkan daftar Role",
+			Message:   "Failed to get roles list",
 			Reference: "ERROR-3",
 		}, 500)
 		return
@@ -56,14 +56,14 @@ func (c *RoleController) Put(ctx *gin.Context) {
 		if errors.As(err, &verr) {
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 				Errors:    helpers.ValidationError(verr),
-				Message:   "Parameter tidak valid",
+				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
 			}, 400)
 		}
 
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal membuat Role",
+			Message:   "Failed to create role",
 			Reference: "ERROR-3",
 		}, 400)
 		return
@@ -72,7 +72,7 @@ func (c *RoleController) Put(ctx *gin.Context) {
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal membuat Role",
+			Message:   "Failed to create role",
 			Reference: "ERROR-3",
 		}, 400)
 		return
@@ -90,11 +90,14 @@ func (c *RoleController) Put(ctx *gin.Context) {
 // @Success		200	{object}	helpers.ResponseParams[any]{}
 // @Router			/roles/{id} [delete]
 func (c *RoleController) Delete(ctx *gin.Context) {
-	id := ctx.Param("id")
-	if err := c.service.Delete(id); err != nil {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	if err := c.service.DeleteByID(id); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal menghapus Role",
+			Message:   "Failed to delete role",
 			Reference: "ERROR-3",
 		}, 500)
 		return
@@ -115,8 +118,11 @@ func (c *RoleController) AssignPermissions(ctx *gin.Context) {
 		return
 	}
 
-	roleId := ctx.Param("id")
-	err := c.service.AssignPermissionsToRole(roleId, req.Permissions)
+	roleID, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	err := c.service.AssignPermissions(roleID, req.Permissions)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -126,8 +132,11 @@ func (c *RoleController) AssignPermissions(ctx *gin.Context) {
 }
 
 func (c *RoleController) GetPermissions(ctx *gin.Context) {
-	roleId := ctx.Param("id")
-	permissions, err := c.service.GetPermissionsByRoleId(roleId)
+	roleID, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	permissions, err := c.service.GetPermissions(roleID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

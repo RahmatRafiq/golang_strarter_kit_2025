@@ -9,14 +9,14 @@ import (
 
 // MigrationLog represents a migration execution log entry
 type MigrationLog struct {
-	ID              int64
+	ExecutedAt      time.Time
 	ConnectionName  string
 	Filename        string
+	Status          string
+	ErrorMessage    string
+	ID              int64
 	Batch           int
 	ExecutionTimeMs int64
-	Status          string // 'success' or 'failed'
-	ErrorMessage    string
-	ExecutedAt      time.Time
 }
 
 // ensureMigrationLogsTable creates the migration_logs table if it doesn't exist
@@ -205,16 +205,16 @@ func GetMigrationStats(connectionName string) (map[string]interface{}, error) {
 // FormatDuration formats milliseconds to human-readable duration
 func FormatDuration(ms int64) string {
 	duration := time.Duration(ms) * time.Millisecond
-	
+
 	if duration < time.Second {
 		return fmt.Sprintf("%dms", ms)
 	}
-	
+
 	seconds := duration.Seconds()
 	if seconds < 60 {
 		return fmt.Sprintf("%.2fs", seconds)
 	}
-	
+
 	minutes := int(seconds / 60)
 	remainingSeconds := seconds - float64(minutes*60)
 	return fmt.Sprintf("%dm %.1fs", minutes, remainingSeconds)

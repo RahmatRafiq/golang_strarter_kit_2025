@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/microcosm-cc/bluemonday"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -52,7 +54,7 @@ func SanitizeInput() gin.HandlerFunc {
 
 		// Try to parse as JSON
 		var body interface{}
-		if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		if jsonErr := json.Unmarshal(bodyBytes, &body); jsonErr != nil {
 			c.Next()
 			return
 		}
@@ -64,7 +66,13 @@ func SanitizeInput() gin.HandlerFunc {
 		c.Set("sanitized_body", sanitized)
 
 		// Update request body with sanitized data
-		sanitizedBytes, _ := json.Marshal(sanitized)
+		sanitizedBytes, err := json.Marshal(sanitized)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to marshal sanitized data")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process request"})
+			c.Abort()
+			return
+		}
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(sanitizedBytes))
 		c.Request.ContentLength = int64(len(sanitizedBytes))
 
