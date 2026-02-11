@@ -64,9 +64,10 @@ jobs:
           version: latest
           args: --timeout=5m
 
-      - name: Create test .env file
+      - name: Create test .env files
         run: |
-          cat > .env << EOF
+          # Create .env for general use
+          cat > .env << 'EOF'
           APP_NAME="Test App"
           APP_ENV=testing
           APP_PORT=9999
@@ -85,6 +86,12 @@ jobs:
           POSTGRES_USER=postgres
           POSTGRES_PASSWORD=test_password
           EOF
+          
+          # Create .env.test for Ginkgo tests (controllers, helpers)
+          cp .env .env.test
+          
+          # Create .env.testing for integration/unit tests
+          cp .env .env.testing
 
       - name: Run tests
         run: |
