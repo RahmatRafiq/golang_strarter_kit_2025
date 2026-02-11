@@ -90,8 +90,11 @@ func (c *RoleController) Put(ctx *gin.Context) {
 // @Success		200	{object}	helpers.ResponseParams[any]{}
 // @Router			/roles/{id} [delete]
 func (c *RoleController) Delete(ctx *gin.Context) {
-	id := ctx.Param("id")
-	if err := c.service.Delete(id); err != nil {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	if err := c.service.DeleteByID(id); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Gagal menghapus Role",
@@ -115,8 +118,11 @@ func (c *RoleController) AssignPermissions(ctx *gin.Context) {
 		return
 	}
 
-	roleID := ctx.Param("id")
-	err := c.service.AssignPermissionsToRole(roleID, req.Permissions)
+	roleID, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	err := c.service.AssignPermissions(roleID, req.Permissions)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -126,8 +132,11 @@ func (c *RoleController) AssignPermissions(ctx *gin.Context) {
 }
 
 func (c *RoleController) GetPermissions(ctx *gin.Context) {
-	roleID := ctx.Param("id")
-	permissions, err := c.service.GetPermissionsByRoleID(roleID)
+	roleID, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	permissions, err := c.service.GetPermissions(roleID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

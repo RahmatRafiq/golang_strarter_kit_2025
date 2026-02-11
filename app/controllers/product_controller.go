@@ -63,8 +63,11 @@ func (c *ProductController) GetAll(ctx *gin.Context) {
 // @Success		200	{object}	helpers.ResponseParams[models.Product]{item=models.Product}
 // @Router			/products/{id} [get]
 func (c *ProductController) GetByID(ctx *gin.Context) {
-	id := ctx.Param("id")
-	product, err := c.service.GetByID(id)
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	product, err := c.service.FindByID(id)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Gagal mendapatkan produk",
@@ -74,7 +77,7 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: &product}, http.StatusOK)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: product}, http.StatusOK)
 }
 
 // @Summary		Create/Update product
@@ -121,8 +124,11 @@ func (c *ProductController) Put(ctx *gin.Context) {
 // @Success		200	{object}	helpers.ResponseParams[models.Product]
 // @Router			/products/{id} [delete]
 func (c *ProductController) Delete(ctx *gin.Context) {
-	id := ctx.Param("id")
-	if err := c.service.Delete(id); err != nil {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	if err := c.service.DeleteByID(id); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Gagal menghapus produk",
 			Reference: "ERROR-3",

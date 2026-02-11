@@ -90,8 +90,11 @@ func (c *PermissionController) Put(ctx *gin.Context) {
 // @Success		200	{object}	helpers.ResponseParams[models.Permission]{}
 // @Router			/permissions/{id} [delete]
 func (c *PermissionController) Delete(ctx *gin.Context) {
-	id := ctx.Param("id")
-	if err := c.service.Delete(id); err != nil {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+	if err := c.service.DeleteByID(id); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Gagal menghapus Permission",

@@ -1,8 +1,6 @@
 package services
 
 import (
-	"strconv"
-
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
 )
@@ -46,14 +44,6 @@ func (s *PermissionService) Create(permission *models.Permission) error {
 
 func (s *PermissionService) Update(permission *models.Permission) error {
 	return s.repo.Update(permission)
-}
-
-func (s *PermissionService) Delete(id string) error {
-	permissionID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		return err
-	}
-	return s.repo.Delete(uint(permissionID))
 }
 
 func (s *PermissionService) DeleteByID(id uint) error {

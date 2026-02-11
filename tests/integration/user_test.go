@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"strconv"
 	"testing"
 
 	"golang_starter_kit_2025/app/models"
@@ -48,7 +47,7 @@ func TestUserService_CRUD_Integration(t *testing.T) {
 			Create()
 
 		// Act: Find user
-		foundUser, err := userService.Find(strconv.Itoa(int(createdUser.ID)))
+		foundUser, err := userService.FindByID(createdUser.ID)
 
 		// Assert
 		if err != nil {
@@ -70,7 +69,7 @@ func TestUserService_CRUD_Integration(t *testing.T) {
 			Create()
 
 		// Act: Delete user
-		err := userService.Delete(strconv.Itoa(int(user.ID)))
+		err := userService.DeleteByID(user.ID)
 
 		// Assert
 		if err != nil {
@@ -111,7 +110,7 @@ func TestUserService_RoleAssignment_Integration(t *testing.T) {
 		roleIDs := []uint{adminRole.ID, editorRole.ID}
 
 		// Act: Assign roles
-		err := userService.AssignRolesToUser(strconv.Itoa(int(user.ID)), roleIDs)
+		err := userService.AssignRoles(user.ID, roleIDs)
 
 		// Assert
 		if err != nil {
@@ -132,7 +131,7 @@ func TestUserService_RoleAssignment_Integration(t *testing.T) {
 		user, role := helpers.CreateUserWithRole(t, testDB, "viewer")
 
 		// Act: Get user roles
-		roles, err := userService.GetRolesByUserID(strconv.Itoa(int(user.ID)))
+		roles, err := userService.GetRoles(user.ID)
 
 		// Assert
 		if err != nil {
@@ -151,14 +150,14 @@ func TestUserService_RoleAssignment_Integration(t *testing.T) {
 		// Arrange: Create user with initial role
 		user := helpers.NewUserFactory(t, testDB).WithEmail("reassign@test.com").Create()
 		oldRole := helpers.NewRoleFactory(t, testDB).WithName("old_role").Create()
-		userService.AssignRolesToUser(strconv.Itoa(int(user.ID)), []uint{oldRole.ID})
+		userService.AssignRoles(user.ID, []uint{oldRole.ID})
 
 		// Create new roles
 		newRole1 := helpers.NewRoleFactory(t, testDB).WithName("new_role_1").Create()
 		newRole2 := helpers.NewRoleFactory(t, testDB).WithName("new_role_2").Create()
 
 		// Act: Reassign with new roles
-		err := userService.AssignRolesToUser(strconv.Itoa(int(user.ID)), []uint{newRole1.ID, newRole2.ID})
+		err := userService.AssignRoles(user.ID, []uint{newRole1.ID, newRole2.ID})
 
 		// Assert
 		if err != nil {
@@ -166,7 +165,7 @@ func TestUserService_RoleAssignment_Integration(t *testing.T) {
 		}
 
 		// Verify new roles assigned (old role should be replaced)
-		roles, _ := userService.GetRolesByUserID(strconv.Itoa(int(user.ID)))
+		roles, _ := userService.GetRoles(user.ID)
 		if len(roles) != 2 {
 			t.Errorf("Expected 2 roles after reassignment, got %d", len(roles))
 		}

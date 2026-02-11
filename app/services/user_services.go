@@ -1,8 +1,6 @@
 package services
 
 import (
-	"strconv"
-
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
 
@@ -24,19 +22,6 @@ func (s *UserService) GetAllUsers() ([]models.User, error) {
 
 func (s *UserService) List(page, limit int) ([]models.User, int64, error) {
 	return s.repo.List(page, limit)
-}
-
-func (s *UserService) Find(id string) (models.User, error) {
-	userID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		return models.User{}, err
-	}
-
-	user, err := s.repo.FindByID(uint(userID))
-	if err != nil {
-		return models.User{}, err
-	}
-	return *user, nil
 }
 
 func (s *UserService) FindByID(id uint) (*models.User, error) {
@@ -87,73 +72,12 @@ func (s *UserService) Update(user *models.User) error {
 	return s.repo.Update(user)
 }
 
-func (s *UserService) Delete(id string) error {
-	userID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Str("id", id).
-			Msg("Invalid user ID format for deletion")
-		return err
-	}
-
-	err = s.repo.Delete(uint(userID))
-	if err != nil {
-		log.Error().
-			Err(err).
-			Uint("user_id", uint(userID)).
-			Msg("Failed to delete user")
-		return err
-	}
-
-	log.Info().
-		Uint("user_id", uint(userID)).
-		Msg("User deleted successfully")
-	return nil
-}
-
 func (s *UserService) DeleteByID(id uint) error {
 	return s.repo.Delete(id)
 }
 
-func (s *UserService) AssignRolesToUser(userID string, roleIDs []uint) error {
-	userIDNum, err := strconv.ParseUint(userID, 10, 32)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Str("user_id", userID).
-			Msg("Invalid user ID format for role assignment")
-		return err
-	}
-
-	err = s.repo.AssignRoles(uint(userIDNum), roleIDs)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Uint("user_id", uint(userIDNum)).
-			Interface("role_ids", roleIDs).
-			Msg("Failed to assign roles to user")
-		return err
-	}
-
-	log.Info().
-		Uint("user_id", uint(userIDNum)).
-		Interface("role_ids", roleIDs).
-		Msg("Roles assigned to user successfully")
-	return nil
-}
-
 func (s *UserService) AssignRoles(userID uint, roleIDs []uint) error {
 	return s.repo.AssignRoles(userID, roleIDs)
-}
-
-func (s *UserService) GetRolesByUserID(userID string) ([]models.Role, error) {
-	userIDNum, err := strconv.ParseUint(userID, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.repo.GetRoles(uint(userIDNum))
 }
 
 func (s *UserService) GetRoles(userID uint) ([]models.Role, error) {
