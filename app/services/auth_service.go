@@ -29,11 +29,24 @@ func NewAuthService(repo interfaces.AuthRepositoryInterface) *AuthService {
 }
 
 func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, error) {
-	user, err := auth.repo.FindUserByEmail(request.Email)
+	// IMPROVED: Sanitize email input (trim whitespace for better UX)
+	sanitizedEmail := strings.TrimSpace(request.Email)
+
+	user, err := auth.repo.FindUserByEmail(sanitizedEmail)
 	if err != nil {
 		log.Warn().
-			Str("email", request.Email).
+			Str("email", sanitizedEmail).
 			Msg("Login attempt with non-existent email")
+		return nil, errors.New("email atau password salah")
+	}
+
+	// IMPROVED: Validate password length (max 128 chars for Argon2)
+	if len(request.Password) > 128 {
+		log.Warn().
+			Uint("user_id", user.ID).
+			Str("email", sanitizedEmail).
+			Int("password_length", len(request.Password)).
+			Msg("Login attempt with excessively long password (DoS protection)")
 		return nil, errors.New("email atau password salah")
 	}
 
@@ -41,7 +54,7 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 	if err != nil || !check {
 		log.Warn().
 			Uint("user_id", user.ID).
-			Str("email", request.Email).
+			Str("email", sanitizedEmail).
 			Msg("Login attempt with invalid password")
 		return nil, errors.New("email atau password salah")
 	}
@@ -68,7 +81,7 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 
 	log.Info().
 		Uint("user_id", user.ID).
-		Str("email", request.Email).
+		Str("email", sanitizedEmail).
 		Msg("User logged in successfully")
 
 	return &casts.Token{
@@ -80,6 +93,8 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 	}, nil
 }
 
+// Logout logs out the user from current device only (preserves other sessions)
+// IMPROVED: Now supports per-device logout instead of terminating all sessions
 func (auth *AuthService) Logout(tokenString string) error {
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
@@ -132,18 +147,70 @@ func (auth *AuthService) Logout(tokenString string) error {
 		return err
 	}
 
-	// Revoke all refresh tokens for this user
-	if err := auth.jwt.RevokeAllUserTokens(userID); err != nil {
+	// IMPROVED: Revoke only current session token (per-device logout)
+	// This allows users to stay logged in on other devices
+	if err := auth.jwt.RevokeCurrentSessionToken(tokenString); err != nil {
 		log.Error().
 			Err(err).
 			Uint("user_id", userID).
-			Msg("Failed to revoke refresh tokens")
+			Msg("Failed to revoke current session token")
 		return err
 	}
 
 	log.Info().
 		Uint("user_id", userID).
-		Msg("User logged out successfully")
+		Msg("User logged out from current device successfully")
+
+	return nil
+}
+
+// LogoutAllDevices logs out the user from ALL devices (security incident response)
+// Use this for security purposes when user wants to terminate all sessions
+func (auth *AuthService) LogoutAllDevices(tokenString string) error {
+	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil || !token.Valid {
+		return errors.New("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return errors.New("invalid claims type")
+	}
+
+	userIDVal := claims["user_id"]
+	var userID uint
+	switch v := userIDVal.(type) {
+	case float64:
+		userID = uint(v)
+	case uint:
+		userID = v
+	default:
+		return errors.New("invalid user id")
+	}
+
+	user, err := auth.repo.FindUserByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	// Clear JWT token in user table
+	user.JwtToken = ""
+	if err := auth.repo.UpdateUser(user); err != nil {
+		return err
+	}
+
+	// Revoke ALL refresh tokens for security
+	if err := auth.jwt.RevokeAllUserTokens(userID); err != nil {
+		return err
+	}
+
+	log.Info().
+		Uint("user_id", userID).
+		Msg("User logged out from ALL devices (security action)")
 
 	return nil
 }
