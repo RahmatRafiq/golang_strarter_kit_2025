@@ -1,13 +1,22 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/middleware"
+	"golang_starter_kit_2025/app/services"
+	"golang_starter_kit_2025/app/workers"
+	"golang_starter_kit_2025/app/workers/tasks"
 	"golang_starter_kit_2025/cmd"
+	"golang_starter_kit_2025/config"
 	"golang_starter_kit_2025/docs"
 	"golang_starter_kit_2025/facades"
 	"golang_starter_kit_2025/routes"
@@ -104,14 +113,63 @@ func Init() {
 		os.Exit(0)
 	}
 
+	// Initialize worker manager if queue is enabled
+	var workerManager *workers.WorkerManager
+	if helpers.GetEnv("QUEUE_ENABLED", "false") == "true" {
+		queueCfg := config.GetQueueConfig()
+		workerManager = workers.NewWorkerManager(queueCfg)
+
+		// Initialize email service for workers
+		emailService := services.NewEmailService()
+
+		// Register task handlers with dependencies
+		workerManager.RegisterHandler(tasks.TypeSendEmail, tasks.NewHandleSendEmailTask(emailService))
+
+		// Start workers in background
+		go func() {
+			if err := workerManager.Start(); err != nil {
+				log.Fatal().Err(err).Msg("Failed to start worker manager")
+			}
+		}()
+
+		log.Info().Msg("Worker manager started with email service")
+	}
+
 	r := Router()
 	appPort := helpers.GetEnv("APP_PORT", "8080")
 
 	helpers.PrintServerStartupInfo()
 
-	if err := r.Run(":" + appPort); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start server")
+	srv := &http.Server{
+		Addr:              ":" + appPort,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("Failed to start server")
+		}
+	}()
+
+	<-quit
+	log.Info().Msg("Shutting down gracefully...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if workerManager != nil {
+		workerManager.Shutdown()
+	}
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error().Err(err).Msg("Server forced to shutdown")
+	}
+
+	log.Info().Msg("Server stopped")
 }
 
 func isWeakSecret(secret string) bool {
@@ -185,6 +243,25 @@ func validateRequiredEnvVars() {
 
 func Router() *gin.Engine {
 	route := gin.Default()
+
+	// Initialize tracing service if enabled
+	tracingConfig := config.GetTracingConfig()
+	if tracingConfig.Enabled {
+		tracingService, err := services.NewTracingService()
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to initialize tracing service")
+		} else {
+			log.Info().Str("service", tracingConfig.ServiceName).Msg("Tracing service initialized")
+			defer func() {
+				if err := tracingService.Shutdown(context.Background()); err != nil {
+					log.Error().Err(err).Msg("Failed to shutdown tracing service")
+				}
+			}()
+
+			// Add tracing middleware
+			route.Use(middleware.TracingMiddleware())
+		}
+	}
 
 	// Gzip compression middleware (5-10x smaller responses)
 	route.Use(gzip.Gzip(gzip.DefaultCompression))
