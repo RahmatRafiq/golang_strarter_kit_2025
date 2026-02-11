@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/services"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,10 @@ func NewStorageController(storageService *services.StorageService) *StorageContr
 func (c *StorageController) UploadFile(ctx *gin.Context) {
 	file, header, err := ctx.Request.FormFile("file")
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "No file uploaded",
+			Errors:  map[string]string{"file": "File is required"},
+		}, http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
@@ -44,17 +48,20 @@ func (c *StorageController) UploadFile(ctx *gin.Context) {
 	filename, err := c.storageService.UploadFile(file, header, folder)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to upload file")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Upload failed"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "Upload failed",
+			Errors:  map[string]string{"upload": err.Error()},
+		}, http.StatusInternalServerError)
 		return
 	}
 
 	url, _ := c.storageService.GetFileURL(filename, 24*time.Hour)
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message":  "File uploaded successfully",
-		"filename": filename,
-		"url":      url,
-	})
+	item := any(map[string]interface{}{"filename": filename, "url": url})
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "File uploaded successfully",
+		Item:    &item,
+	}, http.StatusOK)
 }
 
 // GetFileURL godoc
@@ -73,11 +80,18 @@ func (c *StorageController) GetFileURL(ctx *gin.Context) {
 
 	url, err := c.storageService.GetFileURL(filename, expiry)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "File not found",
+			Errors:  map[string]string{"filename": "File does not exist"},
+		}, http.StatusNotFound)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"url": url})
+	item := any(map[string]interface{}{"url": url, "filename": filename})
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "File URL generated successfully",
+		Item:    &item,
+	}, http.StatusOK)
 }
 
 // DeleteFile godoc
@@ -95,9 +109,16 @@ func (c *StorageController) DeleteFile(ctx *gin.Context) {
 
 	if err := c.storageService.DeleteFile(filename); err != nil {
 		log.Error().Err(err).Msg("Failed to delete file")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "Delete failed",
+			Errors:  map[string]string{"delete": err.Error()},
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
+	item := any(map[string]interface{}{"filename": filename})
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "File deleted successfully",
+		Item:    &item,
+	}, http.StatusOK)
 }

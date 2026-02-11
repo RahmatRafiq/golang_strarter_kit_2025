@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"net/http"
 
+	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/services"
 
 	"github.com/gin-gonic/gin"
@@ -37,7 +38,10 @@ func (c *OAuthController) GoogleCallback(ctx *gin.Context) {
 	cookie, _ := ctx.Cookie("oauth_state")
 
 	if state != cookie {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "Invalid state parameter",
+			Errors:  map[string]string{"state": "CSRF validation failed"},
+		}, http.StatusBadRequest)
 		return
 	}
 
@@ -45,15 +49,18 @@ func (c *OAuthController) GoogleCallback(ctx *gin.Context) {
 	user, token, err := c.oauthService.HandleGoogleCallback(code)
 	if err != nil {
 		log.Error().Err(err).Msg("Google OAuth failed")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "OAuth failed"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "OAuth authentication failed",
+			Errors:  map[string]string{"oauth": err.Error()},
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
-		"token":   token,
-		"user":    user,
-	})
+	item := any(map[string]interface{}{"user": user, "token": token})
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "Login successful",
+		Item:    &item,
+	}, http.StatusOK)
 }
 
 // GitHubLogin godoc
@@ -74,7 +81,10 @@ func (c *OAuthController) GitHubCallback(ctx *gin.Context) {
 	cookie, _ := ctx.Cookie("oauth_state")
 
 	if state != cookie {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "Invalid state parameter",
+			Errors:  map[string]string{"state": "CSRF validation failed"},
+		}, http.StatusBadRequest)
 		return
 	}
 
@@ -82,15 +92,18 @@ func (c *OAuthController) GitHubCallback(ctx *gin.Context) {
 	user, token, err := c.oauthService.HandleGitHubCallback(code)
 	if err != nil {
 		log.Error().Err(err).Msg("GitHub OAuth failed")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "OAuth failed"})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "OAuth authentication failed",
+			Errors:  map[string]string{"oauth": err.Error()},
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
-		"token":   token,
-		"user":    user,
-	})
+	item := any(map[string]interface{}{"user": user, "token": token})
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "Login successful",
+		Item:    &item,
+	}, http.StatusOK)
 }
 
 func generateState() string {
