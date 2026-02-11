@@ -20,7 +20,7 @@ var _ = Describe("GetEnv", func() {
 			appName := helpers.GetEnv("APP_NAME", "default")
 			Expect(appName).NotTo(Equal("default"))
 			Expect(appName).NotTo(BeEmpty())
-			
+
 			Expect(helpers.GetEnv("JWT_EXPIRE_MINUTES", "default")).To(Equal("60"))
 		})
 	})
