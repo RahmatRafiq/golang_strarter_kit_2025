@@ -13,10 +13,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog/log"
 )
 
 func RegisterRoutes(route *gin.Engine) {
-	// Apply observability middleware (must be first for accurate metrics)
+	// Apply security middleware FIRST (must be before other middleware)
+	route.Use(middleware.HTTPSRedirect())   // Force HTTPS in production
+	route.Use(middleware.SecurityHeaders()) // Security headers (HSTS, CSP, etc)
+
+	// Apply observability middleware (must be early for accurate metrics)
 	route.Use(middleware.ZerologMiddleware()) // Structured logging
 	route.Use(middleware.MetricsMiddleware()) // Prometheus metrics
 
@@ -39,6 +44,8 @@ func RegisterRoutes(route *gin.Engine) {
 	productRepo := repositories.NewProductRepository(facades.DB)
 	categoryRepo := repositories.NewCategoryRepository(facades.DB)
 	authRepo := repositories.NewAuthRepository(facades.DB)
+	passwordResetRepo := repositories.NewPasswordResetRepository(facades.DB)
+	emailVerificationRepo := repositories.NewEmailVerificationRepository(facades.DB)
 
 	userService := services.NewUserService(userRepo)
 	roleService := services.NewRoleService(roleRepo, permissionRepo)
@@ -46,6 +53,16 @@ func RegisterRoutes(route *gin.Engine) {
 	productService := services.NewProductService(productRepo, categoryRepo)
 	categoryService := services.NewCategoryService(categoryRepo, productRepo)
 	authService := services.NewAuthService(authRepo)
+	passwordResetService := services.NewPasswordResetService(passwordResetRepo, userRepo)
+	emailVerificationService := services.NewEmailVerificationService(emailVerificationRepo, userRepo)
+	oauthService := services.NewOAuthService(userRepo)
+
+	var storageService *services.StorageService
+	var storageErr error
+	storageService, storageErr = services.NewStorageService()
+	if storageErr != nil {
+		log.Warn().Err(storageErr).Msg("Storage service not available")
+	}
 
 	// ========================================
 	// Demo/Testing Routes (PostgreSQL Example)
@@ -73,7 +90,7 @@ func RegisterRoutes(route *gin.Engine) {
 	// ========================================
 	// API v1 Routes (Recommended)
 	// ========================================
-	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService)
+	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService, passwordResetService, emailVerificationService, oauthService, storageService)
 
 	// ========================================
 	// Legacy Routes (Deprecated - For Backward Compatibility)

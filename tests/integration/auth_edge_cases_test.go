@@ -307,14 +307,14 @@ func TestAuthService_WhitespaceHandling_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("edge - newline in email (sanitized by TrimSpace)", func(t *testing.T) {
-		// Arrange: Create user first
+		// Arrange: Create user first with unique email
 		_, plainPassword := helpers.NewUserFactory(t, testDB).
-			WithEmail("user@test.com").
+			WithEmail("newline.user@test.com").
 			CreateWithPlainPassword()
 
 		// Act: Try login with newline (will be trimmed)
 		loginReq := requests.LoginRequest{
-			Email:    "user@test.com\n",
+			Email:    "newline.user@test.com\n",
 			Password: plainPassword,
 		}
 

@@ -1,71 +1,4 @@
 definitions:
-  casts.DetailedHealthResponse:
-    properties:
-      services:
-        additionalProperties:
-          $ref: '#/definitions/casts.Service'
-        type: object
-      status:
-        allOf:
-        - $ref: '#/definitions/casts.HealthStatus'
-        example: healthy
-      timestamp:
-        example: "2025-02-11T10:30:00Z"
-        type: string
-      uptime:
-        example: 5d 3h 12m
-        type: string
-      version:
-        example: 1.0.0
-        type: string
-    type: object
-  casts.HealthResponse:
-    properties:
-      status:
-        allOf:
-        - $ref: '#/definitions/casts.HealthStatus'
-        example: healthy
-      timestamp:
-        example: "2025-02-11T10:30:00Z"
-        type: string
-      version:
-        example: 1.0.0
-        type: string
-    type: object
-  casts.HealthStatus:
-    enum:
-    - healthy
-    - degraded
-    - unhealthy
-    type: string
-    x-enum-varnames:
-    - StatusHealthy
-    - StatusDegraded
-    - StatusUnhealthy
-  casts.Service:
-    properties:
-      details: {}
-      latency_ms:
-        example: 2.5
-        type: number
-      message:
-        example: ""
-        type: string
-      status:
-        allOf:
-        - $ref: '#/definitions/casts.ServiceStatus'
-        example: up
-    type: object
-  casts.ServiceStatus:
-    enum:
-    - up
-    - down
-    - degraded
-    type: string
-    x-enum-varnames:
-    - ServiceUp
-    - ServiceDown
-    - ServiceDegraded
   casts.Token:
     properties:
       expired_at:
@@ -192,9 +125,7 @@ definitions:
   models.Product:
     properties:
       category:
-        allOf:
-        - $ref: '#/definitions/models.Category'
-        description: Store    *Store    `json:"store"`
+        $ref: '#/definitions/models.Category'
       category_id:
         type: integer
       created_at:
@@ -274,6 +205,8 @@ definitions:
     properties:
       email:
         type: string
+      email_verified_at:
+        type: string
       id:
         type: integer
       password:
@@ -294,6 +227,14 @@ definitions:
         type: integer
     required:
     - category
+    type: object
+  requests.ForgotPasswordRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    required:
+    - email
     type: object
   requests.LoginRequest:
     properties:
@@ -371,6 +312,21 @@ definitions:
         type: string
     required:
     - refresh_token
+    type: object
+  requests.ResetPasswordRequest:
+    properties:
+      new_password:
+        example: newSecurePassword123
+        minLength: 8
+        type: string
+      token:
+        example: a1b2c3d4...
+        maxLength: 64
+        minLength: 64
+        type: string
+    required:
+    - new_password
+    - token
     type: object
   requests.RoleRequestPut:
     properties:
@@ -471,6 +427,191 @@ paths:
       summary: Test database connection
       tags:
       - Database
+  /api/v1/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Send password reset email to user
+      parameters:
+      - description: Forgot Password Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reset email sent successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Request password reset
+      tags:
+      - auth
+  /api/v1/auth/github:
+    get:
+      description: Redirects user to GitHub OAuth2 authorization page
+      produces:
+      - application/json
+      responses:
+        "307":
+          description: Redirect to GitHub OAuth
+          schema:
+            type: string
+      summary: Login with GitHub OAuth2
+      tags:
+      - OAuth
+  /api/v1/auth/google:
+    get:
+      description: Redirects user to Google OAuth2 consent page
+      produces:
+      - application/json
+      responses:
+        "307":
+          description: Redirect to Google OAuth
+          schema:
+            type: string
+      summary: Login with Google OAuth2
+      tags:
+      - OAuth
+  /api/v1/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset user password using valid reset token
+      parameters:
+      - description: Reset Password Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or token
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Reset password with token
+      tags:
+      - auth
+  /api/v1/storage/{filename}:
+    delete:
+      description: Delete a file from S3/MinIO storage
+      parameters:
+      - description: Filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete file from storage
+      tags:
+      - Storage
+  /api/v1/storage/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a file to S3/MinIO storage
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - default: general
+        description: Upload folder
+        in: formData
+        name: folder
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload file to storage
+      tags:
+      - Storage
+  /api/v1/storage/url/{filename}:
+    get:
+      description: Get a temporary presigned URL for accessing a file
+      parameters:
+      - description: Filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get presigned file URL
+      tags:
+      - Storage
   /auth/login:
     put:
       consumes:
@@ -711,36 +852,6 @@ paths:
       summary: Serve file without authentication
       tags:
       - File
-  /health:
-    get:
-      description: Returns basic API health status for load balancer health checks
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/casts.HealthResponse'
-      summary: Basic health check
-      tags:
-      - Health
-  /health/detailed:
-    get:
-      description: Returns comprehensive health status including all service dependencies
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/casts.DetailedHealthResponse'
-        "503":
-          description: Service unavailable
-          schema:
-            $ref: '#/definitions/casts.DetailedHealthResponse'
-      summary: Detailed health check
-      tags:
-      - Health
   /permissions:
     get:
       consumes:
@@ -995,20 +1106,6 @@ paths:
       summary: Delete Role
       tags:
       - Role
-  /status:
-    get:
-      description: Displays a real-time HTML status dashboard for monitoring system
-        health
-      produces:
-      - text/html
-      responses:
-        "200":
-          description: HTML status dashboard
-          schema:
-            type: string
-      summary: Status Dashboard
-      tags:
-      - Health
   /tests:
     get:
       description: Get all test records from PostgreSQL

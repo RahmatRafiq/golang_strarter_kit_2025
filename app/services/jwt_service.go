@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type JwtService struct{}
@@ -104,14 +105,11 @@ func (j *JwtService) RefreshAccessToken(refreshTokenString string) (*TokenPair, 
 	err := facades.DB.Transaction(func(tx *gorm.DB) error {
 		var refreshToken models.RefreshToken
 
-		// Find and lock the refresh token row with FOR UPDATE (prevents concurrent access)
-		// This ensures only ONE request can process this token at a time
-		err := tx.Raw(`
-			SELECT * FROM refresh_tokens
-			WHERE token = ? AND revoked = ? AND expires_at > ?
-			FOR UPDATE`,
-			refreshTokenString, false, time.Now()).
-			Scan(&refreshToken).Error
+		// Find and lock the refresh token row
+		// Use GORM's Clauses for database-agnostic locking (SQLite, MySQL, PostgreSQL)
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("token = ? AND revoked = ? AND expires_at > ?", refreshTokenString, false, time.Now()).
+			First(&refreshToken).Error
 
 		if err != nil {
 			return errors.New("invalid or expired refresh token")

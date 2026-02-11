@@ -126,6 +126,287 @@
                 }
             }
         },
+        "/api/v1/auth/forgot-password": {
+            "post": {
+                "description": "Send password reset email to user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Request password reset",
+                "parameters": [
+                    {
+                        "description": "Forgot Password Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ForgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reset email sent successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/github": {
+            "get": {
+                "description": "Redirects user to GitHub OAuth2 authorization page",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OAuth"
+                ],
+                "summary": "Login with GitHub OAuth2",
+                "responses": {
+                    "307": {
+                        "description": "Redirect to GitHub OAuth",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/google": {
+            "get": {
+                "description": "Redirects user to Google OAuth2 consent page",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OAuth"
+                ],
+                "summary": "Login with Google OAuth2",
+                "responses": {
+                    "307": {
+                        "description": "Redirect to Google OAuth",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "description": "Reset user password using valid reset token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Reset password with token",
+                "parameters": [
+                    {
+                        "description": "Reset Password Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password reset successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/storage/upload": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload a file to S3/MinIO storage",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Storage"
+                ],
+                "summary": "Upload file to storage",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "File to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "general",
+                        "description": "Upload folder",
+                        "name": "folder",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/storage/url/{filename}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a temporary presigned URL for accessing a file",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Storage"
+                ],
+                "summary": "Get presigned file URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filename",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/storage/{filename}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a file from S3/MinIO storage",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Storage"
+                ],
+                "summary": "Delete file from storage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filename",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "put": {
                 "description": "API untuk login dengan email dan password",
@@ -493,52 +774,6 @@
                         "description": "File",
                         "schema": {
                             "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/health": {
-            "get": {
-                "description": "Returns basic API health status for load balancer health checks",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Health"
-                ],
-                "summary": "Basic health check",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/casts.HealthResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/health/detailed": {
-            "get": {
-                "description": "Returns comprehensive health status including all service dependencies",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Health"
-                ],
-                "summary": "Detailed health check",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/casts.DetailedHealthResponse"
-                        }
-                    },
-                    "503": {
-                        "description": "Service unavailable",
-                        "schema": {
-                            "$ref": "#/definitions/casts.DetailedHealthResponse"
                         }
                     }
                 }
@@ -964,26 +1199,6 @@
                 }
             }
         },
-        "/status": {
-            "get": {
-                "description": "Displays a real-time HTML status dashboard for monitoring system health",
-                "produces": [
-                    "text/html"
-                ],
-                "tags": [
-                    "Health"
-                ],
-                "summary": "Status Dashboard",
-                "responses": {
-                    "200": {
-                        "description": "HTML status dashboard",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/tests": {
             "get": {
                 "description": "Get all test records from PostgreSQL",
@@ -1282,106 +1497,6 @@
         }
     },
     "definitions": {
-        "casts.DetailedHealthResponse": {
-            "type": "object",
-            "properties": {
-                "services": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/casts.Service"
-                    }
-                },
-                "status": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/casts.HealthStatus"
-                        }
-                    ],
-                    "example": "healthy"
-                },
-                "timestamp": {
-                    "type": "string",
-                    "example": "2025-02-11T10:30:00Z"
-                },
-                "uptime": {
-                    "type": "string",
-                    "example": "5d 3h 12m"
-                },
-                "version": {
-                    "type": "string",
-                    "example": "1.0.0"
-                }
-            }
-        },
-        "casts.HealthResponse": {
-            "type": "object",
-            "properties": {
-                "status": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/casts.HealthStatus"
-                        }
-                    ],
-                    "example": "healthy"
-                },
-                "timestamp": {
-                    "type": "string",
-                    "example": "2025-02-11T10:30:00Z"
-                },
-                "version": {
-                    "type": "string",
-                    "example": "1.0.0"
-                }
-            }
-        },
-        "casts.HealthStatus": {
-            "type": "string",
-            "enum": [
-                "healthy",
-                "degraded",
-                "unhealthy"
-            ],
-            "x-enum-varnames": [
-                "StatusHealthy",
-                "StatusDegraded",
-                "StatusUnhealthy"
-            ]
-        },
-        "casts.Service": {
-            "type": "object",
-            "properties": {
-                "details": {},
-                "latency_ms": {
-                    "type": "number",
-                    "example": 2.5
-                },
-                "message": {
-                    "type": "string",
-                    "example": ""
-                },
-                "status": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/casts.ServiceStatus"
-                        }
-                    ],
-                    "example": "up"
-                }
-            }
-        },
-        "casts.ServiceStatus": {
-            "type": "string",
-            "enum": [
-                "up",
-                "down",
-                "degraded"
-            ],
-            "x-enum-varnames": [
-                "ServiceUp",
-                "ServiceDown",
-                "ServiceDegraded"
-            ]
-        },
         "casts.Token": {
             "type": "object",
             "properties": {
@@ -1573,12 +1688,7 @@
             "type": "object",
             "properties": {
                 "category": {
-                    "description": "Store    *Store    `json:\"store\"`",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Category"
-                        }
-                    ]
+                    "$ref": "#/definitions/models.Category"
                 },
                 "category_id": {
                     "type": "integer"
@@ -1700,6 +1810,9 @@
                 "email": {
                     "type": "string"
                 },
+                "email_verified_at": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -1729,6 +1842,18 @@
                 },
                 "id": {
                     "type": "integer"
+                }
+            }
+        },
+        "requests.ForgotPasswordRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
                 }
             }
         },
@@ -1837,6 +1962,26 @@
             "properties": {
                 "refresh_token": {
                     "type": "string"
+                }
+            }
+        },
+        "requests.ResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "new_password",
+                "token"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "newSecurePassword123"
+                },
+                "token": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 64,
+                    "example": "a1b2c3d4..."
                 }
             }
         },

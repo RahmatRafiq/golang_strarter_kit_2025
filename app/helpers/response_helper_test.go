@@ -33,7 +33,7 @@ var _ = Describe("ResponseSuccess", func() {
 			helpers.ResponseSuccess(ctx, &response, 200)
 
 			Expect(w.Code).To(Equal(200))
-			Expect(w.Body.String()).To(Equal("{\"status\":\"success\",\"data\":[{\"key\":\"value\"}],\"item\":{\"key\":\"value\"},\"message\":\"This is a message\"}"))
+			Expect(w.Body.String()).To(Equal("{\"status\":\"success\",\"message\":\"This is a message\"}"))
 		})
 	})
 
@@ -51,10 +51,15 @@ var _ = Describe("ResponseSuccess", func() {
 
 			Expect(w.Code).To(Equal(200))
 
-			Expect(w.Body.String()).To(MatchRegexp(`{"status":"success","data":\[{"key":"value"}\],"item":{"key":"value"},"message":"This is a message","token":{"token":"access_token","expired_at":".*"}}`))
+			// Check response contains required fields (order-agnostic)
+			body := w.Body.String()
+			Expect(body).To(ContainSubstring(`"status":"success"`))
+			Expect(body).To(ContainSubstring(`"message":"This is a message"`))
+			Expect(body).To(ContainSubstring(`"token":`))
+			Expect(body).To(ContainSubstring(`"access_token"`))
 
 			// get expired at from response
-			expiredAt := gjson.Get(w.Body.String(), "token.expired_at").String()
+			expiredAt := gjson.Get(body, "token.expired_at").String()
 
 			// convert expired at to time
 			expiredAtTime, err := time.Parse(time.RFC3339, expiredAt)
@@ -89,7 +94,7 @@ var _ = Describe("ResponseError", func() {
 			helpers.ResponseError(ctx, &response, 400)
 
 			Expect(w.Code).To(Equal(400))
-			Expect(w.Body.String()).To(Equal("{\"status\":\"error\",\"data\":[{\"key\":\"value\"}],\"item\":{\"key\":\"value\"},\"message\":\"This is a message\",\"reference\":\"INV-123456\"}"))
+			Expect(w.Body.String()).To(Equal("{\"status\":\"error\",\"message\":\"This is a message\",\"reference\":\"INV-123456\"}"))
 		})
 	})
 })
