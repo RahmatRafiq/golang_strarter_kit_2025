@@ -31,7 +31,7 @@ func (c *PermissionController) List(ctx *gin.Context) {
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal mendapatkan daftar Permission",
+			Message:   "Failed to get permissions list",
 			Reference: "ERROR-3",
 		}, 500)
 		return
@@ -55,14 +55,14 @@ func (c *PermissionController) Put(ctx *gin.Context) {
 		if errors.As(err, &verr) {
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 				Errors:    helpers.ValidationError(verr),
-				Message:   "Parameter tidak valid",
+				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
 			}, 400)
 			return
 		}
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal membuat Permission",
+			Message:   "Failed to create permission",
 			Reference: "ERROR-3",
 		}, 400)
 		return
@@ -72,7 +72,7 @@ func (c *PermissionController) Put(ctx *gin.Context) {
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal membuat Permission",
+			Message:   "Failed to create permission",
 			Reference: "ERROR-3",
 		}, 400)
 		return
@@ -97,7 +97,7 @@ func (c *PermissionController) Delete(ctx *gin.Context) {
 	if err := c.service.DeleteByID(id); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal menghapus Permission",
+			Message:   "Failed to delete permission",
 			Reference: "ERROR-3",
 		}, 400)
 		return

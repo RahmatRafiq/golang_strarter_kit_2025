@@ -30,7 +30,7 @@ func (c *TestController) List(ctx *gin.Context) {
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal mendapatkan data test",
+			Message:   "Failed to get test data",
 			Reference: "ERROR-TEST-1",
 		}, 500)
 		return
@@ -53,7 +53,7 @@ func (c *TestController) Get(ctx *gin.Context) {
 	if err != nil || id < 0 {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": "Invalid ID"},
-			Message:   "ID tidak valid",
+			Message:   "Invalid ID",
 			Reference: "ERROR-TEST-2",
 		}, 400)
 		return
@@ -62,7 +62,7 @@ func (c *TestController) Get(ctx *gin.Context) {
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Data test tidak ditemukan",
+			Message:   "Test data not found",
 			Reference: "ERROR-TEST-3",
 		}, 404)
 		return
@@ -85,7 +85,7 @@ func (c *TestController) Create(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&test); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Parameter tidak valid",
+			Message:   "Invalid parameters",
 			Reference: "ERROR-TEST-4",
 		}, 400)
 		return
@@ -93,7 +93,7 @@ func (c *TestController) Create(ctx *gin.Context) {
 	if err := c.service.Create(&test); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal membuat data test",
+			Message:   "Failed to create test data",
 			Reference: "ERROR-TEST-5",
 		}, 500)
 		return
@@ -118,7 +118,7 @@ func (c *TestController) Update(ctx *gin.Context) {
 	if err != nil || id < 0 {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": "Invalid ID"},
-			Message:   "ID tidak valid",
+			Message:   "Invalid ID",
 			Reference: "ERROR-TEST-6",
 		}, 400)
 		return
@@ -127,7 +127,7 @@ func (c *TestController) Update(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&test); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Parameter tidak valid",
+			Message:   "Invalid parameters",
 			Reference: "ERROR-TEST-7",
 		}, 400)
 		return
@@ -136,7 +136,7 @@ func (c *TestController) Update(ctx *gin.Context) {
 	if err := c.service.Update(&test); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal update data test",
+			Message:   "Failed to update test data",
 			Reference: "ERROR-TEST-8",
 		}, 500)
 		return
@@ -158,7 +158,7 @@ func (c *TestController) Delete(ctx *gin.Context) {
 	if err != nil || id < 0 {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": "Invalid ID"},
-			Message:   "ID tidak valid",
+			Message:   "Invalid ID",
 			Reference: "ERROR-TEST-9",
 		}, 400)
 		return
@@ -166,7 +166,7 @@ func (c *TestController) Delete(ctx *gin.Context) {
 	if err := c.service.Delete(uint(id)); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal menghapus data test",
+			Message:   "Failed to delete test data",
 			Reference: "ERROR-TEST-10",
 		}, 500)
 		return

@@ -99,7 +99,7 @@ func RunMigrationOnConnection(filename, connectionName string) error {
 	path := fmt.Sprintf("app/database/migrations/%s.sql", filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("gagal membaca file migrasi: %v", err)
+		return fmt.Errorf("failed to read migration file: %v", err)
 	}
 
 	conn, err := facades.GetConnection(connectionName)
@@ -115,7 +115,7 @@ func RunMigrationOnConnection(filename, connectionName string) error {
 
 	for _, sql := range ups {
 		if err := conn.DB.Exec(sql).Error; err != nil {
-			execError = fmt.Errorf("gagal menjalankan migrasi: %v", err)
+			execError = fmt.Errorf("failed to execute migration: %v", err)
 			break
 		}
 	}
@@ -138,7 +138,7 @@ func RunMigrationOnConnection(filename, connectionName string) error {
 		if logErr := logMigrationExecution(connectionName, filename, batch, executionTime, "failed", err.Error()); logErr != nil {
 			fmt.Printf("Warning: failed to log migration execution: %v\n", logErr)
 		}
-		return fmt.Errorf("gagal mencatat migrasi: %v", err)
+		return fmt.Errorf("failed to record migration: %v", err)
 	}
 
 	// Log successful execution
@@ -164,7 +164,7 @@ func RollbackMigrationOnConnection(filename, connectionName string) error {
 	path := fmt.Sprintf("app/database/migrations/%s.sql", filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("gagal membaca file rollback: %v", err)
+		return fmt.Errorf("failed to read rollback file: %v", err)
 	}
 
 	conn, err := facades.GetConnection(connectionName)
@@ -178,13 +178,13 @@ func RollbackMigrationOnConnection(filename, connectionName string) error {
 	return conn.DB.Transaction(func(tx *gorm.DB) error {
 		for _, sql := range downs {
 			if err := tx.Exec(sql).Error; err != nil {
-				return fmt.Errorf("gagal rollback: %v", err)
+				return fmt.Errorf("failed to rollback: %v", err)
 			}
 		}
 
 		// Remove from migrations table with connection_name filter
 		if err := tx.Exec("DELETE FROM migrations WHERE connection_name = ? AND filename = ?", connectionName, filename).Error; err != nil {
-			return fmt.Errorf("gagal menghapus record migrasi: %v", err)
+			return fmt.Errorf("failed to delete migration record: %v", err)
 		}
 
 		fmt.Printf("Rolled back: %s\n", filename)
@@ -243,7 +243,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 
 	files, err := os.ReadDir("app/database/migrations")
 	if err != nil {
-		return fmt.Errorf("gagal baca folder: %v", err)
+		return fmt.Errorf("failed to read directory: %v", err)
 	}
 	var toRun []string
 	for _, f := range files {
@@ -275,7 +275,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 			fmt.Sprintf("app/database/migrations/%s.sql", name),
 		)
 		if err != nil {
-			return fmt.Errorf("gagal membaca %s: %v", name, err)
+			return fmt.Errorf("failed to read %s: %v", name, err)
 		}
 		parts := strings.Split(
 			string(data), "-- --- DOWN Migration",
@@ -287,7 +287,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 		var execError error
 		for _, stmt := range parseSQLStatements(up) {
 			if err := conn.DB.Exec(stmt).Error; err != nil {
-				execError = fmt.Errorf("gagal %s: %v", name, err)
+				execError = fmt.Errorf("failed to %s: %v", name, err)
 				break
 			}
 		}
@@ -310,7 +310,7 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 			if logErr := logMigrationExecution(connectionName, name, batch, executionTime, "failed", err.Error()); logErr != nil {
 				fmt.Printf("Warning: failed to log migration execution: %v\n", logErr)
 			}
-			return fmt.Errorf("gagal mencatat %s: %v", name, err)
+			return fmt.Errorf("failed to record %s: %v", name, err)
 		}
 
 		// Log successful execution

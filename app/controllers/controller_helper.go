@@ -17,7 +17,7 @@ func ParseIDParam(ctx *gin.Context) (uint, bool) {
 	if err != nil || idUint == 0 {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": "Invalid ID format"},
-			Message:   "ID tidak valid",
+			Message:   "Invalid ID",
 			Reference: "ERROR-INVALID-ID",
 		}, 400)
 		return 0, false
