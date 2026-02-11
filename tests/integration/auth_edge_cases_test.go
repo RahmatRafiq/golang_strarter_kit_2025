@@ -371,11 +371,11 @@ func TestAuthService_CaseSensitivity_EdgeCases(t *testing.T) {
 
 		// Test various case combinations
 		testCases := []string{
-			"test@example.com",     // Original
-			"Test@example.com",     // Capitalize first
-			"TEST@EXAMPLE.COM",     // All caps
-			"TeSt@ExAmPlE.cOm",     // Mixed
-			"test@EXAMPLE.com",     // Domain caps
+			"test@example.com", // Original
+			"Test@example.com", // Capitalize first
+			"TEST@EXAMPLE.COM", // All caps
+			"TeSt@ExAmPlE.cOm", // Mixed
+			"test@EXAMPLE.com", // Domain caps
 		}
 
 		for _, emailVariant := range testCases {
@@ -403,9 +403,9 @@ func TestAuthService_CaseSensitivity_EdgeCases(t *testing.T) {
 
 		// Act: Try different case combinations
 		wrongCases := []string{
-			"mypassword123",  // All lowercase
-			"MYPASSWORD123",  // All uppercase
-			"myPassword123",  // Different case
+			"mypassword123", // All lowercase
+			"MYPASSWORD123", // All uppercase
+			"myPassword123", // Different case
 		}
 
 		for _, wrongPass := range wrongCases {

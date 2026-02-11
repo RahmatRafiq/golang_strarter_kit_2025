@@ -124,8 +124,8 @@ func (j *JwtService) RefreshAccessToken(refreshTokenString string) (*TokenPair, 
 
 		// Revoke old refresh token (token rotation)
 		refreshToken.Revoked = true
-		if err := tx.Save(&refreshToken).Error; err != nil {
-			return err
+		if saveErr := tx.Save(&refreshToken).Error; saveErr != nil {
+			return saveErr
 		}
 
 		// Generate new token pair using the same transaction

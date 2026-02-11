@@ -22,7 +22,7 @@ import (
 // createTestPasswordHash creates a valid Argon2 password hash for testing
 func createTestPasswordHash(t *testing.T, plainPassword string) string {
 	t.Helper()
-	
+
 	hash, err := helpers.HashPasswordArgon2(plainPassword, helpers.DefaultParams)
 	if err != nil {
 		t.Fatalf("Failed to hash password for test: %v", err)
