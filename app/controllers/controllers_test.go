@@ -11,7 +11,6 @@ import (
 func TestControllerssSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	// load .env.test
 	err := godotenv.Load("../../.env.test")
 	if err != nil {
 		Fail("Error loading .env.test file")

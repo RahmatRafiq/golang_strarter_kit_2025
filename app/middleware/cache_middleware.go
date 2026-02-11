@@ -80,7 +80,7 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 		// Cache successful responses (200 OK)
 		if c.Writer.Status() == http.StatusOK {
 			c.Header("X-Cache", "MISS")
-			
+
 			// Store in Redis with TTL
 			err := helpers.RedisClient.Set(
 				c.Request.Context(),
@@ -114,12 +114,12 @@ func InvalidateCachePattern(pattern string) error {
 
 	ctx := context.Background()
 	iter := helpers.RedisClient.Scan(ctx, 0, "cache:"+pattern+"*", 0).Iterator()
-	
+
 	for iter.Next(ctx) {
 		if err := helpers.RedisClient.Del(ctx, iter.Val()).Err(); err != nil {
 			return err
 		}
 	}
-	
+
 	return iter.Err()
 }

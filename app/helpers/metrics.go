@@ -34,15 +34,15 @@ var (
 // CollectDBMetrics starts a background goroutine to collect database metrics
 func CollectDBMetrics() {
 	ticker := time.NewTicker(10 * time.Second)
-	
+
 	go func() {
 		defer ticker.Stop()
-		
+
 		for range ticker.C {
 			collectCurrentDBStats()
 		}
 	}()
-	
+
 	log.Info().Msg("Database metrics collector started")
 }
 
