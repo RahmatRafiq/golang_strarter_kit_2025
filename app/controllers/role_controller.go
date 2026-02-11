@@ -32,7 +32,7 @@ func (c *RoleController) List(ctx *gin.Context) {
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal mendapatkan daftar Role",
+			Message:   "Failed to get roles list",
 			Reference: "ERROR-3",
 		}, 500)
 		return
@@ -56,14 +56,14 @@ func (c *RoleController) Put(ctx *gin.Context) {
 		if errors.As(err, &verr) {
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 				Errors:    helpers.ValidationError(verr),
-				Message:   "Parameter tidak valid",
+				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
 			}, 400)
 		}
 
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal membuat Role",
+			Message:   "Failed to create role",
 			Reference: "ERROR-3",
 		}, 400)
 		return
@@ -72,7 +72,7 @@ func (c *RoleController) Put(ctx *gin.Context) {
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal membuat Role",
+			Message:   "Failed to create role",
 			Reference: "ERROR-3",
 		}, 400)
 		return
@@ -97,7 +97,7 @@ func (c *RoleController) Delete(ctx *gin.Context) {
 	if err := c.service.DeleteByID(id); err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
-			Message:   "Gagal menghapus Role",
+			Message:   "Failed to delete role",
 			Reference: "ERROR-3",
 		}, 500)
 		return

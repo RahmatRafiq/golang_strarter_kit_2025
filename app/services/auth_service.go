@@ -36,7 +36,7 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 		log.Warn().
 			Str("email", sanitizedEmail).
 			Msg("Login attempt with non-existent email")
-		return nil, errors.New("email atau password salah")
+		return nil, errors.New("invalid email or password")
 	}
 
 	// IMPROVED: Validate password length (max 128 chars for Argon2)
@@ -46,7 +46,7 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 			Str("email", sanitizedEmail).
 			Int("password_length", len(request.Password)).
 			Msg("Login attempt with excessively long password (DoS protection)")
-		return nil, errors.New("email atau password salah")
+		return nil, errors.New("invalid email or password")
 	}
 
 	check, err := helpers.ComparePasswordArgon2(request.Password, user.Password)
@@ -55,7 +55,7 @@ func (auth *AuthService) Login(request requests.LoginRequest) (*casts.Token, err
 			Uint("user_id", user.ID).
 			Str("email", sanitizedEmail).
 			Msg("Login attempt with invalid password")
-		return nil, errors.New("email atau password salah")
+		return nil, errors.New("invalid email or password")
 	}
 
 	// Generate token pair (access + refresh token)

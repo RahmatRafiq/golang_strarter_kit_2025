@@ -74,7 +74,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		if err != nil {
 			helpers.ResponseError(c, &helpers.ResponseParams[any]{
 				Reference: "ERROR-4",
-				Message:   "Token tidak valid",
+				Message:   "Invalid token",
 			}, http.StatusUnauthorized)
 			c.Abort()
 			return
@@ -84,7 +84,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		if err != nil {
 			helpers.ResponseError(c, &helpers.ResponseParams[any]{
 				Reference: "ERROR-4",
-				Message:   "Token tidak valid",
+				Message:   "Invalid token",
 			}, http.StatusUnauthorized)
 			c.Abort()
 			return
@@ -93,7 +93,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		if claims.ExpiredAt < time.Now().Unix() {
 			helpers.ResponseError(c, &helpers.ResponseParams[any]{
 				Reference: "ERROR-4",
-				Message:   "Token sudah kadaluarsa",
+				Message:   "Token has expired",
 			}, http.StatusUnauthorized)
 			c.Abort()
 			return
@@ -111,7 +111,7 @@ func CheckTokenValidity(tokenString string, c *gin.Context) (*jwt.Token, bool) {
 	if err != nil || !token.Valid {
 		helpers.ResponseError(c, &helpers.ResponseParams[any]{
 			Reference: "ERROR-3",
-			Message:   "Token tidak valid",
+			Message:   "Invalid token",
 		}, http.StatusUnauthorized)
 		c.Abort()
 		return nil, true
@@ -123,7 +123,7 @@ func CheckBearerTokenPrefix(tokenString string, c *gin.Context) bool {
 	if !strings.HasPrefix(tokenString, "Bearer ") {
 		helpers.ResponseError(c, &helpers.ResponseParams[any]{
 			Reference: "ERROR-2",
-			Message:   "Token tidak valid",
+			Message:   "Invalid token",
 		}, http.StatusUnauthorized)
 		c.Abort()
 		return true
@@ -136,7 +136,7 @@ func CheckTokenExist(c *gin.Context) (string, bool) {
 	if tokenString == "" {
 		helpers.ResponseError(c, &helpers.ResponseParams[any]{
 			Reference: "ERROR-1",
-			Message:   "Membutuhkan token",
+			Message:   "Token required",
 		}, http.StatusUnauthorized)
 		c.Abort()
 		return "", true

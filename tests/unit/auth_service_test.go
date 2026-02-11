@@ -43,14 +43,21 @@ func TestAuthService_Login_Unit(t *testing.T) {
 
 	t.Run("success - valid credentials", func(t *testing.T) {
 		plainPassword := "correctpassword"
-		hashedPassword := createTestPasswordHash(t, plainPassword)
 
-		expectedUser := &models.User{
-			ID:       1,
+		// Create user with plain password - BeforeCreate hook will hash it
+		userToCreate := &models.User{
 			Email:    "test@example.com",
-			Password: hashedPassword,
+			Password: plainPassword,
 			Username: "testuser",
 		}
+
+		// Create actual user in database for foreign key constraint
+		if err := testDB.DB.Create(userToCreate).Error; err != nil {
+			t.Fatalf("Failed to create test user: %v", err)
+		}
+
+		// After creation, password is hashed and ID is assigned
+		expectedUser := userToCreate
 
 		loginReq := requests.LoginRequest{
 			Email:    "test@example.com",
@@ -110,8 +117,8 @@ func TestAuthService_Login_Unit(t *testing.T) {
 		if token != nil {
 			t.Error("expected nil token, got non-nil")
 		}
-		if err.Error() != "email atau password salah" {
-			t.Errorf("expected 'email atau password salah', got %v", err)
+		if err.Error() != "invalid email or password" {
+			t.Errorf("expected 'invalid email or password', got %v", err)
 		}
 	})
 
@@ -142,8 +149,8 @@ func TestAuthService_Login_Unit(t *testing.T) {
 		if token != nil {
 			t.Error("expected nil token, got non-nil")
 		}
-		if err.Error() != "email atau password salah" {
-			t.Errorf("expected 'email atau password salah', got %v", err)
+		if err.Error() != "invalid email or password" {
+			t.Errorf("expected 'invalid email or password', got %v", err)
 		}
 	})
 
@@ -178,16 +185,24 @@ func TestAuthService_Login_Unit(t *testing.T) {
 
 	t.Run("error - failed to update user token", func(t *testing.T) {
 		plainPassword := "correctpassword"
-		hashedPassword := createTestPasswordHash(t, plainPassword)
 
-		expectedUser := &models.User{
-			ID:       1,
-			Email:    "test@example.com",
-			Password: hashedPassword,
+		// Create user with plain password - BeforeCreate hook will hash it
+		userToCreate := &models.User{
+			Email:    "test2@example.com",
+			Password: plainPassword,
+			Username: "testuser2",
 		}
 
+		// Create actual user in database for foreign key constraint
+		if err := testDB.DB.Create(userToCreate).Error; err != nil {
+			t.Fatalf("Failed to create test user: %v", err)
+		}
+
+		// After creation, password is hashed and ID is assigned
+		expectedUser := userToCreate
+
 		loginReq := requests.LoginRequest{
-			Email:    "test@example.com",
+			Email:    "test2@example.com",
 			Password: plainPassword,
 		}
 

@@ -69,7 +69,7 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{Message: "Berhasil logout"}, 200)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{Message: "Logout successful"}, 200)
 }
 
 // @Summary		Refresh Token
