@@ -1,0 +1,20 @@
+<h2>Verify Your Email Address</h2>
+
+<p>Hi <strong>{{.Username}}</strong>,</p>
+
+<p>Thanks for signing up! Please verify your email address to activate your account.</p>
+
+<p style="text-align: center;">
+    <a href="{{.VerifyURL}}" class="button">Verify Email Address</a>
+</p>
+
+<div class="warning-box">
+    <strong>⚠️ Security Notice:</strong>
+    <p>This verification link will expire in <strong>{{.ExpiryHours}} hours</strong>.</p>
+    <p>If you didn't create an account, you can safely ignore this email.</p>
+</div>
+
+<p>Or copy and paste this link into your browser:</p>
+<p style="word-break: break-all; color: #666;">{{.VerifyURL}}</p>
+
+<p>Best regards,<br>The {{.AppName}} Team</p>

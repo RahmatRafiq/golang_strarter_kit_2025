@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
+	"golang_starter_kit_2025/app/services"
 	"golang_starter_kit_2025/app/workers"
 	"golang_starter_kit_2025/app/workers/tasks"
 	"golang_starter_kit_2025/cmd"
@@ -115,8 +116,11 @@ func Init() {
 		queueCfg := config.GetQueueConfig()
 		workerManager = workers.NewWorkerManager(queueCfg)
 
-		// Register task handlers
-		workerManager.RegisterHandler(tasks.TypeSendEmail, &tasks.HandleSendEmailTask{})
+		// Initialize email service for workers
+		emailService := services.NewEmailService()
+
+		// Register task handlers with dependencies
+		workerManager.RegisterHandler(tasks.TypeSendEmail, tasks.NewHandleSendEmailTask(emailService))
 
 		// Start workers in background
 		go func() {
@@ -125,7 +129,7 @@ func Init() {
 			}
 		}()
 
-		log.Info().Msg("Worker manager started")
+		log.Info().Msg("Worker manager started with email service")
 	}
 
 	r := Router()

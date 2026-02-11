@@ -51,8 +51,20 @@ func newSendEmailTaskFromPayload(payload SendEmailPayload) (*asynq.Task, error) 
 
 // HandleSendEmailTask processes send email tasks
 type HandleSendEmailTask struct {
-	// EmailService will be injected here when we implement it in Phase 1.2
-	// emailService *services.EmailService
+	emailService interface {
+		SendEmail(to, subject, body string) error
+		SendHTMLEmail(to, subject, htmlBody string) error
+	}
+}
+
+// NewHandleSendEmailTask creates a new send email task handler with dependencies
+func NewHandleSendEmailTask(emailService interface {
+	SendEmail(to, subject, body string) error
+	SendHTMLEmail(to, subject, htmlBody string) error
+}) *HandleSendEmailTask {
+	return &HandleSendEmailTask{
+		emailService: emailService,
+	}
 }
 
 // ProcessTask implements asynq.Handler interface
@@ -68,13 +80,33 @@ func (h *HandleSendEmailTask) ProcessTask(ctx context.Context, task *asynq.Task)
 		Str("template", payload.Template).
 		Msg("Processing send email task")
 
-	// TODO: Implement actual email sending in Phase 1.2
-	// For now, just log the email
-	log.Info().
-		Str("to", payload.To).
-		Str("subject", payload.Subject).
-		Str("body", payload.Body).
-		Msg("[PLACEHOLDER] Email would be sent here")
+	// Send email using email service
+	if h.emailService != nil {
+		var err error
+		if payload.Template != "" {
+			// If template is specified, body is HTML
+			err = h.emailService.SendHTMLEmail(payload.To, payload.Subject, payload.Body)
+		} else {
+			// Plain text email
+			err = h.emailService.SendEmail(payload.To, payload.Subject, payload.Body)
+		}
+
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("to", payload.To).
+				Str("subject", payload.Subject).
+				Msg("Failed to send email")
+			return fmt.Errorf("failed to send email: %w", err)
+		}
+
+		log.Info().
+			Str("to", payload.To).
+			Str("subject", payload.Subject).
+			Msg("Email sent successfully via worker")
+	} else {
+		log.Warn().Msg("Email service not configured, email not sent")
+	}
 
 	return nil
 }
