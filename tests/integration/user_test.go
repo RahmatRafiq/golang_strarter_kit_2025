@@ -235,3 +235,74 @@ func TestUserService_MultipleUsers_Integration(t *testing.T) {
 			len(page1Users), len(page2Users), len(page3Users))
 	})
 }
+
+// TestUserService_ErrorCases_Integration tests error handling scenarios
+func TestUserService_ErrorCases_Integration(t *testing.T) {
+	testDB := helpers.SetupTestDB(t)
+	defer helpers.CleanupTestDB(t, testDB)
+
+	userRepo := repositories.NewUserRepository(testDB.DB)
+	userService := services.NewUserService(userRepo)
+
+	t.Run("error - find non-existent user", func(t *testing.T) {
+		// Act: Try to find user that doesn't exist
+		_, err := userService.FindByID(99999)
+
+		// Assert
+		if err == nil {
+			t.Error("Expected error for non-existent user, got nil")
+		}
+		t.Logf("✓ Correctly returned error for non-existent user: %v", err)
+	})
+
+	t.Run("success - delete non-existent user (GORM behavior)", func(t *testing.T) {
+		// Act: Try to delete user that doesn't exist
+		// Note: GORM Delete() does not return error for non-existent records
+		err := userService.DeleteByID(99999)
+
+		// Assert: GORM behavior - no error for deleting non-existent record
+		if err != nil {
+			t.Errorf("Expected no error (GORM behavior), got: %v", err)
+		}
+		t.Logf("✓ Delete non-existent user completed (GORM does not error)")
+	})
+
+	t.Run("error - assign roles to non-existent user", func(t *testing.T) {
+		// Act: Try to assign roles to non-existent user
+		err := userService.AssignRoles(99999, []uint{1, 2})
+
+		// Assert
+		if err == nil {
+			t.Error("Expected error for non-existent user, got nil")
+		}
+		t.Logf("✓ Correctly returned error when assigning roles to non-existent user: %v", err)
+	})
+
+	t.Run("error - get roles of non-existent user", func(t *testing.T) {
+		// Act: Try to get roles of non-existent user
+		_, err := userService.GetRoles(99999)
+
+		// Assert
+		if err == nil {
+			t.Error("Expected error for non-existent user, got nil")
+		}
+		t.Logf("✓ Correctly returned error when getting roles of non-existent user: %v", err)
+	})
+
+	t.Run("error - list users returns empty when no users exist", func(t *testing.T) {
+		// Act: List users in fresh DB (no users created)
+		users, total, err := userService.List(1, 10)
+
+		// Assert
+		if err != nil {
+			t.Errorf("Expected no error for empty list, got: %v", err)
+		}
+		if total != 0 {
+			t.Errorf("Expected total 0, got %d", total)
+		}
+		if len(users) != 0 {
+			t.Errorf("Expected empty users slice, got %d users", len(users))
+		}
+		t.Logf("✓ Correctly returned empty list when no users exist")
+	})
+}
