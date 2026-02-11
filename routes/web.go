@@ -16,7 +16,11 @@ import (
 )
 
 func RegisterRoutes(route *gin.Engine) {
-	// Apply observability middleware (must be first for accurate metrics)
+	// Apply security middleware FIRST (must be before other middleware)
+	route.Use(middleware.HTTPSRedirect())    // Force HTTPS in production
+	route.Use(middleware.SecurityHeaders())  // Security headers (HSTS, CSP, etc)
+
+	// Apply observability middleware (must be early for accurate metrics)
 	route.Use(middleware.ZerologMiddleware()) // Structured logging
 	route.Use(middleware.MetricsMiddleware()) // Prometheus metrics
 
