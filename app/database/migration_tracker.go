@@ -9,14 +9,14 @@ import (
 
 // MigrationLog represents a migration execution log entry
 type MigrationLog struct {
-	ID              int64
+	ExecutedAt      time.Time
 	ConnectionName  string
 	Filename        string
+	Status          string
+	ErrorMessage    string
+	ID              int64
 	Batch           int
 	ExecutionTimeMs int64
-	Status          string // 'success' or 'failed'
-	ErrorMessage    string
-	ExecutedAt      time.Time
 }
 
 // ensureMigrationLogsTable creates the migration_logs table if it doesn't exist

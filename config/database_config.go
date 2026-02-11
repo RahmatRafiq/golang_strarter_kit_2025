@@ -36,8 +36,8 @@ type DatabaseConfig struct {
 
 // DatabaseConfigs holds multiple database configurations
 type DatabaseConfigs struct {
-	Default     string                     `json:"default"`
 	Connections map[string]*DatabaseConfig `json:"connections"`
+	Default     string                     `json:"default"`
 }
 
 // GetDatabaseConfigs loads database configurations from environment variables
