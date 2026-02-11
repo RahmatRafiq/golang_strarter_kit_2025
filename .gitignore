@@ -23,6 +23,7 @@ go.work.sum
 .env.local
 .env.*.local
 .env.docker
+.env.testing
 
 # IDE and Editor files
 .vscode/
