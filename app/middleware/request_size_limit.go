@@ -26,8 +26,8 @@ func RequestSizeLimit() gin.HandlerFunc {
 		// Check if body was too large
 		if c.Writer.Status() == http.StatusRequestEntityTooLarge {
 			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-				"error":   "request too large",
-				"message": "Request body exceeds maximum allowed size",
+				"error":       "request too large",
+				"message":     "Request body exceeds maximum allowed size",
 				"max_size_mb": maxSizeMB,
 			})
 			c.Abort()
