@@ -5,14 +5,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 )
 
 // responseWriter is a custom writer to capture response body
@@ -64,7 +65,7 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 		// Cache miss or error
 		if err != redis.Nil {
 			// Log Redis error but continue
-			fmt.Printf("Redis error: %v\n", err)
+			log.Warn().Err(err).Str("cache_key", cacheKey).Msg("Redis cache error")
 		}
 
 		// Create custom writer to capture response
@@ -77,9 +78,17 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 		// Continue to handler
 		c.Next()
 
-		// Cache successful responses (200 OK)
+		// IMPROVED: Validate response before caching
 		if c.Writer.Status() == http.StatusOK {
 			c.Header("X-Cache", "MISS")
+
+			// Validate response is cacheable
+			if !isCacheable(c, writer.body.Bytes()) {
+				log.Debug().
+					Str("path", c.Request.URL.Path).
+					Msg("Response not cacheable, skipping cache")
+				return
+			}
 
 			// Store in Redis with TTL
 			err := helpers.RedisClient.Set(
@@ -90,20 +99,48 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 			).Err()
 
 			if err != nil {
-				fmt.Printf("Failed to cache response: %v\n", err)
+				log.Warn().Err(err).Str("cache_key", cacheKey).Msg("Failed to cache response")
 			}
 		}
 	}
 }
 
+// isCacheable validates if response should be cached
+// Prevents caching error responses, non-JSON responses, etc.
+func isCacheable(c *gin.Context, body []byte) bool {
+	contentType := c.Writer.Header().Get("Content-Type")
+
+	// Only cache JSON responses
+	if !strings.Contains(contentType, "application/json") {
+		return false
+	}
+
+	// Don't cache error responses (even if HTTP 200)
+	// Check for common error patterns in JSON
+	bodyStr := string(body)
+	if strings.Contains(bodyStr, `"error":true`) ||
+		strings.Contains(bodyStr, `"error":"`) ||
+		strings.Contains(bodyStr, `"status":"error"`) {
+		return false
+	}
+
+	// Don't cache empty responses
+	if len(body) == 0 || bodyStr == "{}" || bodyStr == "[]" {
+		return false
+	}
+
+	return true
+}
+
 // InvalidateCache removes a specific cache entry
+// FIXED: Use context.Background() instead of TODO()
 func InvalidateCache(url string) error {
 	if helpers.RedisClient == nil {
 		return nil
 	}
 
 	cacheKey := generateCacheKey(url)
-	return helpers.RedisClient.Del(context.TODO(), cacheKey).Err()
+	return helpers.RedisClient.Del(context.Background(), cacheKey).Err()
 }
 
 // InvalidateCachePattern removes cache entries matching a pattern

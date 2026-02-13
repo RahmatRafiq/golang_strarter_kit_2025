@@ -8,20 +8,25 @@ import (
 	"golang_starter_kit_2025/app/helpers"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
+	sredis "github.com/ulule/limiter/v3/drivers/store/redis"
 )
 
 // GlobalRateLimiter limits requests per IP globally to prevent DDoS
 // Default: 100 requests per minute per IP
+// IMPROVED: Uses Redis for distributed rate limiting (horizontal scaling safe)
 func GlobalRateLimiter() gin.HandlerFunc {
 	limit := helpers.GetEnvInt64("RATE_LIMIT_GLOBAL", 100)
 	rate := limiter.Rate{
 		Period: 1 * time.Minute,
 		Limit:  limit,
 	}
-	store := memory.NewStore()
+
+	// Try Redis first (distributed), fallback to memory (single instance)
+	store := createRateLimitStore()
 	instance := limiter.New(store, rate)
 	middleware := mgin.NewMiddleware(instance)
 
@@ -30,6 +35,7 @@ func GlobalRateLimiter() gin.HandlerFunc {
 
 // AuthRateLimiter limits login/register attempts to prevent brute force
 // Default: 5 attempts per 15 minutes per IP
+// IMPROVED: Uses Redis for distributed rate limiting (horizontal scaling safe)
 func AuthRateLimiter() gin.HandlerFunc {
 	limit := helpers.GetEnvInt64("RATE_LIMIT_AUTH", 5)
 	periodMinutes := helpers.GetEnvInt("RATE_LIMIT_AUTH_PERIOD_MINUTES", 15)
@@ -38,7 +44,9 @@ func AuthRateLimiter() gin.HandlerFunc {
 		Period: time.Duration(periodMinutes) * time.Minute,
 		Limit:  limit,
 	}
-	store := memory.NewStore()
+
+	// Try Redis first (distributed), fallback to memory (single instance)
+	store := createRateLimitStore()
 	instance := limiter.New(store, rate)
 	middleware := mgin.NewMiddleware(instance)
 
@@ -47,6 +55,7 @@ func AuthRateLimiter() gin.HandlerFunc {
 
 // UserRateLimiter limits requests per authenticated user to prevent API abuse
 // Default: 1000 requests per hour per user
+// IMPROVED: Uses Redis for distributed rate limiting (horizontal scaling safe)
 func UserRateLimiter() gin.HandlerFunc {
 	limit := helpers.GetEnvInt64("RATE_LIMIT_USER", 1000)
 	periodMinutes := helpers.GetEnvInt("RATE_LIMIT_USER_PERIOD_MINUTES", 60)
@@ -55,7 +64,9 @@ func UserRateLimiter() gin.HandlerFunc {
 		Period: time.Duration(periodMinutes) * time.Minute,
 		Limit:  limit,
 	}
-	store := memory.NewStore()
+
+	// Try Redis first (distributed), fallback to memory (single instance)
+	store := createRateLimitStore()
 
 	return func(c *gin.Context) {
 		// Get user ID from context (set by auth middleware)
@@ -107,14 +118,42 @@ func UserRateLimiter() gin.HandlerFunc {
 
 // APIRateLimiter is a general purpose rate limiter for API endpoints
 // Can be configured per route group
+// IMPROVED: Uses Redis for distributed rate limiting (horizontal scaling safe)
 func APIRateLimiter(limit int64, period time.Duration) gin.HandlerFunc {
 	rate := limiter.Rate{
 		Period: period,
 		Limit:  limit,
 	}
-	store := memory.NewStore()
+
+	// Try Redis first (distributed), fallback to memory (single instance)
+	store := createRateLimitStore()
 	instance := limiter.New(store, rate)
 	middleware := mgin.NewMiddleware(instance)
 
 	return middleware
+}
+
+// createRateLimitStore creates Redis store if available, falls back to memory store
+// Redis store is required for horizontal scaling (multi-instance deployments)
+func createRateLimitStore() limiter.Store {
+	redisClient := helpers.GetRedisClient()
+
+	if redisClient == nil {
+		log.Warn().Msg("Redis not available, using memory store for rate limiting (not distributed)")
+		return memory.NewStore()
+	}
+
+	// Create Redis store for distributed rate limiting
+	store, err := sredis.NewStoreWithOptions(redisClient, limiter.StoreOptions{
+		Prefix:   "rate_limit",
+		MaxRetry: 3,
+	})
+
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create Redis rate limit store, falling back to memory")
+		return memory.NewStore()
+	}
+
+	log.Info().Msg("Rate limiting using Redis store (distributed)")
+	return store
 }

@@ -25,12 +25,19 @@ func NewUserController(service services.UserService) *UserController {
 // @Success	200	{array}	models.User
 // @Router		/users [get]
 func (c *UserController) List(ctx *gin.Context) {
-	users, err := c.service.GetAllUsers()
+	// FIXED: Use List() with pagination instead of removed GetAllUsers()
+	// Default to page 1, limit 100 for backward compatibility
+	users, total, err := c.service.List(1, 100)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, users)
+	ctx.JSON(http.StatusOK, gin.H{
+		"data":  users,
+		"total": total,
+		"page":  1,
+		"limit": 100,
+	})
 }
 
 // @Summary	Show a user

@@ -19,10 +19,19 @@ func NewUserService(repo interfaces.UserRepositoryInterface) *UserService {
 	}
 }
 
-func (s *UserService) GetAllUsers() ([]models.User, error) {
-	users, _, err := s.repo.List(1, 1000)
-	return users, err
-}
+// GetAllUsers is DEPRECATED and REMOVED due to unsafe hardcoded limit.
+// Use List(page, limit) with proper pagination instead.
+//
+// Reason for removal:
+// - Hardcoded limit 1000 causes memory issues with large datasets
+// - Misleading name ("All" but limited to 1000)
+// - Not suitable for production use
+//
+// Migration guide:
+//   Old: users, err := service.GetAllUsers()
+//   New: users, total, err := service.List(1, 100) // with proper pagination
+//
+// REMOVED: func (s *UserService) GetAllUsers() ([]models.User, error)
 
 func (s *UserService) List(page, limit int) ([]models.User, int64, error) {
 	return s.repo.List(page, limit)

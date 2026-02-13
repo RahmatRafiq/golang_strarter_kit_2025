@@ -51,12 +51,16 @@ func (s *OAuthService) GetGitHubAuthURL(state string) string {
 }
 
 func (s *OAuthService) HandleGoogleCallback(code string) (*models.User, string, error) {
-	token, err := s.config.GoogleConfig.Exchange(context.Background(), code)
+	// FIXED: Add timeout to prevent goroutine leaks
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	token, err := s.config.GoogleConfig.Exchange(ctx, code)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to exchange token: %w", err)
 	}
 
-	client := s.config.GoogleConfig.Client(context.Background(), token)
+	client := s.config.GoogleConfig.Client(ctx, token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get user info: %w", err)
@@ -77,12 +81,16 @@ func (s *OAuthService) HandleGoogleCallback(code string) (*models.User, string, 
 }
 
 func (s *OAuthService) HandleGitHubCallback(code string) (*models.User, string, error) {
-	token, err := s.config.GitHubConfig.Exchange(context.Background(), code)
+	// FIXED: Add timeout to prevent goroutine leaks
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	token, err := s.config.GitHubConfig.Exchange(ctx, code)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to exchange token: %w", err)
 	}
 
-	client := s.config.GitHubConfig.Client(context.Background(), token)
+	client := s.config.GitHubConfig.Client(ctx, token)
 	resp, err := client.Get("https://api.github.com/user")
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get user info: %w", err)
