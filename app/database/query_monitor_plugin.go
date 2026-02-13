@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -23,20 +24,44 @@ func (p *QueryMonitorPlugin) Name() string {
 // Initialize initializes the plugin
 func (p *QueryMonitorPlugin) Initialize(db *gorm.DB) error {
 	// Register callback before query to capture start time
-	db.Callback().Query().Before("gorm:query").Register("query_monitor:before", p.beforeQuery)
-	db.Callback().Create().Before("gorm:create").Register("query_monitor:before", p.beforeQuery)
-	db.Callback().Update().Before("gorm:update").Register("query_monitor:before", p.beforeQuery)
-	db.Callback().Delete().Before("gorm:delete").Register("query_monitor:before", p.beforeQuery)
-	db.Callback().Row().Before("gorm:row").Register("query_monitor:before", p.beforeQuery)
-	db.Callback().Raw().Before("gorm:raw").Register("query_monitor:before", p.beforeQuery)
+	if err := db.Callback().Query().Before("gorm:query").Register("query_monitor:before", p.beforeQuery); err != nil {
+		return fmt.Errorf("failed to register query monitor before callback: %w", err)
+	}
+	if err := db.Callback().Create().Before("gorm:create").Register("query_monitor:before", p.beforeQuery); err != nil {
+		return fmt.Errorf("failed to register create monitor before callback: %w", err)
+	}
+	if err := db.Callback().Update().Before("gorm:update").Register("query_monitor:before", p.beforeQuery); err != nil {
+		return fmt.Errorf("failed to register update monitor before callback: %w", err)
+	}
+	if err := db.Callback().Delete().Before("gorm:delete").Register("query_monitor:before", p.beforeQuery); err != nil {
+		return fmt.Errorf("failed to register delete monitor before callback: %w", err)
+	}
+	if err := db.Callback().Row().Before("gorm:row").Register("query_monitor:before", p.beforeQuery); err != nil {
+		return fmt.Errorf("failed to register row monitor before callback: %w", err)
+	}
+	if err := db.Callback().Raw().Before("gorm:raw").Register("query_monitor:before", p.beforeQuery); err != nil {
+		return fmt.Errorf("failed to register raw monitor before callback: %w", err)
+	}
 
 	// Register callback after query execution
-	db.Callback().Query().After("gorm:query").Register("query_monitor:after", p.afterQuery)
-	db.Callback().Create().After("gorm:create").Register("query_monitor:after", p.afterQuery)
-	db.Callback().Update().After("gorm:update").Register("query_monitor:after", p.afterQuery)
-	db.Callback().Delete().After("gorm:delete").Register("query_monitor:after", p.afterQuery)
-	db.Callback().Row().After("gorm:row").Register("query_monitor:after", p.afterQuery)
-	db.Callback().Raw().After("gorm:raw").Register("query_monitor:after", p.afterQuery)
+	if err := db.Callback().Query().After("gorm:query").Register("query_monitor:after", p.afterQuery); err != nil {
+		return fmt.Errorf("failed to register query monitor after callback: %w", err)
+	}
+	if err := db.Callback().Create().After("gorm:create").Register("query_monitor:after", p.afterQuery); err != nil {
+		return fmt.Errorf("failed to register create monitor after callback: %w", err)
+	}
+	if err := db.Callback().Update().After("gorm:update").Register("query_monitor:after", p.afterQuery); err != nil {
+		return fmt.Errorf("failed to register update monitor after callback: %w", err)
+	}
+	if err := db.Callback().Delete().After("gorm:delete").Register("query_monitor:after", p.afterQuery); err != nil {
+		return fmt.Errorf("failed to register delete monitor after callback: %w", err)
+	}
+	if err := db.Callback().Row().After("gorm:row").Register("query_monitor:after", p.afterQuery); err != nil {
+		return fmt.Errorf("failed to register row monitor after callback: %w", err)
+	}
+	if err := db.Callback().Raw().After("gorm:raw").Register("query_monitor:after", p.afterQuery); err != nil {
+		return fmt.Errorf("failed to register raw monitor after callback: %w", err)
+	}
 
 	log.Info().
 		Dur("slow_threshold", p.SlowQueryThreshold).
@@ -58,7 +83,14 @@ func (p *QueryMonitorPlugin) afterQuery(db *gorm.DB) {
 	if !exists {
 		return
 	}
-	elapsed := time.Since(startTime.(time.Time))
+
+	startTimeVal, ok := startTime.(time.Time)
+	if !ok {
+		log.Warn().Msg("Invalid query start time type")
+		return
+	}
+
+	elapsed := time.Since(startTimeVal)
 
 	// Log slow queries
 	if elapsed >= p.SlowQueryThreshold {
