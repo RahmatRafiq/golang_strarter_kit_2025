@@ -159,6 +159,33 @@ func (s *CacheService) Remember(key string, ttl time.Duration, callback func() (
 	return result, nil
 }
 
+// RememberQuery is a typed version of Remember for query result caching
+// MED-3: Query result caching layer for database queries
+// Usage: cache.RememberQuery("users:list:page:1", CacheTTLMedium, func() ([]User, error) { ... })
+func RememberQuery[T any](s *CacheService, key string, ttl time.Duration, query func() (T, error)) (T, error) {
+	var result T
+
+	// Try to get from cache first
+	if err := s.Get(key, &result); err == nil {
+		log.Debug().Str("key", key).Msg("Query result from cache")
+		return result, nil
+	}
+
+	// Cache miss, execute query
+	result, err := query()
+	if err != nil {
+		return result, err
+	}
+
+	// Store in cache (log errors but don't fail query)
+	if setErr := s.Set(key, result, ttl); setErr != nil {
+		log.Warn().Err(setErr).Str("key", key).Msg("Failed to cache query result")
+	}
+
+	log.Debug().Str("key", key).Dur("ttl", ttl).Msg("Query result cached")
+	return result, nil
+}
+
 // Exists checks if a key exists in cache
 func (s *CacheService) Exists(key string) bool {
 	if !s.IsEnabled() {
@@ -190,6 +217,23 @@ func (s *CacheService) Flush() error {
 }
 
 // Helper functions for common cache key patterns
+
+// CountCacheKey generates cache key for COUNT queries
+// MED-4: Optimize COUNT queries with caching
+func CountCacheKey(tableName string, conditions ...string) string {
+	if len(conditions) == 0 {
+		return fmt.Sprintf("count:%s:all", tableName)
+	}
+	return fmt.Sprintf("count:%s:%v", tableName, conditions)
+}
+
+// ListCacheKey generates cache key for list queries
+func ListCacheKey(tableName string, page, limit int, filters ...string) string {
+	if len(filters) == 0 {
+		return fmt.Sprintf("list:%s:page:%d:limit:%d", tableName, page, limit)
+	}
+	return fmt.Sprintf("list:%s:page:%d:limit:%d:filter:%v", tableName, page, limit, filters)
+}
 
 // UserCacheKey generates cache key for user data
 func UserCacheKey(userID uint) string {

@@ -32,7 +32,10 @@ func NewStorageService() (*StorageService, error) {
 		return nil, fmt.Errorf("failed to create minio client: %w", err)
 	}
 
-	ctx := context.Background()
+	// FIXED: Add timeout to prevent goroutine leaks
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	exists, err := client.BucketExists(ctx, cfg.BucketName)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to check bucket existence")
@@ -55,8 +58,12 @@ func (s *StorageService) UploadFile(file multipart.File, header *multipart.FileH
 	ext := filepath.Ext(header.Filename)
 	filename := fmt.Sprintf("%s/%s%s", folder, uuid.New().String(), ext)
 
+	// FIXED: Add timeout to prevent goroutine leaks
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	_, err := s.client.PutObject(
-		context.Background(),
+		ctx,
 		s.config.BucketName,
 		filename,
 		file,
@@ -71,8 +78,12 @@ func (s *StorageService) UploadFile(file multipart.File, header *multipart.FileH
 }
 
 func (s *StorageService) GetFileURL(filename string, expiry time.Duration) (string, error) {
+	// FIXED: Add timeout to prevent goroutine leaks
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	url, err := s.client.PresignedGetObject(
-		context.Background(),
+		ctx,
 		s.config.BucketName,
 		filename,
 		expiry,
@@ -86,8 +97,12 @@ func (s *StorageService) GetFileURL(filename string, expiry time.Duration) (stri
 }
 
 func (s *StorageService) DeleteFile(filename string) error {
+	// FIXED: Add timeout to prevent goroutine leaks
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	err := s.client.RemoveObject(
-		context.Background(),
+		ctx,
 		s.config.BucketName,
 		filename,
 		minio.RemoveObjectOptions{},
@@ -100,8 +115,12 @@ func (s *StorageService) DeleteFile(filename string) error {
 }
 
 func (s *StorageService) DownloadFile(filename string, writer io.Writer) error {
+	// FIXED: Add timeout to prevent goroutine leaks
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	object, err := s.client.GetObject(
-		context.Background(),
+		ctx,
 		s.config.BucketName,
 		filename,
 		minio.GetObjectOptions{},
