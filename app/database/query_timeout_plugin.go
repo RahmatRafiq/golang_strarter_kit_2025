@@ -22,12 +22,24 @@ func (p *QueryTimeoutPlugin) Name() string {
 // Initialize initializes the plugin
 func (p *QueryTimeoutPlugin) Initialize(db *gorm.DB) error {
 	// Register callback before query execution
-	db.Callback().Query().Before("gorm:query").Register("query_timeout:before", p.beforeQuery)
-	db.Callback().Create().Before("gorm:create").Register("query_timeout:before", p.beforeQuery)
-	db.Callback().Update().Before("gorm:update").Register("query_timeout:before", p.beforeQuery)
-	db.Callback().Delete().Before("gorm:delete").Register("query_timeout:before", p.beforeQuery)
-	db.Callback().Row().Before("gorm:row").Register("query_timeout:before", p.beforeQuery)
-	db.Callback().Raw().Before("gorm:raw").Register("query_timeout:before", p.beforeQuery)
+	if err := db.Callback().Query().Before("gorm:query").Register("query_timeout:before", p.beforeQuery); err != nil {
+		return err
+	}
+	if err := db.Callback().Create().Before("gorm:create").Register("query_timeout:before", p.beforeQuery); err != nil {
+		return err
+	}
+	if err := db.Callback().Update().Before("gorm:update").Register("query_timeout:before", p.beforeQuery); err != nil {
+		return err
+	}
+	if err := db.Callback().Delete().Before("gorm:delete").Register("query_timeout:before", p.beforeQuery); err != nil {
+		return err
+	}
+	if err := db.Callback().Row().Before("gorm:row").Register("query_timeout:before", p.beforeQuery); err != nil {
+		return err
+	}
+	if err := db.Callback().Raw().Before("gorm:raw").Register("query_timeout:before", p.beforeQuery); err != nil {
+		return err
+	}
 
 	log.Info().
 		Dur("timeout", p.Timeout).
