@@ -1,0 +1,324 @@
+package controllers
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+type StatusController struct {
+	healthController *HealthController
+}
+
+func NewStatusController() *StatusController {
+	return &StatusController{
+		healthController: NewHealthController(),
+	}
+}
+
+// @Summary Status Dashboard
+// @Description Displays a real-time HTML status dashboard for monitoring system health
+// @Tags Health
+// @Produce html
+// @Success 200 {string} string "HTML status dashboard"
+// @Router /status [get]
+func (c *StatusController) ShowDashboard(ctx *gin.Context) {
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #fafafa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header .time {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .status-banner {
+            background: white;
+            border-left: 4px solid #22c55e;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .status-banner.degraded {
+            border-left-color: #f59e0b;
+        }
+
+        .status-banner.unhealthy {
+            border-left-color: #ef4444;
+        }
+
+        .status-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .status-meta {
+            color: #666;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+
+        .services {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .service-item {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .service-item:last-child {
+            border-bottom: none;
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .service-name {
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+
+        .status-dot.down {
+            background: #ef4444;
+        }
+
+        .uptime-bars {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+        }
+
+        .uptime-bar {
+            width: 8px;
+            height: 34px;
+            background: #22c55e;
+            border-radius: 1px;
+            transition: opacity 0.2s;
+        }
+
+        .uptime-bar:hover {
+            opacity: 0.8;
+        }
+
+        .uptime-bar.degraded {
+            background: #f59e0b;
+        }
+
+        .uptime-bar.down {
+            background: #ef4444;
+        }
+
+        .uptime-bar.unknown {
+            background: #d1d5db;
+        }
+
+        .uptime-summary {
+            margin-left: 12px;
+            font-size: 0.85rem;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .service-info {
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+
+        .refresh-notice {
+            text-align: center;
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>System Status</h1>
+            <div class="time" id="timestamp">Loading...</div>
+        </div>
+
+        <div class="status-banner" id="status-banner">
+            <div class="status-text" id="status-text">Loading...</div>
+            <div class="status-meta" id="status-meta"></div>
+        </div>
+
+        <div class="services" id="services">
+            <div class="service-row">
+                <div>Loading services...</div>
+            </div>
+        </div>
+
+        <div class="refresh-notice">
+            Auto-refreshes every 5 seconds
+        </div>
+    </div>
+
+    <script>
+        async function fetchStatus() {
+            try {
+                const statusRes = await fetch('/health/detailed');
+                const statusData = await statusRes.json();
+
+                const historyRes = await fetch('/health/history?days=90');
+                const historyData = await historyRes.json();
+
+                updateUI(statusData, historyData);
+            } catch (error) {
+                document.getElementById('status-text').textContent = 'Failed to load status';
+            }
+        }
+
+        function updateUI(statusData, historyData) {
+            const time = new Date(statusData.timestamp).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('timestamp').textContent = time;
+
+            const banner = document.getElementById('status-banner');
+            banner.className = 'status-banner ' + statusData.status;
+
+            const statusMessages = {
+                'healthy': 'All systems operational',
+                'degraded': 'Partial system outage',
+                'unhealthy': 'System outage'
+            };
+
+            document.getElementById('status-text').textContent = statusMessages[statusData.status] || statusData.status;
+            document.getElementById('status-meta').textContent = 'Uptime: ' + statusData.uptime + ' · Version ' + statusData.version;
+
+            let html = '';
+            for (const [name, service] of Object.entries(statusData.services)) {
+                const statusClass = service.status === 'up' ? '' : 'down';
+                const statusText = service.status === 'up' ? 'Operational' : 'Down';
+
+                let info = service.message || '';
+                if (service.latency_ms) {
+                    info += (info ? ' · ' : '') + service.latency_ms.toFixed(1) + 'ms';
+                }
+                if (name === 'database' && service.details) {
+                    info += (info ? ' · ' : '') + 'Connections: ' + service.details.active + '/' + service.details.max;
+                }
+
+                // Find history for this service
+                const serviceHistory = historyData.find(h => h.service === name);
+
+                // Generate bars from real data or fallback
+                const bars = serviceHistory && serviceHistory.daily_history.length > 0
+                    ? generateRealBars(serviceHistory.daily_history)
+                    : generateFallbackBars(90);
+
+                const uptime = serviceHistory && serviceHistory.overall_uptime > 0
+                    ? serviceHistory.overall_uptime.toFixed(2)
+                    : '0.00';
+
+                html += '<div class="service-item">' +
+                    '<div class="service-header">' +
+                        '<div class="service-name">' + name.charAt(0).toUpperCase() + name.slice(1) + '</div>' +
+                        '<div class="service-status">' +
+                            '<span class="status-dot ' + statusClass + '"></span>' +
+                            '<span>' + statusText + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="uptime-bars">' +
+                        bars +
+                        '<div class="uptime-summary">' + uptime + '% uptime</div>' +
+                    '</div>' +
+                    (info ? '<div class="service-info">' + info + '</div>' : '') +
+                '</div>';
+            }
+
+            document.getElementById('services').innerHTML = html;
+        }
+
+        function generateRealBars(dailyHistory) {
+            let bars = '';
+            for (const day of dailyHistory) {
+                const statusClass = day.status === 'up' ? '' :
+                                  day.status === 'degraded' ? 'degraded' :
+                                  day.status === 'unknown' ? 'unknown' : 'down';
+                const title = day.date + ': ' + (day.uptime > 0 ? day.uptime.toFixed(1) + '% uptime' : 'No data');
+                bars += '<div class="uptime-bar ' + statusClass + '" title="' + title + '"></div>';
+            }
+            return bars;
+        }
+
+        function generateFallbackBars(days) {
+            let bars = '';
+            for (let i = 0; i < days; i++) {
+                bars += '<div class="uptime-bar unknown" title="Collecting data..."></div>';
+            }
+            return bars;
+        }
+
+        fetchStatus();
+        setInterval(fetchStatus, 5000);
+    </script>
+</body>
+</html>`
+
+	ctx.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+}

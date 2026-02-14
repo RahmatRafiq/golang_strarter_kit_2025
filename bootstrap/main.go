@@ -57,6 +57,10 @@ func Init() {
 	// Initialize Redis (optional - continues even if Redis is unavailable)
 	if err := helpers.InitRedis(); err != nil {
 		log.Warn().Err(err).Msg("Redis not available, caching disabled")
+	} else {
+		// Start health history collector (only if Redis is available)
+		services.StartHealthHistoryCollector()
+		log.Info().Msg("Health history collector started")
 	}
 	defer func() {
 		if err := helpers.CloseRedis(); err != nil {

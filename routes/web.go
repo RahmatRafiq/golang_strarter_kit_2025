@@ -89,6 +89,16 @@ func RegisterRoutes(route *gin.Engine) {
 	route.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// ========================================
+	// Health & Status Monitoring (Public)
+	// ========================================
+	healthController := controllers.NewHealthController()
+	statusController := controllers.NewStatusController()
+	route.GET("/health", healthController.GetHealth)
+	route.GET("/health/detailed", healthController.GetDetailedHealth)
+	route.GET("/health/history", healthController.GetHistory)
+	route.GET("/status", statusController.ShowDashboard)
+
+	// ========================================
 	// API v1 Routes (Recommended)
 	// ========================================
 	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService, passwordResetService, emailVerificationService, oauthService, storageService)
@@ -169,9 +179,10 @@ func RegisterRoutes(route *gin.Engine) {
 		fileRoutes.GET("/:key/:filename", fileController.ServeFile)
 	}
 
-	// Endpoint untuk mengecek kesehatan koneksi facades
-	route.GET("/health", func(c *gin.Context) {
-		sqlDB, err := facades.DB.DB() // Mengambil facades/sql *DB dari GORM *DB
+	// Legacy health endpoint (kept for backward compatibility)
+	// DEPRECATED: Use /health/detailed instead
+	route.GET("/health/legacy", func(c *gin.Context) {
+		sqlDB, err := facades.DB.DB()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "Failed to get facades connection",
@@ -180,7 +191,7 @@ func RegisterRoutes(route *gin.Engine) {
 			return
 		}
 
-		err = sqlDB.Ping() // Menggunakan sqlDB untuk ping ke facades
+		err = sqlDB.Ping()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "facades connection failed",
@@ -191,7 +202,7 @@ func RegisterRoutes(route *gin.Engine) {
 
 		c.JSON(200, gin.H{
 			"message": "facades is connected",
-			"facades": "supply_chain_retail", // Sesuaikan dengan nama facades Anda
+			"facades": "supply_chain_retail",
 		})
 	})
 
