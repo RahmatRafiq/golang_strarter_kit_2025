@@ -38,7 +38,7 @@ type DetailedHealthResponse struct {
 
 // Service represents health information for a specific service
 type Service struct {
-	Details   interface{}   `json:"details,omitempty"`
+	Details   any           `json:"details,omitempty"`
 	Message   string        `json:"message,omitempty" example:""`
 	Status    ServiceStatus `json:"status" example:"up"`
 	LatencyMs float64       `json:"latency_ms,omitempty" example:"2.5"`
@@ -55,4 +55,18 @@ type DatabaseDetails struct {
 type RedisDetails struct {
 	Memory  string  `json:"memory,omitempty" example:"125MB"`
 	HitRate float64 `json:"hit_rate,omitempty" example:"0.85"`
+}
+
+// QueueHealthResponse provides queue worker health and metrics
+type QueueHealthResponse struct {
+	QueueDepth       map[string]int64 `json:"queue_depth,omitempty"`
+	LastUpdated      time.Time        `json:"last_updated" example:"2026-02-14T15:30:00Z"`
+	Status           string           `json:"status" example:"healthy"`
+	Message          string           `json:"message,omitempty" example:"Queue is running (metrics disabled)"`
+	TasksProcessed   int64            `json:"tasks_processed" example:"1234"`
+	TasksFailed      int64            `json:"tasks_failed" example:"12"`
+	TasksRetried     int64            `json:"tasks_retried" example:"45"`
+	AverageLatencyMs float64          `json:"average_latency_ms" example:"125.5"`
+	FailureRate      float64          `json:"failure_rate" example:"0.97"`
+	ActiveWorkers    int              `json:"active_workers" example:"10"`
 }

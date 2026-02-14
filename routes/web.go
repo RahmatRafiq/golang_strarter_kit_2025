@@ -96,6 +96,7 @@ func RegisterRoutes(route *gin.Engine) {
 	route.GET("/health", healthController.GetHealth)
 	route.GET("/health/detailed", healthController.GetDetailedHealth)
 	route.GET("/health/history", healthController.GetHistory)
+	route.GET("/health/queue", healthController.GetQueueHealth)
 	route.GET("/status", statusController.ShowDashboard)
 
 	// ========================================

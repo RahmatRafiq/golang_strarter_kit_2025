@@ -11,6 +11,10 @@ import (
 
 // TestUserService_CRUD_Integration tests complete user CRUD operations
 func TestUserService_CRUD_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -95,6 +99,10 @@ func TestUserService_CRUD_Integration(t *testing.T) {
 
 // TestUserService_RoleAssignment_Integration tests user-role relationships
 func TestUserService_RoleAssignment_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -187,6 +195,10 @@ func TestUserService_RoleAssignment_Integration(t *testing.T) {
 
 // TestUserService_MultipleUsers_Integration tests handling multiple users
 func TestUserService_MultipleUsers_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -238,6 +250,10 @@ func TestUserService_MultipleUsers_Integration(t *testing.T) {
 
 // TestUserService_ErrorCases_Integration tests error handling scenarios
 func TestUserService_ErrorCases_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 

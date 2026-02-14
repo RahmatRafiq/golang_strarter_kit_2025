@@ -8,8 +8,10 @@ import (
 )
 
 var (
-	QueueClient     *workers.Client
-	queueClientOnce sync.Once
+	QueueClient        *workers.Client
+	queueClientOnce    sync.Once
+	WorkerManager      *workers.WorkerManager
+	workerManagerMutex sync.Mutex
 )
 
 // InitQueue initializes the queue client
@@ -35,4 +37,19 @@ func CloseQueue() error {
 		return QueueClient.Close()
 	}
 	return nil
+}
+
+// SetWorkerManager sets the global worker manager instance
+// This is called from bootstrap during initialization
+func SetWorkerManager(wm *workers.WorkerManager) {
+	workerManagerMutex.Lock()
+	defer workerManagerMutex.Unlock()
+	WorkerManager = wm
+}
+
+// GetWorkerManager returns the global worker manager instance
+func GetWorkerManager() *workers.WorkerManager {
+	workerManagerMutex.Lock()
+	defer workerManagerMutex.Unlock()
+	return WorkerManager
 }

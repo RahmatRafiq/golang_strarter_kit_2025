@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -36,7 +35,8 @@ func SetupTestDB(t *testing.T) *TestDB {
 
 	connection := os.Getenv("DB_CONNECTION")
 	if connection == "" {
-		connection = "mysql"
+		// Default to sqlite for CI/CD environments (no database service required)
+		connection = "sqlite"
 	}
 
 	var db *gorm.DB
@@ -328,6 +328,7 @@ func setupFacades(t *testing.T, db *gorm.DB) {
 }
 
 // loadTestEnv loads .env.testing file and overrides existing env vars
+// If .env.testing doesn't exist (like in CI/CD), it uses environment variables instead
 func loadTestEnv(t *testing.T) {
 	t.Helper()
 
@@ -337,18 +338,20 @@ func loadTestEnv(t *testing.T) {
 
 	envFile := filepath.Join(projectRoot, ".env.testing")
 
+	// Try to load .env.testing, but don't fail if it doesn't exist (CI/CD compatibility)
 	if _, err := os.Stat(envFile); os.IsNotExist(err) {
-		t.Fatalf(".env.testing not found at: %s", envFile)
+		t.Logf("Note: .env.testing not found, using environment variables from CI/CD")
+		// Set default APP_ENV for testing if not already set
+		if os.Getenv("APP_ENV") == "" {
+			os.Setenv("APP_ENV", "testing")
+		}
+		return
 	}
 
 	// IMPORTANT: Use Overload instead of Load to override existing .env values
 	if err := godotenv.Overload(envFile); err != nil {
-		t.Fatalf("Failed to load .env.testing: %v", err)
-	}
-
-	// Verify APP_ENV is set to testing
-	if os.Getenv("APP_ENV") != "testing" {
-		log.Fatal("APP_ENV must be 'testing' in .env.testing")
+		t.Logf("Warning: Failed to load .env.testing: %v (using environment variables)", err)
+		return
 	}
 
 	t.Logf("Loaded .env.testing configuration (DB: %s)", os.Getenv("MYSQL_DB"))

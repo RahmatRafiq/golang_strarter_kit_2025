@@ -5,7 +5,9 @@ import (
 	"strconv"
 
 	"golang_starter_kit_2025/app/casts"
+	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/services"
+	"golang_starter_kit_2025/facades"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -98,4 +100,78 @@ func (c *HealthController) GetHistory(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusOK, result)
 	}
+}
+
+// GetQueueHealth returns queue worker health and metrics
+// @Summary		Queue health check
+// @Description	Returns queue worker metrics and health status
+// @Tags			Health
+// @Produce		json
+// @Success		200	{object}	casts.QueueHealthResponse
+// @Success		503	{object}	casts.QueueHealthResponse	"Queue not enabled"
+// @Router			/health/queue [get]
+func (c *HealthController) GetQueueHealth(ctx *gin.Context) {
+	// Check if queue is enabled
+	if helpers.GetEnv("QUEUE_ENABLED", "false") != "true" {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "Queue system is not enabled",
+		}, http.StatusServiceUnavailable)
+		return
+	}
+
+	// Get worker manager from facades
+	workerManager := facades.GetWorkerManager()
+	if workerManager == nil {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message: "Worker manager not initialized",
+		}, http.StatusServiceUnavailable)
+		return
+	}
+
+	// Get metrics
+	metrics := workerManager.GetMetrics()
+	if metrics == nil {
+		response := casts.QueueHealthResponse{
+			Status:  "healthy",
+			Message: "Queue is running (metrics disabled)",
+		}
+		helpers.ResponseSuccess(ctx, &helpers.ResponseParams[casts.QueueHealthResponse]{
+			Item: &response,
+		}, http.StatusOK)
+		return
+	}
+
+	// Calculate health status
+	status := "healthy"
+	failureRate := float64(0)
+	if metrics.TasksProcessed > 0 {
+		failureRate = float64(metrics.TasksFailed) / float64(metrics.TasksProcessed) * 100
+	}
+
+	// Consider unhealthy if failure rate > 50%
+	if failureRate > 50 {
+		status = "degraded"
+	}
+
+	response := casts.QueueHealthResponse{
+		Status:           status,
+		TasksProcessed:   metrics.TasksProcessed,
+		TasksFailed:      metrics.TasksFailed,
+		TasksRetried:     metrics.TasksRetried,
+		AverageLatencyMs: metrics.AverageLatencyMs,
+		ActiveWorkers:    metrics.ActiveWorkers,
+		FailureRate:      failureRate,
+		LastUpdated:      metrics.LastUpdated,
+		QueueDepth:       metrics.QueueDepth,
+	}
+
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[casts.QueueHealthResponse]{
+		Item: &response,
+	}, http.StatusOK)
+
+	log.Debug().
+		Str("status", status).
+		Int64("tasks_processed", metrics.TasksProcessed).
+		Float64("failure_rate", failureRate).
+		Msg("Queue health check requested")
 }

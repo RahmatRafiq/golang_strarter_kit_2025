@@ -12,11 +12,8 @@ import (
 func TestHelpersSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	// load .env.test file for all specs in this package
-	err := godotenv.Load("../../.env.test")
-	if err != nil {
-		Fail("Error loading .env.test file")
-	}
+	// Try to load .env.test, but don't fail if it doesn't exist (CI/CD compatibility)
+	_ = godotenv.Load("../../.env.test")
 
 	gin.SetMode(gin.TestMode)
 
