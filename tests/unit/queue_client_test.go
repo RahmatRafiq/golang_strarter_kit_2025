@@ -21,6 +21,10 @@ func init() {
 
 // TestQueueClient_Enqueue tests basic enqueue functionality
 func TestQueueClient_Enqueue(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test that requires Redis in short mode")
+	}
+
 	// Use centralized Redis config for testing
 	redisConfig := config.GetTestRedisConfig()
 
@@ -96,6 +100,10 @@ func TestQueueClient_Enqueue(t *testing.T) {
 
 // TestQueueClient_Close tests client cleanup
 func TestQueueClient_Close(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test that requires Redis in short mode")
+	}
+
 	redisConfig := config.GetTestRedisConfig()
 
 	cfg := &config.QueueConfig{
@@ -116,6 +124,10 @@ func TestQueueClient_Close(t *testing.T) {
 
 // BenchmarkQueueClient_Enqueue benchmarks enqueue performance
 func BenchmarkQueueClient_Enqueue(b *testing.B) {
+	if testing.Short() {
+		b.Skip("Skipping benchmark that requires Redis in short mode")
+	}
+
 	redisConfig := config.GetTestRedisConfig()
 
 	cfg := &config.QueueConfig{

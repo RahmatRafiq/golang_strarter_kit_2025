@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -160,6 +161,7 @@ func CreateTestTask(taskType string, payload []byte) *asynq.Task {
 
 // MockTaskHandler is a simple handler for testing that tracks calls
 type MockTaskHandler struct {
+	mu           sync.Mutex
 	ErrorMsg     string
 	LastPayload  []byte
 	ProcessCount int
@@ -169,15 +171,20 @@ type MockTaskHandler struct {
 
 // ProcessTask implements asynq.Handler
 func (h *MockTaskHandler) ProcessTask(ctx context.Context, task *asynq.Task) error {
+	h.mu.Lock()
 	h.ProcessCount++
 	h.LastPayload = task.Payload()
+	shouldError := h.ShouldError
+	errorMsg := h.ErrorMsg
+	delay := h.ProcessDelay
+	h.mu.Unlock()
 
-	if h.ProcessDelay > 0 {
-		time.Sleep(h.ProcessDelay)
+	if delay > 0 {
+		time.Sleep(delay)
 	}
 
-	if h.ShouldError {
-		return fmt.Errorf("%s", h.ErrorMsg)
+	if shouldError {
+		return fmt.Errorf("%s", errorMsg)
 	}
 
 	return nil
@@ -185,11 +192,15 @@ func (h *MockTaskHandler) ProcessTask(ctx context.Context, task *asynq.Task) err
 
 // Reset resets the handler state
 func (h *MockTaskHandler) Reset() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.ProcessCount = 0
 	h.LastPayload = nil
 }
 
 // WasProcessed checks if handler was called
 func (h *MockTaskHandler) WasProcessed() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	return h.ProcessCount > 0
 }
