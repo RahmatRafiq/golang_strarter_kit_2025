@@ -31,6 +31,10 @@ func createTestPasswordHash(t *testing.T, plainPassword string) string {
 }
 
 func TestAuthService_Login_Unit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test that requires database in short mode")
+	}
+
 	// Setup test database (required for JWT token generation)
 	testDB := testhelpers.SetupTestDB(t)
 	defer testhelpers.CleanupTestDB(t, testDB)
@@ -277,6 +281,10 @@ func TestAuthService_Logout_Unit(t *testing.T) {
 }
 
 func TestAuthService_RefreshToken_Unit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test that requires database in short mode")
+	}
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 

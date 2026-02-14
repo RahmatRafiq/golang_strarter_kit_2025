@@ -12,6 +12,10 @@ import (
 // Note: OAuth callback tests require real OAuth credentials and token exchange
 // These tests focus on URL generation and user management
 func TestOAuthService_GoogleAuthURL_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -70,6 +74,10 @@ func TestOAuthService_GoogleAuthURL_Integration(t *testing.T) {
 }
 
 func TestOAuthService_GitHubAuthURL_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 

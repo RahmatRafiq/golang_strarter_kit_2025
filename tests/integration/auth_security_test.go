@@ -16,6 +16,10 @@ import (
 // TestAuthService_SoftDeletedUser tests that soft-deleted users cannot login
 // CRITICAL SECURITY: Prevents deleted accounts from being used
 func TestAuthService_SoftDeletedUser_Security(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -95,6 +99,10 @@ func TestAuthService_SoftDeletedUser_Security(t *testing.T) {
 // TestAuthService_RefreshTokenReuse tests refresh token rotation security
 // CRITICAL SECURITY: Prevents token replay attacks
 func TestAuthService_RefreshTokenReuse_Security(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -207,6 +215,10 @@ func TestAuthService_RefreshTokenReuse_Security(t *testing.T) {
 // TestAuthService_ConcurrentAccess tests thread safety and race conditions
 // CRITICAL SECURITY: Prevents race condition exploits
 func TestAuthService_ConcurrentAccess_Security(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -347,6 +359,10 @@ func TestAuthService_ConcurrentAccess_Security(t *testing.T) {
 // TestAuthService_TokenExpiration tests token lifetime handling
 // SECURITY: Validates token expiry mechanisms
 func TestAuthService_TokenExpiration_Security(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -418,6 +434,10 @@ func TestAuthService_TokenExpiration_Security(t *testing.T) {
 // TestAuthService_SessionManagement tests multi-device session handling
 // SECURITY: Validates proper session isolation
 func TestAuthService_SessionManagement_Security(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 

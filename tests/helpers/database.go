@@ -35,7 +35,8 @@ func SetupTestDB(t *testing.T) *TestDB {
 
 	connection := os.Getenv("DB_CONNECTION")
 	if connection == "" {
-		connection = "mysql"
+		// Default to sqlite for CI/CD environments (no database service required)
+		connection = "sqlite"
 	}
 
 	var db *gorm.DB

@@ -13,6 +13,10 @@ import (
 // TestAuthService_Login_Integration tests full authentication flow with real database
 // Similar to Laravel: php artisan test --filter=AuthTest
 func TestAuthService_Login_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	// Setup test database (like Laravel's RefreshDatabase)
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
@@ -143,6 +147,10 @@ func TestAuthService_Login_Integration(t *testing.T) {
 
 // TestAuthService_RefreshToken_Integration tests token refresh flow
 func TestAuthService_RefreshToken_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -222,6 +230,10 @@ func TestAuthService_RefreshToken_Integration(t *testing.T) {
 
 // TestAuthService_Logout_Integration tests logout flow
 func TestAuthService_Logout_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -286,6 +298,10 @@ func TestAuthService_Logout_Integration(t *testing.T) {
 // TestAuthService_CompleteFlow_Integration tests complete auth flow
 // Login → Use token → Refresh → Logout
 func TestAuthService_CompleteFlow_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 

@@ -13,6 +13,10 @@ import (
 // TestAuthService_InputLength tests handling of extreme input lengths
 // EDGE CASE: Prevents DoS via expensive operations
 func TestAuthService_InputLength_EdgeCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -158,6 +162,10 @@ func TestAuthService_InputLength_EdgeCases(t *testing.T) {
 // TestAuthService_WhitespaceHandling tests whitespace edge cases
 // EDGE CASE: User experience issue - common login failures
 func TestAuthService_WhitespaceHandling_EdgeCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -332,6 +340,10 @@ func TestAuthService_WhitespaceHandling_EdgeCases(t *testing.T) {
 // TestAuthService_CaseSensitivity tests case handling
 // EDGE CASE: Email case sensitivity varies by database
 func TestAuthService_CaseSensitivity_EdgeCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -440,6 +452,10 @@ func TestAuthService_CaseSensitivity_EdgeCases(t *testing.T) {
 // TestAuthService_UnicodeHandling tests international character support
 // EDGE CASE: International users
 func TestAuthService_UnicodeHandling_EdgeCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -532,6 +548,10 @@ func TestAuthService_UnicodeHandling_EdgeCases(t *testing.T) {
 // TestAuthService_SpecialCharacters tests special character handling
 // EDGE CASE: Password strength and email validation
 func TestAuthService_SpecialCharacters_EdgeCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
@@ -654,6 +674,10 @@ func TestAuthService_SpecialCharacters_EdgeCases(t *testing.T) {
 // TestAuthService_NullBytes tests null byte injection
 // EDGE CASE: Security - null byte attacks
 func TestAuthService_NullBytes_EdgeCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+
 	testDB := helpers.SetupTestDB(t)
 	defer helpers.CleanupTestDB(t, testDB)
 
