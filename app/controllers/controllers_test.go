@@ -11,10 +11,8 @@ import (
 func TestControllerssSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	err := godotenv.Load("../../.env.test")
-	if err != nil {
-		Fail("Error loading .env.test file")
-	}
+	// Try to load .env.test, but don't fail if it doesn't exist (CI/CD compatibility)
+	_ = godotenv.Load("../../.env.test")
 
 	RunSpecs(t, "Controllers Test Suite")
 }
