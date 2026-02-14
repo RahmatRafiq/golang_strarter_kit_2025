@@ -16,19 +16,17 @@ import (
 
 // WorkerManager manages the lifecycle of async workers
 type WorkerManager struct {
-	server *asynq.Server
-	mux    *asynq.ServeMux
-	config *config.QueueConfig
-	mu     sync.Mutex
-
-	// Metrics tracking
-	metricsEnabled  bool
-	tasksProcessed  atomic.Int64
-	tasksFailed     atomic.Int64
-	tasksRetried    atomic.Int64
-	totalLatencyMs  atomic.Int64
-	latencyCount    atomic.Int64
-	metricsStarted  time.Time
+	metricsStarted time.Time
+	server         *asynq.Server
+	mux            *asynq.ServeMux
+	config         *config.QueueConfig
+	tasksProcessed atomic.Int64
+	tasksFailed    atomic.Int64
+	tasksRetried   atomic.Int64
+	totalLatencyMs atomic.Int64
+	latencyCount   atomic.Int64
+	mu             sync.Mutex
+	metricsEnabled bool
 }
 
 // NewWorkerManager creates a new worker manager instance

@@ -50,11 +50,11 @@ type WorkerManager interface {
 
 // WorkerMetrics holds worker performance metrics
 type WorkerMetrics struct {
-	TasksProcessed   int64
-	TasksFailed      int64
-	TasksRetried     int64
-	AverageLatencyMs float64
-	QueueDepth       map[string]int64
-	ActiveWorkers    int
-	LastUpdated      time.Time
+	QueueDepth       map[string]int64 // 8 bytes (pointer)
+	LastUpdated      time.Time        // 24 bytes
+	TasksProcessed   int64            // 8 bytes
+	TasksFailed      int64            // 8 bytes
+	TasksRetried     int64            // 8 bytes
+	AverageLatencyMs float64          // 8 bytes
+	ActiveWorkers    int              // 8 bytes
 }
