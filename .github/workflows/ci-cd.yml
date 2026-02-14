@@ -11,9 +11,12 @@ env:
 
 jobs:
   # Job 1: Testing & Linting
+  # DISABLED: This workflow is replaced by pr-checks.yml which provides better separation
+  # between unit tests (fast, no services) and integration tests (with MySQL/Redis)
   test:
     name: Test & Lint
     runs-on: ubuntu-latest
+    if: false  # Disabled - use pr-checks.yml instead
 
     steps:
       - name: Checkout code
