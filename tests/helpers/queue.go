@@ -10,6 +10,7 @@ import (
 	"golang_starter_kit_2025/config"
 
 	"github.com/hibiken/asynq"
+	"github.com/joho/godotenv"
 )
 
 // TestQueue wraps queue client and worker manager for testing
@@ -25,12 +26,19 @@ type TestQueue struct {
 func SetupTestQueue(t *testing.T) *TestQueue {
 	t.Helper()
 
-	// Use separate Redis DB for testing (DB 15)
+	// Load .env.test for test environment
+	if err := godotenv.Load("../../.env.test"); err != nil {
+		t.Logf("Warning: .env.test not loaded: %v", err)
+	}
+
+	// Use centralized Redis config for testing
+	redisConfig := config.GetTestRedisConfig()
+
 	cfg := &config.QueueConfig{
-		RedisAddr:     "localhost:6379",
-		RedisPassword: "",
-		RedisDB:       15, // Dedicated test database
-		Concurrency:   2,  // Low concurrency for tests
+		RedisAddr:     redisConfig.Addr,
+		RedisPassword: redisConfig.Password,
+		RedisDB:       redisConfig.DB,
+		Concurrency:   2, // Low concurrency for tests
 		Queues: map[string]int{
 			"critical": 2,
 			"default":  1,
@@ -152,11 +160,11 @@ func CreateTestTask(taskType string, payload []byte) *asynq.Task {
 
 // MockTaskHandler is a simple handler for testing that tracks calls
 type MockTaskHandler struct {
-	ProcessCount int
-	LastPayload  []byte
-	ShouldError  bool
 	ErrorMsg     string
+	LastPayload  []byte
+	ProcessCount int
 	ProcessDelay time.Duration
+	ShouldError  bool
 }
 
 // ProcessTask implements asynq.Handler
@@ -169,7 +177,7 @@ func (h *MockTaskHandler) ProcessTask(ctx context.Context, task *asynq.Task) err
 	}
 
 	if h.ShouldError {
-		return fmt.Errorf(h.ErrorMsg)
+		return fmt.Errorf("%s", h.ErrorMsg)
 	}
 
 	return nil

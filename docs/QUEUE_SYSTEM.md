@@ -1,57 +1,14 @@
 # Queue System Documentation
 
-## 📋 Overview
+## Overview
 
-This starter kit includes a production-ready queue system built on [Asynq](https://github.com/hibiken/asynq) with Redis as the message broker. The system is designed to be **modular**, **scalable**, **testable**, and **easy to use**.
+Production-ready queue system built on [Asynq](https://github.com/hibiken/asynq) with Redis. Modular, scalable, and easy to use.
 
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Application Layer                        │
-│  (Services: PasswordResetService, EmailVerificationService)  │
-└────────────────────┬────────────────────────────────────────┘
-                     │ uses
-                     ↓
-┌─────────────────────────────────────────────────────────────┐
-│                   Queue Client (Producer)                    │
-│  - Enqueue()                                                 │
-│  - EnqueueWithPriority()                                     │
-│  - EnqueueIn() / EnqueueAt()                                 │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ↓
-┌─────────────────────────────────────────────────────────────┐
-│                      Redis (Broker)                          │
-│  - critical queue (60% workers)                              │
-│  - default queue  (30% workers)                              │
-│  - low queue      (10% workers)                              │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ↓
-┌─────────────────────────────────────────────────────────────┐
-│                 Worker Manager (Consumer)                    │
-│  - Task Registry                                             │
-│  - Metrics Tracking                                          │
-│  - Error Handling                                            │
-└────────────────────┬────────────────────────────────────────┘
-                     │ executes
-                     ↓
-┌─────────────────────────────────────────────────────────────┐
-│                      Task Handlers                           │
-│  - HandleSendEmailTask                                       │
-│  - ... (add more tasks here)                                 │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Configuration
 
-Add to your `.env`:
-
 ```env
-# Queue Configuration
 QUEUE_ENABLED=true
 QUEUE_REDIS_ADDR=localhost:6379
 QUEUE_REDIS_PASSWORD=
@@ -63,7 +20,6 @@ QUEUE_CONCURRENCY=10
 
 ```go
 import (
-    "context"
     "golang_starter_kit_2025/app/workers/tasks"
     "golang_starter_kit_2025/facades"
 )
@@ -71,7 +27,7 @@ import (
 // Get queue client
 queueClient := facades.GetQueueClient()
 
-// Create task
+// Create and enqueue task
 task, err := tasks.NewSendEmailTask(
     "user@example.com",
     "Welcome!",
@@ -82,116 +38,110 @@ if err != nil {
 }
 
 // Enqueue with priority
-ctx := context.Background()
 info, err := queueClient.EnqueueWithPriority(ctx, task, "critical")
 ```
 
 ### 3. Create Custom Task
 
-#### Step 1: Define Task Type and Payload
+#### Define Task & Payload
 
 ```go
-// app/workers/tasks/process_file_task.go
+// app/workers/tasks/my_task.go
+package tasks
+
+import (
+    "golang_starter_kit_2025/app/workers"
+    "github.com/hibiken/asynq"
+)
+
+const TypeMyTask = "my:task"
+
+type MyTaskPayload struct {
+    UserID uint   `json:"user_id"`
+    Action string `json:"action"`
+}
+
+// Using base helper
+func NewMyTask(userID uint, action string) (*asynq.Task, error) {
+    payload := MyTaskPayload{UserID: userID, Action: action}
+    return workers.NewTaskFromPayload(TypeMyTask, payload)
+}
+```
+
+#### Create Handler
+
+```go
+// app/workers/tasks/my_task.go (continued)
 package tasks
 
 import (
     "context"
-    "encoding/json"
-    "fmt"
-    "github.com/hibiken/asynq"
+    "golang_starter_kit_2025/app/workers"
 )
 
-const TypeProcessFile = "file:process"
-
-type ProcessFilePayload struct {
-    FilePath string `json:"file_path"`
-    UserID   uint   `json:"user_id"`
+type HandleMyTask struct {
+    myService MyService
 }
 
-func NewProcessFileTask(filePath string, userID uint) (*asynq.Task, error) {
-    payload := ProcessFilePayload{
-        FilePath: filePath,
-        UserID:   userID,
+func NewHandleMyTask(service MyService) *HandleMyTask {
+    return &HandleMyTask{myService: service}
+}
+
+func (h *HandleMyTask) ProcessTask(ctx context.Context, task *asynq.Task) error {
+    var payload MyTaskPayload
+    if err := workers.UnmarshalTaskPayload(task, &payload); err != nil {
+        return err
     }
 
-    data, err := json.Marshal(payload)
-    if err != nil {
-        return nil, fmt.Errorf("failed to marshal payload: %w", err)
-    }
-
-    return asynq.NewTask(TypeProcessFile, data), nil
+    // Process task
+    return h.myService.DoSomething(payload.UserID, payload.Action)
 }
 ```
 
-#### Step 2: Create Task Handler
+#### Register Handler
 
 ```go
-// app/workers/tasks/process_file_task.go (continued)
+// app/providers/queue_provider.go
+package providers
 
-type HandleProcessFileTask struct {
-    fileService interface {
-        ProcessFile(path string, userID uint) error
-    }
-}
+import (
+    "golang_starter_kit_2025/app/workers"
+    "golang_starter_kit_2025/app/workers/tasks"
+)
 
-func NewHandleProcessFileTask(fs interface {
-    ProcessFile(path string, userID uint) error
-}) *HandleProcessFileTask {
-    return &HandleProcessFileTask{
-        fileService: fs,
-    }
-}
+func RegisterQueueHandlers() {
+    // Initialize services
+    myService := services.NewMyService()
 
-func (h *HandleProcessFileTask) ProcessTask(ctx context.Context, task *asynq.Task) error {
-    var payload ProcessFilePayload
-    if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-        return fmt.Errorf("failed to unmarshal payload: %w", err)
-    }
-
-    // Process file
-    if err := h.fileService.ProcessFile(payload.FilePath, payload.UserID); err != nil {
-        return fmt.Errorf("failed to process file: %w", err)
-    }
-
-    return nil
+    // Register to global registry
+    workers.RegisterTask(tasks.TypeMyTask, tasks.NewHandleMyTask(myService))
 }
 ```
 
-#### Step 3: Register Handler
+Handlers auto-register via bootstrap:
 
 ```go
-// bootstrap/main.go (in Init function)
-
+// bootstrap/main.go
 if helpers.GetEnv("QUEUE_ENABLED", "false") == "true" {
-    queueCfg := config.GetQueueConfig()
     workerManager = workers.NewWorkerManager(queueCfg)
 
-    // Register email handler
-    emailService := services.NewEmailService()
-    workerManager.RegisterHandler(tasks.TypeSendEmail, tasks.NewHandleSendEmailTask(emailService))
+    // Auto-register all handlers
+    providers.RegisterQueueHandlers()
+    registry := workers.GetGlobalRegistry()
+    registry.RegisterAll(workerManager)
 
-    // Register file processing handler
-    fileService := services.NewFileService()
-    workerManager.RegisterHandler(tasks.TypeProcessFile, tasks.NewHandleProcessFileTask(fileService))
-
-    // Start workers
-    go func() {
-        if err := workerManager.Start(); err != nil {
-            log.Fatal().Err(err).Msg("Failed to start worker manager")
-        }
-    }()
+    facades.SetWorkerManager(workerManager)
+    go workerManager.Start()
 }
 ```
 
-## 📊 Priority Queues
+## Priority Queues
 
-Tasks can be enqueued to different priority queues:
-
-| Queue    | Weight | Use Case                                    |
-|----------|--------|---------------------------------------------|
-| critical | 60%    | Password resets, OTP, critical emails       |
-| default  | 30%    | Regular emails, notifications               |
-| low      | 10%    | Analytics, cleanup, non-urgent tasks        |
+| Queue    | Weight | Use Case                          |
+|----------|--------|-----------------------------------|
+| critical | 60%    | Password resets, OTP              |
+| default  | 30%    | Regular emails, notifications     |
+| low      | 10%    | Analytics, cleanup                |
 
 ```go
 // Critical priority
@@ -204,12 +154,11 @@ queueClient.EnqueueWithPriority(ctx, task, "default")
 queueClient.EnqueueWithPriority(ctx, task, "low")
 ```
 
-## ⏰ Scheduling Tasks
+## Scheduling
 
 ### Delay Execution
 
 ```go
-// Process after 5 minutes
 delay := 5 * time.Minute
 info, err := queueClient.EnqueueIn(ctx, task, delay)
 ```
@@ -217,226 +166,98 @@ info, err := queueClient.EnqueueIn(ctx, task, delay)
 ### Schedule at Specific Time
 
 ```go
-// Process tomorrow at 9 AM
-processAt := time.Now().Add(24 * time.Hour).
-    Truncate(24 * time.Hour).
-    Add(9 * time.Hour)
-
+processAt := time.Now().Add(24 * time.Hour)
 info, err := queueClient.EnqueueAt(ctx, task, processAt)
 ```
 
-## 🔄 Retry Configuration
+## Retry Configuration
 
 ```go
-import "github.com/hibiken/asynq"
-
 // Custom retry count
-info, err := queueClient.Enqueue(ctx, task,
-    asynq.MaxRetry(5),
-)
+info, err := queueClient.Enqueue(ctx, task, asynq.MaxRetry(5))
 
 // Disable retry
-info, err := queueClient.Enqueue(ctx, task,
-    asynq.MaxRetry(0),
-)
+info, err := queueClient.Enqueue(ctx, task, asynq.MaxRetry(0))
 
 // With timeout
-info, err := queueClient.Enqueue(ctx, task,
-    asynq.Timeout(30 * time.Second),
-)
+info, err := queueClient.Enqueue(ctx, task, asynq.Timeout(30 * time.Second))
 ```
 
-Default retry behavior:
-- Max retries: 25
-- Backoff: Exponential (seconds → minutes → hours)
-- Retry delay function: `asynq.DefaultRetryDelayFunc`
+Default: 25 retries with exponential backoff
 
-## 📈 Monitoring & Metrics
+## Monitoring
 
-### Get Worker Metrics
-
-```go
-metrics := workerManager.GetMetrics()
-if metrics != nil {
-    fmt.Printf("Tasks Processed: %d\n", metrics.TasksProcessed)
-    fmt.Printf("Tasks Failed: %d\n", metrics.TasksFailed)
-    fmt.Printf("Tasks Retried: %d\n", metrics.TasksRetried)
-    fmt.Printf("Average Latency: %.2fms\n", metrics.AverageLatencyMs)
-    fmt.Printf("Active Workers: %d\n", metrics.ActiveWorkers)
-}
-```
-
-### Metrics Available
-
-- `TasksProcessed`: Total successfully processed tasks
-- `TasksFailed`: Total failed tasks
-- `TasksRetried`: Total retry attempts
-- `AverageLatencyMs`: Average task processing time
-- `ActiveWorkers`: Number of concurrent workers
-- `LastUpdated`: Last metrics update timestamp
-
-## 🧪 Testing
-
-### Unit Tests
-
-```go
-// tests/unit/my_task_test.go
-package services_test
-
-import (
-    "context"
-    "testing"
-    "golang_starter_kit_2025/app/workers/tasks"
-    "github.com/stretchr/testify/assert"
-)
-
-func TestMyTask_Creation(t *testing.T) {
-    task, err := tasks.NewMyTask("param1", "param2")
-
-    assert.NoError(t, err)
-    assert.Equal(t, tasks.TypeMyTask, task.Type())
-}
-
-func TestMyTaskHandler_Process(t *testing.T) {
-    // Create mock service
-    mockService := &mockMyService{}
-    handler := tasks.NewHandleMyTask(mockService)
-
-    // Create task
-    task, _ := tasks.NewMyTask("test", "data")
-
-    // Process
-    ctx := context.Background()
-    err := handler.ProcessTask(ctx, task)
-
-    assert.NoError(t, err)
-    assert.True(t, mockService.called)
-}
-```
-
-### Integration Tests
-
-```go
-// tests/integration/queue_flow_test.go
-package integration
-
-import (
-    "testing"
-    "time"
-    testhelpers "golang_starter_kit_2025/tests/helpers"
-)
-
-func TestQueueFlow_MyTask(t *testing.T) {
-    if testing.Short() {
-        t.Skip("Skipping integration test")
-    }
-
-    // Setup test queue
-    tq := testhelpers.SetupTestQueue(t)
-    defer testhelpers.CleanupTestQueue(t, tq)
-
-    // Register handler
-    mockHandler := &testhelpers.MockTaskHandler{}
-    testhelpers.RegisterTestHandler(t, tq, "my:task", mockHandler)
-
-    // Start workers
-    testhelpers.StartTestWorkers(t, tq)
-
-    // Enqueue task
-    task := testhelpers.CreateTestTask("my:task", nil)
-    testhelpers.EnqueueTestTask(t, tq, task)
-
-    // Wait for completion
-    completed := testhelpers.WaitForTaskCompletion(t,
-        mockHandler.WasProcessed, 5*time.Second)
-
-    assert.True(t, completed)
-}
-```
-
-### Run Tests
+### Queue Health Endpoint
 
 ```bash
-# All queue tests
-go test ./tests/unit/... -v -run "Queue|Task|Registry"
-
-# Integration tests
-go test ./tests/integration/... -v -run "QueueFlow"
-
-# With Redis requirement
-go test ./tests/integration/... -v
-
-# Benchmarks
-go test ./tests/unit/... -bench=. -benchmem
+curl http://localhost:8080/health/queue
 ```
 
-## 🔧 Advanced Features
+Response:
 
-### Task Deduplication
-
-```go
-// Prevent duplicate tasks within 24 hours
-info, err := queueClient.Enqueue(ctx, task,
-    asynq.TaskID("send-email-" + userEmail),
-    asynq.Unique(24 * time.Hour),
-)
-```
-
-### Custom Queue Config
-
-```go
-// config/queue_config.go
-Queues: map[string]int{
-    "critical":    6,  // 60% workers
-    "high":        4,  // 40% workers
-    "default":     3,  // 30% workers
-    "low":         2,  // 20% workers
-    "background":  1,  // 10% workers
+```json
+{
+  "status": "healthy",
+  "tasks_processed": 1234,
+  "tasks_failed": 12,
+  "tasks_retried": 45,
+  "average_latency_ms": 125.5,
+  "active_workers": 10,
+  "failure_rate": 0.97,
+  "last_updated": "2026-02-14T15:30:00Z",
+  "queue_depth": {
+    "critical": 5,
+    "default": 12,
+    "low": 3
+  }
 }
 ```
 
-### Task Context
+Status: `healthy` (< 50% failure) | `degraded` (> 50% failure)
+
+### Get Metrics Programmatically
 
 ```go
-func (h *Handler) ProcessTask(ctx context.Context, task *asynq.Task) error {
-    // Get retry count
-    retried, _ := asynq.GetRetryCount(ctx)
+workerManager := facades.GetWorkerManager()
+metrics := workerManager.GetMetrics()
 
-    // Get task ID
-    taskID, _ := asynq.GetTaskID(ctx)
-
-    // Get queue name
-    queueName, _ := asynq.GetQueueName(ctx)
-
-    // Use context for cancellation
-    select {
-    case <-ctx.Done():
-        return ctx.Err()
-    default:
-        // Process task
-    }
-
-    return nil
+if metrics != nil {
+    fmt.Printf("Tasks Processed: %d\n", metrics.TasksProcessed)
+    fmt.Printf("Average Latency: %.2fms\n", metrics.AverageLatencyMs)
 }
 ```
 
-## 🎯 Best Practices
+## Base Helpers
 
-### 1. Task Design
+Reduce boilerplate with base helpers:
 
-✅ **DO:**
+```go
+// Create task
+payload := MyPayload{UserID: 123}
+task, err := workers.NewTaskFromPayload("my:task", payload)
+
+// Process task
+var payload MyPayload
+err := workers.UnmarshalTaskPayload(task, &payload)
+```
+
+## Best Practices
+
+### Task Design
+
+✅ DO:
 - Keep tasks small and focused
 - Make tasks idempotent (safe to retry)
-- Use clear, descriptive task names
-- Include all necessary data in payload
+- Use clear task names
+- Include all data in payload
 
-❌ **DON'T:**
-- Pass large objects in payload (use IDs instead)
-- Make tasks dependent on global state
-- Use tasks for synchronous operations
-- Include sensitive data in task payload
+❌ DON'T:
+- Pass large objects (use IDs instead)
+- Depend on global state
+- Use for synchronous operations
+- Include sensitive data
 
-### 2. Error Handling
+### Error Handling
 
 ```go
 func (h *Handler) ProcessTask(ctx context.Context, task *asynq.Task) error {
@@ -454,44 +275,45 @@ func (h *Handler) ProcessTask(ctx context.Context, task *asynq.Task) error {
 }
 ```
 
-### 3. Monitoring
+### Task Deduplication
 
 ```go
-// Log important events
-log.Info().
-    Str("task_id", taskID).
-    Str("task_type", task.Type()).
-    Int("retry_count", retried).
-    Msg("Processing task")
-
-// Track metrics
-metrics := workerManager.GetMetrics()
-// Export to monitoring system (Prometheus, Datadog, etc)
+// Prevent duplicates within 24 hours
+info, err := queueClient.Enqueue(ctx, task,
+    asynq.TaskID("send-email-" + userEmail),
+    asynq.Unique(24 * time.Hour),
+)
 ```
 
-### 4. Testing
+## Architecture
 
-- Write unit tests for task creation and handler logic
-- Write integration tests for end-to-end flow
-- Use `testhelpers.SetupTestQueue` for consistent test setup
-- Mock external dependencies (email service, APIs, etc)
-- Test retry behavior and error scenarios
+```
+Application Layer (Services)
+    ↓ uses
+Queue Client (Producer)
+    ↓
+Redis (Message Broker)
+    ↓
+Worker Manager (Consumer)
+    ↓ executes
+Task Handlers
+```
 
-## 📚 References
+### Components
 
-- [Asynq Documentation](https://github.com/hibiken/asynq)
-- [Asynq Best Practices](https://github.com/hibiken/asynq/wiki/Best-Practices)
-- [Testing Guide](https://github.com/hibiken/asynq/wiki/Testing)
-- [Task Lifecycle](https://github.com/hibiken/asynq/wiki/Task-Lifecycle)
+- **Client**: Enqueue tasks with priority/scheduling
+- **WorkerManager**: Lifecycle management, metrics tracking
+- **TaskRegistry**: Auto-discovery, centralized management
+- **BaseHelpers**: DRY for task creation/processing
+- **Interfaces**: Modular, testable dependencies
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
-### Redis Connection Issues
+### Redis Connection
 
 ```bash
-# Check Redis is running
-redis-cli ping
-# Should return: PONG
+# Check Redis
+redis-cli ping  # Should return: PONG
 
 # Check connection
 redis-cli -h localhost -p 6379 -n 1 info
@@ -500,36 +322,30 @@ redis-cli -h localhost -p 6379 -n 1 info
 ### Tasks Not Processing
 
 1. Check `QUEUE_ENABLED=true` in `.env`
-2. Verify workers are started in `bootstrap/main.go`
-3. Check task handler is registered
-4. Check Redis connection
-5. View logs for errors
+2. Verify workers started in `bootstrap/main.go`
+3. Check handler registered in `providers/queue_provider.go`
+4. View logs for errors
 
-### High Memory Usage
+### Performance
 
-- Reduce `QUEUE_CONCURRENCY`
-- Check for memory leaks in task handlers
-- Monitor queue depth (too many pending tasks)
-
-### Slow Processing
-
-- Increase `QUEUE_CONCURRENCY`
-- Optimize task handler code
+- High memory: Reduce `QUEUE_CONCURRENCY`
+- Slow processing: Increase `QUEUE_CONCURRENCY`, optimize handlers
 - Check external service response times
-- Consider task batching
 
-## 🔄 Migration from Old System
+## Testing
 
-If you're migrating from a synchronous system:
+```bash
+# Unit tests
+go test ./tests/unit/... -v -run "Queue|Task"
 
-1. Identify long-running operations
-2. Extract to task handlers
-3. Replace direct calls with enqueue
-4. Add proper error handling
-5. Test thoroughly
-6. Monitor metrics
-7. Adjust concurrency as needed
+# Integration tests (requires Redis)
+go test ./tests/integration/... -v -run "QueueFlow"
 
----
+# App package only
+go test ./app/... -v
+```
 
-**Need help?** Open an issue on GitHub or check the [main README](../README.md).
+## References
+
+- [Asynq Documentation](https://github.com/hibiken/asynq)
+- [Asynq Best Practices](https://github.com/hibiken/asynq/wiki/Best-Practices)

@@ -2,8 +2,9 @@ package tasks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+
+	"golang_starter_kit_2025/app/workers"
 
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
@@ -28,7 +29,7 @@ func NewSendEmailTask(to, subject, body string) (*asynq.Task, error) {
 		Subject: subject,
 		Body:    body,
 	}
-	return newSendEmailTaskFromPayload(payload)
+	return workers.NewTaskFromPayload(TypeSendEmail, payload)
 }
 
 // NewSendEmailTaskWithTemplate creates a new send email task with template
@@ -38,30 +39,16 @@ func NewSendEmailTaskWithTemplate(to, subject, template string) (*asynq.Task, er
 		Subject:  subject,
 		Template: template,
 	}
-	return newSendEmailTaskFromPayload(payload)
-}
-
-func newSendEmailTaskFromPayload(payload SendEmailPayload) (*asynq.Task, error) {
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal payload: %w", err)
-	}
-	return asynq.NewTask(TypeSendEmail, data), nil
+	return workers.NewTaskFromPayload(TypeSendEmail, payload)
 }
 
 // HandleSendEmailTask processes send email tasks
 type HandleSendEmailTask struct {
-	emailService interface {
-		SendEmail(to, subject, body string) error
-		SendHTMLEmail(to, subject, htmlBody string) error
-	}
+	emailService EmailService
 }
 
 // NewHandleSendEmailTask creates a new send email task handler with dependencies
-func NewHandleSendEmailTask(emailService interface {
-	SendEmail(to, subject, body string) error
-	SendHTMLEmail(to, subject, htmlBody string) error
-}) *HandleSendEmailTask {
+func NewHandleSendEmailTask(emailService EmailService) *HandleSendEmailTask {
 	return &HandleSendEmailTask{
 		emailService: emailService,
 	}
@@ -70,8 +57,8 @@ func NewHandleSendEmailTask(emailService interface {
 // ProcessTask implements asynq.Handler interface
 func (h *HandleSendEmailTask) ProcessTask(ctx context.Context, task *asynq.Task) error {
 	var payload SendEmailPayload
-	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal payload: %w", err)
+	if err := workers.UnmarshalTaskPayload(task, &payload); err != nil {
+		return err
 	}
 
 	log.Info().

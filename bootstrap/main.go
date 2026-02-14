@@ -12,9 +12,9 @@ import (
 
 	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/middleware"
+	"golang_starter_kit_2025/app/providers"
 	"golang_starter_kit_2025/app/services"
 	"golang_starter_kit_2025/app/workers"
-	"golang_starter_kit_2025/app/workers/tasks"
 	"golang_starter_kit_2025/cmd"
 	"golang_starter_kit_2025/config"
 	"golang_starter_kit_2025/docs"
@@ -123,11 +123,15 @@ func Init() {
 		queueCfg := config.GetQueueConfig()
 		workerManager = workers.NewWorkerManager(queueCfg)
 
-		// Initialize email service for workers
-		emailService := services.NewEmailService()
+		// Register all task handlers from providers (auto-discovery pattern)
+		providers.RegisterQueueHandlers()
 
-		// Register task handlers with dependencies
-		workerManager.RegisterHandler(tasks.TypeSendEmail, tasks.NewHandleSendEmailTask(emailService))
+		// Register all handlers to worker manager from global registry
+		registry := workers.GetGlobalRegistry()
+		registry.RegisterAll(workerManager)
+
+		// Set worker manager to facade for global access (e.g., health checks)
+		facades.SetWorkerManager(workerManager)
 
 		// Start workers in background
 		go func() {
@@ -136,7 +140,9 @@ func Init() {
 			}
 		}()
 
-		log.Info().Msg("Worker manager started with email service")
+		log.Info().
+			Int("handlers", registry.Count()).
+			Msg("Worker manager started with task registry")
 	}
 
 	r := Router()

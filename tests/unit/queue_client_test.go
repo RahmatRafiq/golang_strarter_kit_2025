@@ -9,17 +9,25 @@ import (
 	"golang_starter_kit_2025/config"
 
 	"github.com/hibiken/asynq"
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	// Load .env.test for all tests in this package
+	_ = godotenv.Load("../../.env.test")
+}
+
 // TestQueueClient_Enqueue tests basic enqueue functionality
 func TestQueueClient_Enqueue(t *testing.T) {
-	// Skip if Redis not available
+	// Use centralized Redis config for testing
+	redisConfig := config.GetTestRedisConfig()
+
 	cfg := &config.QueueConfig{
-		RedisAddr:     "localhost:6379",
-		RedisPassword: "",
-		RedisDB:       15, // Use separate DB for testing
+		RedisAddr:     redisConfig.Addr,
+		RedisPassword: redisConfig.Password,
+		RedisDB:       redisConfig.DB,
 		Concurrency:   1,
 		Queues: map[string]int{
 			"default": 1,
@@ -88,10 +96,12 @@ func TestQueueClient_Enqueue(t *testing.T) {
 
 // TestQueueClient_Close tests client cleanup
 func TestQueueClient_Close(t *testing.T) {
+	redisConfig := config.GetTestRedisConfig()
+
 	cfg := &config.QueueConfig{
-		RedisAddr:     "localhost:6379",
-		RedisPassword: "",
-		RedisDB:       15,
+		RedisAddr:     redisConfig.Addr,
+		RedisPassword: redisConfig.Password,
+		RedisDB:       redisConfig.DB,
 		Concurrency:   1,
 		Queues: map[string]int{
 			"default": 1,
@@ -106,10 +116,12 @@ func TestQueueClient_Close(t *testing.T) {
 
 // BenchmarkQueueClient_Enqueue benchmarks enqueue performance
 func BenchmarkQueueClient_Enqueue(b *testing.B) {
+	redisConfig := config.GetTestRedisConfig()
+
 	cfg := &config.QueueConfig{
-		RedisAddr:     "localhost:6379",
-		RedisPassword: "",
-		RedisDB:       15,
+		RedisAddr:     redisConfig.Addr,
+		RedisPassword: redisConfig.Password,
+		RedisDB:       redisConfig.DB,
 		Concurrency:   10,
 		Queues: map[string]int{
 			"default": 1,

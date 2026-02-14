@@ -54,12 +54,12 @@ func TestNewSendEmailTask(t *testing.T) {
 
 // mockEmailService implements the email service interface for testing
 type mockEmailService struct {
-	sendEmailCalled     bool
-	sendHTMLEmailCalled bool
-	shouldFail          bool
 	lastTo              string
 	lastSubject         string
 	lastBody            string
+	sendEmailCalled     bool
+	sendHTMLEmailCalled bool
+	shouldFail          bool
 }
 
 func (m *mockEmailService) SendEmail(to, subject, body string) error {

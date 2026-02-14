@@ -15,9 +15,9 @@ import (
 
 // mockEmailData holds test email tracking data
 type mockEmailData struct {
-	called  bool
 	lastTo  string
 	lastSub string
+	called  bool
 }
 
 // testEmailService implements email service interface for testing
