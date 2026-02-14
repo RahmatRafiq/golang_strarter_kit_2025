@@ -1,0 +1,97 @@
+name: CI Pipeline
+
+# Simple CI for code quality - no deployment
+# Runs on: Pull Requests and pushes to main/development
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+
+env:
+  GO_VERSION: '1.24.3'
+
+jobs:
+  ci:
+    name: CI Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      # Step 1: Validation (format, deps, vet)
+      - name: Validate code quality
+        run: |
+          echo "📋 Checking Go modules..."
+          go mod download
+          go mod verify
+          go mod tidy
+          git diff --exit-code go.mod go.sum || (echo "❌ go.mod/go.sum not tidy" && exit 1)
+
+          echo "🎨 Checking code formatting..."
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "❌ Code not formatted:"
+            gofmt -l .
+            exit 1
+          fi
+
+          echo "🔍 Running go vet..."
+          go vet ./...
+
+          echo "✅ Validation passed!"
+
+      # Step 2: Linting
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+      # Step 3: Unit Tests (fast, no external services)
+      - name: Run unit tests
+        run: |
+          echo "🧪 Running unit tests (with -short flag)..."
+          go test -v -short -race -coverprofile=coverage.out ./...
+          echo "✅ Unit tests passed!"
+
+      # Step 4: Build check
+      - name: Build application
+        run: |
+          echo "🔨 Building application..."
+          go build -v -o app .
+          echo "✅ Build successful!"
+
+      # Optional: Upload coverage
+      - name: Upload coverage
+        if: github.event_name == 'pull_request'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.out
+          flags: unittests
+          fail_ci_if_error: false
+
+      # Summary
+      - name: CI Summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ All CI checks passed!"
+            echo ""
+            echo "📊 Summary:"
+            echo "  ✓ Code validation"
+            echo "  ✓ Linting"
+            echo "  ✓ Unit tests"
+            echo "  ✓ Build"
+            echo ""
+            echo "ℹ️  Integration tests and deployment are not configured"
+          else
+            echo "❌ CI checks failed!"
+            exit 1
+          fi
