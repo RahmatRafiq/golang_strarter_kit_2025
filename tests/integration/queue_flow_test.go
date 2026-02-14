@@ -13,6 +13,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// mockEmailData holds test email tracking data
+type mockEmailData struct {
+	called  bool
+	lastTo  string
+	lastSub string
+}
+
+// testEmailService implements email service interface for testing
+type testEmailService struct {
+	data *mockEmailData
+}
+
+func (s *testEmailService) SendEmail(to, subject, body string) error {
+	s.data.called = true
+	s.data.lastTo = to
+	s.data.lastSub = subject
+	return nil
+}
+
+func (s *testEmailService) SendHTMLEmail(to, subject, htmlBody string) error {
+	s.data.called = true
+	s.data.lastTo = to
+	s.data.lastSub = subject
+	return nil
+}
+
 // TestQueueFlow_EnqueueAndProcess tests complete queue flow
 func TestQueueFlow_EnqueueAndProcess(t *testing.T) {
 	if testing.Short() {
@@ -127,28 +153,10 @@ func TestQueueFlow_EmailTask(t *testing.T) {
 
 	t.Run("process send email task", func(t *testing.T) {
 		// Create mock email service
-		mockEmailService := &struct {
-			called  bool
-			lastTo  string
-			lastSub string
-		}{}
+		mock := &mockEmailData{}
+		emailService := &testEmailService{data: mock}
 
-		// Create handler with mock service
-		handler := tasks.NewHandleSendEmailTask(&struct {
-			SendEmail     func(to, subject, body string) error
-			SendHTMLEmail func(to, subject, htmlBody string) error
-		}{
-			SendEmail: func(to, subject, body string) error {
-				mockEmailService.called = true
-				mockEmailService.lastTo = to
-				mockEmailService.lastSub = subject
-				return nil
-			},
-			SendHTMLEmail: func(to, subject, htmlBody string) error {
-				return nil
-			},
-		})
-
+		handler := tasks.NewHandleSendEmailTask(emailService)
 		testhelpers.RegisterTestHandler(t, tq, tasks.TypeSendEmail, handler)
 		testhelpers.StartTestWorkers(t, tq)
 
@@ -164,12 +172,12 @@ func TestQueueFlow_EmailTask(t *testing.T) {
 
 		// Wait for processing
 		completed := testhelpers.WaitForTaskCompletion(t, func() bool {
-			return mockEmailService.called
+			return mock.called
 		}, 5*time.Second)
 
 		assert.True(t, completed, "email task should be processed")
-		assert.Equal(t, "test@example.com", mockEmailService.lastTo)
-		assert.Equal(t, "Test Subject", mockEmailService.lastSub)
+		assert.Equal(t, "test@example.com", mock.lastTo)
+		assert.Equal(t, "Test Subject", mock.lastSub)
 	})
 }
 
