@@ -16,9 +16,9 @@ import (
 
 // mockEmailData holds test email tracking data
 type mockEmailData struct {
-	mu      sync.Mutex
 	lastTo  string
 	lastSub string
+	mu      sync.Mutex
 	called  bool
 }
 

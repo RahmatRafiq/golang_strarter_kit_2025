@@ -161,11 +161,11 @@ func CreateTestTask(taskType string, payload []byte) *asynq.Task {
 
 // MockTaskHandler is a simple handler for testing that tracks calls
 type MockTaskHandler struct {
-	mu           sync.Mutex
 	ErrorMsg     string
 	LastPayload  []byte
-	ProcessCount int
 	ProcessDelay time.Duration
+	mu           sync.Mutex
+	ProcessCount int
 	ShouldError  bool
 }
 
