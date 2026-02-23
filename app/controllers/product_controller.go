@@ -41,7 +41,7 @@ func (c *ProductController) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	products, err := c.service.GetAll(filters)
+	products, _, err := c.service.List(1, 1000)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Failed to get products list",
@@ -102,7 +102,7 @@ func (c *ProductController) Create(ctx *gin.Context) {
 		}
 	}
 
-	product, err := c.service.CreateProduct(ctx, request)
+	product, err := c.service.Create(ctx, request)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Failed to create product",
@@ -143,7 +143,7 @@ func (c *ProductController) Update(ctx *gin.Context) {
 		}
 	}
 
-	product, err := c.service.UpdateProduct(ctx, id, request)
+	product, err := c.service.Update(ctx, id, request)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Failed to update product",

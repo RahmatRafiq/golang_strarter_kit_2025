@@ -27,7 +27,7 @@ func NewPermissionController(service services.PermissionService) *PermissionCont
 // @Success		200	{object}	helpers.ResponseParams[models.Permission]{data=[]models.Permission}
 // @Router			/permissions [get]
 func (c *PermissionController) List(ctx *gin.Context) {
-	permissions, err := c.service.GetAll()
+	permissions, _, err := c.service.List(1, 1000)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},

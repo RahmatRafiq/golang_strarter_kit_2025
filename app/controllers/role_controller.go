@@ -28,7 +28,7 @@ func NewRoleController(service services.RoleService) *RoleController {
 // @Success		200	{object}	helpers.ResponseParams[models.Role]{data=[]models.Role}
 // @Router			/roles [get]
 func (c *RoleController) List(ctx *gin.Context) {
-	roles, err := c.service.GetAll()
+	roles, _, err := c.service.List(1, 1000)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},

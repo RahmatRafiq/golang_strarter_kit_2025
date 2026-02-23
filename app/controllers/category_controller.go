@@ -28,7 +28,7 @@ func NewCategoryController(service services.CategoryService) *CategoryController
 // @Failure		500	{object}	map[string]string	"Internal Server Error"
 // @Router			/categories [get]
 func (c *CategoryController) List(ctx *gin.Context) {
-	categories, err := c.service.GetAllCategories()
+	categories, _, err := c.service.List(1, 1000)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -82,7 +82,7 @@ func (c *CategoryController) Create(ctx *gin.Context) {
 		UpdatedAt: time.Now(),
 	}
 
-	createdCategory, err := c.service.CreateCategory(category)
+	createdCategory, err := c.service.Create(category)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -121,7 +121,7 @@ func (c *CategoryController) Update(ctx *gin.Context) {
 		UpdatedAt: time.Now(),
 	}
 
-	updatedCategory, err := c.service.UpdateCategory(id, category)
+	updatedCategory, err := c.service.Update(id, category)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
