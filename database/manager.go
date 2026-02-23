@@ -3,11 +3,11 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"sync"
 
 	"golang_starter_kit_2025/config"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -123,7 +123,10 @@ func (m *Manager) Connect(connectionName string) (*Connection, error) {
 	// Store connection
 	m.connections[connectionName] = connection
 
-	log.Printf("✅ Database connection '%s' (%s) established successfully", connectionName, cfg.Type)
+	log.Info().
+		Str("connection", connectionName).
+		Str("type", string(cfg.Type)).
+		Msg("Database connection established successfully")
 	return connection, nil
 }
 
@@ -151,11 +154,16 @@ func (m *Manager) CloseConnection(connectionName string) error {
 
 	if conn, exists := m.connections[connectionName]; exists {
 		if err := conn.SQLDB.Close(); err != nil {
-			log.Printf("Error closing connection '%s': %v", connectionName, err)
+			log.Error().
+				Err(err).
+				Str("connection", connectionName).
+				Msg("Error closing database connection")
 			return err
 		}
 		delete(m.connections, connectionName)
-		log.Printf("✅ Database connection '%s' closed successfully", connectionName)
+		log.Info().
+			Str("connection", connectionName).
+			Msg("Database connection closed successfully")
 	}
 
 	return nil
@@ -168,9 +176,14 @@ func (m *Manager) CloseAllConnections() {
 
 	for name, conn := range m.connections {
 		if err := conn.SQLDB.Close(); err != nil {
-			log.Printf("Error closing connection '%s': %v", name, err)
+			log.Error().
+				Err(err).
+				Str("connection", name).
+				Msg("Error closing database connection")
 		} else {
-			log.Printf("✅ Database connection '%s' closed successfully", name)
+			log.Info().
+				Str("connection", name).
+				Msg("Database connection closed successfully")
 		}
 	}
 

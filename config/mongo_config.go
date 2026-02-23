@@ -3,9 +3,9 @@ package config
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -58,7 +58,7 @@ var MongoClient *mongo.Client
 func ConnectMongo() {
 	cfg := GetMongoDBConfig()
 	if err := cfg.Validate(); err != nil {
-		log.Fatal("MongoDB config error:", err)
+		log.Fatal().Err(err).Str("database", "mongodb").Msg("MongoDB configuration error")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -68,15 +68,13 @@ func ConnectMongo() {
 	clientOptions := options.Client().ApplyURI(uri)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		log.Fatal("MongoDB connection error:", err)
+		log.Fatal().Err(err).Str("database", "mongodb").Msg("MongoDB connection failed")
 	}
 
 	if err := client.Ping(ctx, nil); err != nil {
-		log.Fatal("MongoDB ping error:", err)
+		log.Fatal().Err(err).Str("database", "mongodb").Msg("MongoDB ping failed")
 	}
 
-	fmt.Println("✅ Connected to MongoDB!")
+	log.Info().Str("database", "mongodb").Msg("Connected to MongoDB successfully")
 	MongoClient = client
 }
-
-// Hapus fungsi getEnv karena sudah ada di database.go
