@@ -350,13 +350,6 @@ var MigrateLogsCommand = &cli.Command{
 	},
 }
 
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
-}
-
 var MigrateStatusCommand = &cli.Command{
 	Name:  "migrate:status",
 	Usage: "Show the status of each migration",

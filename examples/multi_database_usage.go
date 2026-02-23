@@ -116,7 +116,7 @@ func healthCheckExample() {
 				logEvent := log.Info().
 					Str("connection", connName).
 					Str("status", "connected")
-				
+
 				if openConns, exists := statsMap["open_connections"]; exists {
 					logEvent = logEvent.Interface("open_connections", openConns)
 				}
@@ -131,7 +131,7 @@ func healthCheckExample() {
 				logEvent := log.Warn().
 					Str("connection", connName).
 					Str("status", "disconnected")
-				
+
 				if errMsg, exists := statsMap["error"]; exists {
 					logEvent = logEvent.Interface("error", errMsg)
 				}

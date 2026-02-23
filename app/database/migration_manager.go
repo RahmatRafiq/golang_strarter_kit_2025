@@ -637,13 +637,6 @@ func ShowMigrationStatus(connectionName string) error {
 	return nil
 }
 
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
-}
-
 // WipeDatabase drops all tables from the database
 func WipeDatabase(connectionName string) error {
 	if connectionName == "" {
