@@ -244,6 +244,16 @@ func validateRequiredEnvVars() {
 		log.Warn().Msg("JWT_SECRET_KEY appears to be weak. Consider using: openssl rand -base64 48")
 	}
 
+	// SECURITY: Prevent SKIP_AUTH in production (moved from middleware)
+	skipAuth := os.Getenv("SKIP_AUTH")
+	appEnv := os.Getenv("APP_ENV")
+	if skipAuth == "true" && appEnv == "production" {
+		log.Fatal().
+			Str("skip_auth", skipAuth).
+			Str("app_env", appEnv).
+			Msg("SECURITY ERROR: SKIP_AUTH cannot be 'true' in production environment")
+	}
+
 	if len(missing) > 0 {
 		log.Fatal().
 			Strs("missing_vars", missing).
