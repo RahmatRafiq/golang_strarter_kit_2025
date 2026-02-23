@@ -141,57 +141,7 @@ func TestRoleService_Create_Unit(t *testing.T) {
 	roleService := services.NewRoleService(mockRoleRepo, mockPermRepo)
 
 	t.Run("success - creates new role", func(t *testing.T) {
-		newRole := &models.Role{
-			Name:  "editor",
-			Group: "content",
-		}
-
-		mockRoleRepo.EXPECT().
-			Create(newRole).
-			DoAndReturn(func(role *models.Role) error {
-				role.ID = 1 // Simulate database ID assignment
-				return nil
-			})
-
-		err := roleService.Create(newRole)
-
-		if err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-		if newRole.ID == 0 {
-			t.Error("expected role ID to be set")
-		}
-	})
-
-	t.Run("error - duplicate role name", func(t *testing.T) {
-		newRole := &models.Role{
-			Name:  "admin",
-			Group: "system",
-		}
-
-		mockRoleRepo.EXPECT().
-			Create(newRole).
-			Return(errors.New("duplicate entry"))
-
-		err := roleService.Create(newRole)
-
-		if err == nil {
-			t.Error("expected error for duplicate role, got nil")
-		}
-	})
-}
-
-func TestRoleService_Put_Unit(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRoleRepo := mocks.NewMockRoleRepositoryInterface(ctrl)
-	mockPermRepo := mocks.NewMockPermissionRepositoryInterface(ctrl)
-	roleService := services.NewRoleService(mockRoleRepo, mockPermRepo)
-
-	t.Run("success - creates new role when ID is 0", func(t *testing.T) {
 		newRole := models.Role{
-			ID:    0, // No ID means create
 			Name:  "editor",
 			Group: "content",
 		}
@@ -203,7 +153,7 @@ func TestRoleService_Put_Unit(t *testing.T) {
 				return nil
 			})
 
-		result, err := roleService.Put(newRole)
+		result, err := roleService.Create(newRole)
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
@@ -213,22 +163,70 @@ func TestRoleService_Put_Unit(t *testing.T) {
 		}
 	})
 
-	t.Run("success - updates existing role when ID is provided", func(t *testing.T) {
+	t.Run("error - duplicate role name", func(t *testing.T) {
+		newRole := models.Role{
+			Name:  "admin",
+			Group: "system",
+		}
+
+		mockRoleRepo.EXPECT().
+			Create(gomock.Any()).
+			Return(errors.New("duplicate entry"))
+
+		_, err := roleService.Create(newRole)
+
+		if err == nil {
+			t.Error("expected error for duplicate role, got nil")
+		}
+	})
+}
+
+func TestRoleService_CreateAndUpdate_Unit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRoleRepo := mocks.NewMockRoleRepositoryInterface(ctrl)
+	mockPermRepo := mocks.NewMockPermissionRepositoryInterface(ctrl)
+	roleService := services.NewRoleService(mockRoleRepo, mockPermRepo)
+
+	t.Run("success - creates new role", func(t *testing.T) {
+		newRole := models.Role{
+			Name:  "editor",
+			Group: "content",
+		}
+
+		mockRoleRepo.EXPECT().
+			Create(gomock.Any()).
+			DoAndReturn(func(role *models.Role) error {
+				role.ID = 1
+				return nil
+			})
+
+		result, err := roleService.Create(newRole)
+
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+		if result.ID == 0 {
+			t.Error("expected role ID to be set")
+		}
+	})
+
+	t.Run("success - updates existing role", func(t *testing.T) {
 		updatedRole := models.Role{
-			ID:    1,
 			Name:  "updated_admin",
 			Group: "system",
 		}
 
 		mockRoleRepo.EXPECT().
-			Update(&updatedRole).
+			Update(gomock.Any()).
 			Return(nil)
 
 		mockRoleRepo.EXPECT().
 			FindByID(uint(1)).
 			Return(&updatedRole, nil)
 
-		result, err := roleService.Put(updatedRole)
+		result, err := roleService.Update(1, updatedRole)
 
 		if err != nil {
 			t.Errorf("expected no error, got %v", err)
@@ -240,61 +238,14 @@ func TestRoleService_Put_Unit(t *testing.T) {
 
 	t.Run("error - update fails", func(t *testing.T) {
 		updatedRole := models.Role{
-			ID:   1,
 			Name: "admin",
 		}
 
 		mockRoleRepo.EXPECT().
-			Update(&updatedRole).
+			Update(gomock.Any()).
 			Return(errors.New("database error"))
 
-		result, err := roleService.Put(updatedRole)
-
-		if err == nil {
-			t.Error("expected error, got nil")
-		}
-		if result.ID != 1 {
-			t.Error("expected original role to be returned on error")
-		}
-	})
-}
-
-func TestRoleService_Update_Unit(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRoleRepo := mocks.NewMockRoleRepositoryInterface(ctrl)
-	mockPermRepo := mocks.NewMockPermissionRepositoryInterface(ctrl)
-	roleService := services.NewRoleService(mockRoleRepo, mockPermRepo)
-
-	t.Run("success - updates role", func(t *testing.T) {
-		role := &models.Role{
-			ID:   1,
-			Name: "updated_role",
-		}
-
-		mockRoleRepo.EXPECT().
-			Update(role).
-			Return(nil)
-
-		err := roleService.Update(role)
-
-		if err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-	})
-
-	t.Run("error - role not found", func(t *testing.T) {
-		role := &models.Role{
-			ID:   999,
-			Name: "nonexistent",
-		}
-
-		mockRoleRepo.EXPECT().
-			Update(role).
-			Return(errors.New("role not found"))
-
-		err := roleService.Update(role)
+		_, err := roleService.Update(1, updatedRole)
 
 		if err == nil {
 			t.Error("expected error, got nil")
