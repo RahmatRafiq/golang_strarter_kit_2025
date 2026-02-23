@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
 
@@ -56,19 +57,18 @@ func runTests(c *cli.Context) error {
 	filter := c.String("filter")
 	setup := c.Bool("setup")
 
-	fmt.Println("╔════════════════════════════════════════════╗")
-	fmt.Println("║   Golang Starter Kit - Test Runner        ║")
-	fmt.Println("╚════════════════════════════════════════════╝")
-	fmt.Println()
+	log.Info().
+		Msg("Golang Starter Kit - Test Runner")
 
 	// Setup test database if requested
 	if setup {
-		fmt.Println("📦 Setting up test database...")
+		log.Info().
+			Msg("Setting up test database")
 		if err := setupTestDatabase(); err != nil {
 			return fmt.Errorf("failed to setup test database: %w", err)
 		}
-		fmt.Println("✅ Test database ready")
-		fmt.Println()
+		log.Info().
+			Msg("Test database ready")
 	}
 
 	// Determine test paths based on type
@@ -77,8 +77,9 @@ func runTests(c *cli.Context) error {
 		return fmt.Errorf("invalid test type: %s (use: unit, integration, e2e, or all)", testType)
 	}
 
-	fmt.Printf("🧪 Running %s tests...\n", testType)
-	fmt.Println()
+	log.Info().
+		Str("type", testType).
+		Msg("Running tests")
 
 	// Build go test command
 	args := []string{"test"}
@@ -106,27 +107,27 @@ func runTests(c *cli.Context) error {
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "APP_ENV=testing")
 
-	fmt.Printf("Running: go %s\n", strings.Join(args, " "))
-	fmt.Println(strings.Repeat("─", 50))
+	log.Info().
+		Str("command", "go "+strings.Join(args, " ")).
+		Msg("Running test command")
 
 	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			fmt.Println()
-			fmt.Println(strings.Repeat("─", 50))
-			fmt.Printf("❌ Tests failed with exit code: %d\n", exitErr.ExitCode())
+			log.Error().
+				Int("exit_code", exitErr.ExitCode()).
+				Msg("Tests failed")
 			return exitErr
 		}
 		return err
 	}
 
-	fmt.Println()
-	fmt.Println(strings.Repeat("─", 50))
-	fmt.Println("✅ All tests passed!")
+	log.Info().
+		Msg("All tests passed")
 
 	// Show coverage report if requested
 	if coverage {
-		fmt.Println()
-		fmt.Println("📊 Generating coverage report...")
+		log.Info().
+			Msg("Generating coverage report")
 		showCoverage()
 	}
 
@@ -170,10 +171,12 @@ func showCoverage() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("Warning: failed to generate coverage report: %v\n", err)
+		log.Warn().
+			Err(err).
+			Msg("Failed to generate coverage report")
 	}
 
-	fmt.Println()
-	fmt.Println("💡 View HTML coverage report:")
-	fmt.Println("   go tool cover -html=coverage.out")
+	log.Info().
+		Str("command", "go tool cover -html=coverage.out").
+		Msg("View HTML coverage report")
 }
