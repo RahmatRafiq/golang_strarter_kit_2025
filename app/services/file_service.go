@@ -17,7 +17,11 @@ func (service FileService) UploadFile(ctx *gin.Context, key string, path string)
 	}
 
 	// rename file with uuid as filename with extension
-	fileName := helpers.GenerateReference(key) + filepath.Ext(file.Filename)
+	reference, err := helpers.GenerateReference(key)
+	if err != nil {
+		return nil, err
+	}
+	fileName := reference + filepath.Ext(file.Filename)
 
 	// save file
 	if err := ctx.SaveUploadedFile(file, helpers.StoragePath()+filepath.Join(path, fileName)); err != nil {
@@ -28,7 +32,11 @@ func (service FileService) UploadFile(ctx *gin.Context, key string, path string)
 }
 
 func (service FileService) StoreBase64File(base64 string, key string, path string) (*string, error) {
-	fileName := helpers.GenerateReference(key) + ".png"
+	reference, err := helpers.GenerateReference(key)
+	if err != nil {
+		return nil, err
+	}
+	fileName := reference + ".png"
 
 	if err := helpers.StoreBase64File(base64, path, fileName); err != nil {
 		return nil, err
