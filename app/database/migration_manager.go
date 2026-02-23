@@ -9,6 +9,7 @@ import (
 
 	"golang_starter_kit_2025/facades"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -126,7 +127,10 @@ func RunMigrationOnConnection(filename, connectionName string) error {
 	// If execution failed, log and return error
 	if execError != nil {
 		if logErr := logMigrationExecution(connectionName, filename, batch, executionTime, "failed", execError.Error()); logErr != nil {
-			fmt.Printf("Warning: failed to log migration execution: %v\n", logErr)
+			log.Warn().
+				Err(logErr).
+				Str("migration", filename).
+				Msg("Failed to log migration execution")
 		}
 		return execError
 	}
@@ -136,17 +140,26 @@ func RunMigrationOnConnection(filename, connectionName string) error {
 		"INSERT INTO migrations(connection_name,filename,batch) VALUES(?,?,?)", connectionName, filename, batch,
 	).Error; err != nil {
 		if logErr := logMigrationExecution(connectionName, filename, batch, executionTime, "failed", err.Error()); logErr != nil {
-			fmt.Printf("Warning: failed to log migration execution: %v\n", logErr)
+			log.Warn().
+				Err(logErr).
+				Str("migration", filename).
+				Msg("Failed to log migration execution")
 		}
 		return fmt.Errorf("failed to record migration: %v", err)
 	}
 
 	// Log successful execution
 	if err := logMigrationExecution(connectionName, filename, batch, executionTime, "success", ""); err != nil {
-		fmt.Printf("Warning: failed to log migration execution: %v\n", err)
+		log.Warn().
+			Err(err).
+			Str("migration", filename).
+			Msg("Failed to log migration execution")
 	}
 
-	fmt.Printf("Migrated: %s (%s)\n", filename, FormatDuration(executionTime))
+	log.Info().
+		Str("migration", filename).
+		Str("duration", FormatDuration(executionTime)).
+		Msg("Migration completed")
 	return nil
 }
 
@@ -187,7 +200,9 @@ func RollbackMigrationOnConnection(filename, connectionName string) error {
 			return fmt.Errorf("failed to delete migration record: %v", err)
 		}
 
-		fmt.Printf("Rolled back: %s\n", filename)
+		log.Info().
+			Str("migration", filename).
+			Msg("Migration rolled back")
 		return nil
 	})
 }
@@ -220,7 +235,10 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 	}
 	defer func() {
 		if err := lock.Release(); err != nil {
-			fmt.Printf("Warning: failed to release migration lock: %v\n", err)
+			log.Warn().
+				Err(err).
+				Str("connection", connectionName).
+				Msg("Failed to release migration lock")
 		}
 	}()
 
@@ -266,7 +284,9 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 	}
 
 	for _, name := range toRun {
-		fmt.Printf("Migrating: %s\n", name)
+		log.Info().
+			Str("migration", name).
+			Msg("Running migration")
 
 		// Start timing
 		startTime := time.Now()
@@ -298,7 +318,10 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 		// If execution failed, log and return error
 		if execError != nil {
 			if logErr := logMigrationExecution(connectionName, name, batch, executionTime, "failed", execError.Error()); logErr != nil {
-				fmt.Printf("Warning: failed to log migration execution: %v\n", logErr)
+				log.Warn().
+					Err(logErr).
+					Str("migration", name).
+					Msg("Failed to log migration execution")
 			}
 			return execError
 		}
@@ -308,19 +331,30 @@ func RunAllMigrationsOnConnection(connectionName string) error {
 			connectionName, name, batch,
 		).Error; err != nil {
 			if logErr := logMigrationExecution(connectionName, name, batch, executionTime, "failed", err.Error()); logErr != nil {
-				fmt.Printf("Warning: failed to log migration execution: %v\n", logErr)
+				log.Warn().
+					Err(logErr).
+					Str("migration", name).
+					Msg("Failed to log migration execution")
 			}
 			return fmt.Errorf("failed to record %s: %v", name, err)
 		}
 
 		// Log successful execution
 		if err := logMigrationExecution(connectionName, name, batch, executionTime, "success", ""); err != nil {
-			fmt.Printf("Warning: failed to log migration execution: %v\n", err)
+			log.Warn().
+				Err(err).
+				Str("migration", name).
+				Msg("Failed to log migration execution")
 		}
-		fmt.Printf("  ✓ Completed in %s\n", FormatDuration(executionTime))
+		log.Info().
+			Str("migration", name).
+			Str("duration", FormatDuration(executionTime)).
+			Msg("Migration completed")
 	}
 
-	fmt.Printf("Batch %d applied.\n", batch)
+	log.Info().
+		Int("batch", batch).
+		Msg("Migration batch applied")
 	return nil
 }
 
@@ -373,12 +407,16 @@ func RollbackBatchOnConnection(batch int, connectionName string) error {
 	var rows []struct{ Filename string }
 	conn.DB.Raw("SELECT filename FROM migrations WHERE connection_name = ? AND batch = ? ORDER BY id DESC", connectionName, batch).Scan(&rows)
 	for _, r := range rows {
-		fmt.Printf("Rolling back: %s\n", r.Filename)
+		log.Info().
+			Str("migration", r.Filename).
+			Msg("Rolling back migration")
 		if err := RollbackMigrationOnConnection(r.Filename, connectionName); err != nil {
 			return err
 		}
 	}
-	fmt.Printf("Batch %d rolled back.\n", batch)
+	log.Info().
+		Int("batch", batch).
+		Msg("Migration batch rolled back")
 	return nil
 }
 
@@ -398,7 +436,9 @@ func RollbackLastBatchOnConnection(connectionName string) error {
 		return fmt.Errorf("failed to get last batch: %v", err)
 	}
 	if last == 0 {
-		fmt.Printf("No batch to rollback.\n")
+		log.Info().
+			Str("connection", connectionName).
+			Msg("No batch to rollback")
 		return nil
 	}
 	return RollbackBatchOnConnection(last, connectionName)
@@ -419,7 +459,9 @@ func RollbackStepsOnConnection(steps int, connectionName string) error {
 		return fmt.Errorf("failed to get last batch: %v", err)
 	}
 	if last == 0 {
-		fmt.Println("⚠️ No batches to rollback.")
+		log.Warn().
+			Str("connection", connectionName).
+			Msg("No batches to rollback")
 		return nil
 	}
 
@@ -437,7 +479,10 @@ func RollbackStepsOnConnection(steps int, connectionName string) error {
 		count++
 	}
 
-	fmt.Printf("✅ Successfully rolled back %d batch(es).\n", count)
+	log.Info().
+		Int("batches_rolled_back", count).
+		Str("connection", connectionName).
+		Msg("Successfully rolled back batches")
 	return nil
 }
 
@@ -523,11 +568,9 @@ func ShowMigrationStatus(connectionName string) error {
 		}{a.Batch, a.ExecutionTimeMs}
 	}
 
-	fmt.Println()
-	fmt.Println("Migration Status on connection:", connectionName)
-	fmt.Println(strings.Repeat("=", 95))
-	fmt.Printf("%-50s %-10s %-15s %-15s\n", "Migration", "Batch", "Status", "Execution Time")
-	fmt.Println(strings.Repeat("-", 95))
+	log.Info().
+		Str("connection", connectionName).
+		Msg("Migration Status")
 
 	var pending, ran int
 	for _, f := range files {
@@ -540,48 +583,57 @@ func ShowMigrationStatus(connectionName string) error {
 			if info.ExecutionTimeMs > 0 {
 				timeStr = FormatDuration(info.ExecutionTimeMs)
 			}
-			fmt.Printf("%-50s %-10d %-15s %-15s\n",
-				truncateString(name, 50),
-				info.Batch,
-				"✅ Ran",
-				timeStr)
+			log.Info().
+				Str("migration", name).
+				Int("batch", info.Batch).
+				Str("status", "ran").
+				Str("execution_time", timeStr).
+				Msg("Migration ran")
 			ran++
 		} else {
-			fmt.Printf("%-50s %-10s %-15s %-15s\n",
-				truncateString(name, 50),
-				"-",
-				"⏳ Pending",
-				"-")
+			log.Info().
+				Str("migration", name).
+				Str("status", "pending").
+				Msg("Migration pending")
 			pending++
 		}
 	}
 
-	fmt.Println(strings.Repeat("=", 95))
-	fmt.Printf("Total: %d migrations (%d ran, %d pending)\n", ran+pending, ran, pending)
+	log.Info().
+		Int("total", ran+pending).
+		Int("ran", ran).
+		Int("pending", pending).
+		Str("connection", connectionName).
+		Msg("Migration summary")
 
 	// Show statistics if there are ran migrations
 	if ran > 0 {
 		stats, err := GetMigrationStats(connectionName)
 		if err != nil {
-			fmt.Printf("Warning: failed to get migration statistics: %v\n", err)
+			log.Warn().
+				Err(err).
+				Str("connection", connectionName).
+				Msg("Failed to get migration statistics")
 		} else if stats != nil {
-			fmt.Println()
-			fmt.Println("Execution Statistics:")
-
 			// Use comma-ok idiom for type assertions
 			if avgTime, ok := stats["avg_time_ms"].(float64); ok {
-				fmt.Printf("  Average Time: %s\n", FormatDuration(int64(avgTime)))
+				log.Info().
+					Str("avg_time", FormatDuration(int64(avgTime))).
+					Msg("Average execution time")
 			}
 			if minTime, ok := stats["min_time_ms"].(int64); ok {
-				fmt.Printf("  Fastest: %s\n", FormatDuration(minTime))
+				log.Info().
+					Str("min_time", FormatDuration(minTime)).
+					Msg("Fastest migration")
 			}
 			if maxTime, ok := stats["max_time_ms"].(int64); ok {
-				fmt.Printf("  Slowest: %s\n", FormatDuration(maxTime))
+				log.Info().
+					Str("max_time", FormatDuration(maxTime)).
+					Msg("Slowest migration")
 			}
 		}
 	}
 
-	fmt.Println()
 	return nil
 }
 
@@ -620,7 +672,9 @@ func WipeDatabase(connectionName string) error {
 
 		// Drop tables with CASCADE
 		for _, table := range tables {
-			fmt.Printf("Dropping table: %s\n", table)
+			log.Info().
+				Str("table", table).
+				Msg("Dropping table")
 			if err := conn.DB.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", table)).Error; err != nil {
 				return fmt.Errorf("failed to drop table %s: %v", table, err)
 			}
@@ -640,13 +694,18 @@ func WipeDatabase(connectionName string) error {
 
 		// Drop each table
 		for _, table := range tables {
-			fmt.Printf("Dropping table: %s\n", table)
+			log.Info().
+				Str("table", table).
+				Msg("Dropping table")
 			if err := conn.DB.Exec(fmt.Sprintf("DROP TABLE IF EXISTS `%s`", table)).Error; err != nil {
 				return fmt.Errorf("failed to drop table %s: %v", table, err)
 			}
 		}
 	}
 
-	fmt.Printf("✅ Successfully dropped %d tables.\n", len(tables))
+	log.Info().
+		Int("tables_dropped", len(tables)).
+		Str("connection", connectionName).
+		Msg("Successfully dropped all tables")
 	return nil
 }
