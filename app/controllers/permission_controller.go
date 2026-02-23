@@ -40,15 +40,15 @@ func (c *PermissionController) List(ctx *gin.Context) {
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Data: &permissions}, 200)
 }
 
-// @Summary		Create/Update Permission
-// @Description	API untuk mengupdate atau membuat Permission
+// @Summary		Create Permission
+// @Description	API untuk membuat Permission baru
 // @Tags			Permission
 // @Accept			json
 // @Produce		json
 // @Param			permission	body		requests.PermissionRequest	true	"Permission Data"
-// @Success		200			{object}	helpers.ResponseParams[models.Permission]{item=models.Permission}
-// @Router			/permissions [put]
-func (c *PermissionController) Put(ctx *gin.Context) {
+// @Success		201			{object}	helpers.ResponseParams[models.Permission]{item=models.Permission}
+// @Router			/permissions [post]
+func (c *PermissionController) Create(ctx *gin.Context) {
 	var permission models.Permission
 	if err := ctx.ShouldBindJSON(&permission); err != nil {
 		var verr validator.ValidationErrors
@@ -68,11 +68,58 @@ func (c *PermissionController) Put(ctx *gin.Context) {
 		return
 	}
 
-	updatedPermission, err := c.service.Put(permission)
+	createdPermission, err := c.service.Create(permission)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to create permission",
+			Reference: "ERROR-3",
+		}, 400)
+		return
+	}
+
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Item: &createdPermission}, 201)
+}
+
+// @Summary		Update Permission
+// @Description	API untuk mengupdate Permission yang sudah ada
+// @Tags			Permission
+// @Accept			json
+// @Produce		json
+// @Param			id			path		uint						true	"Permission ID"
+// @Param			permission	body		requests.PermissionRequest	true	"Permission Data"
+// @Success		200			{object}	helpers.ResponseParams[models.Permission]{item=models.Permission}
+// @Router			/permissions/{id} [put]
+func (c *PermissionController) Update(ctx *gin.Context) {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+
+	var permission models.Permission
+	if err := ctx.ShouldBindJSON(&permission); err != nil {
+		var verr validator.ValidationErrors
+		if errors.As(err, &verr) {
+			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+				Errors:    helpers.ValidationError(verr),
+				Message:   "Invalid parameters",
+				Reference: "ERROR-4",
+			}, 400)
+			return
+		}
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Failed to update permission",
+			Reference: "ERROR-3",
+		}, 400)
+		return
+	}
+
+	updatedPermission, err := c.service.Update(id, permission)
+	if err != nil {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Failed to update permission",
 			Reference: "ERROR-3",
 		}, 400)
 		return

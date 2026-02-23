@@ -60,25 +60,53 @@ func (c *UserController) Get(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, user)
 }
 
-// @Summary	Upsert a user
+// @Summary	Create a new user
 // @Tags		users
 // @Accept		json
 // @Produce	json
-// @Success	200	{object}	models.User
-// @Router		/users [put]
+// @Success	201	{object}	models.User
+// @Router		/users [post]
 // @Param		JSON	body	models.User	true	"User object"
-func (c *UserController) Put(ctx *gin.Context) {
+func (c *UserController) Create(ctx *gin.Context) {
 	var user models.User
 	if err := ctx.ShouldBindJSON(&user); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	updatedUser, err := c.service.Put(user)
+	createdUser, err := c.service.Create(user)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusCreated, updatedUser)
+	ctx.JSON(http.StatusCreated, createdUser)
+}
+
+// @Summary	Update an existing user
+// @Tags		users
+// @Accept		json
+// @Produce	json
+// @Success	200	{object}	models.User
+// @Router		/users/{id} [put]
+// @Param		id		path	uint		true	"User ID"
+// @Param		JSON	body	models.User	true	"User object"
+func (c *UserController) Update(ctx *gin.Context) {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+
+	var user models.User
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updatedUser, err := c.service.Update(id, user)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, updatedUser)
 }
 
 // @Summary	Delete a user

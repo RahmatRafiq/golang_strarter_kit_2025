@@ -41,15 +41,15 @@ func (c *RoleController) List(ctx *gin.Context) {
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Role]{Data: &roles}, 200)
 }
 
-// @Summary		Create/Update Role
-// @Description	API untuk mengupdate atau membuat Role
+// @Summary		Create Role
+// @Description	API untuk membuat Role baru
 // @Tags			Role
 // @Accept			json
 // @Produce		json
 // @Param			role	body		requests.RoleRequestPut	true	"Role Data"
-// @Success		200		{object}	helpers.ResponseParams[models.Role]{item=models.Role}
-// @Router			/roles [put]
-func (c *RoleController) Put(ctx *gin.Context) {
+// @Success		201		{object}	helpers.ResponseParams[models.Role]{item=models.Role}
+// @Router			/roles [post]
+func (c *RoleController) Create(ctx *gin.Context) {
 	var role models.Role
 	if err := ctx.ShouldBindJSON(&role); err != nil {
 		var verr validator.ValidationErrors
@@ -59,6 +59,7 @@ func (c *RoleController) Put(ctx *gin.Context) {
 				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
 			}, 400)
+			return
 		}
 
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
@@ -68,11 +69,60 @@ func (c *RoleController) Put(ctx *gin.Context) {
 		}, 400)
 		return
 	}
-	updatedRole, err := c.service.Put(role)
+
+	createdRole, err := c.service.Create(role)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to create role",
+			Reference: "ERROR-3",
+		}, 400)
+		return
+	}
+
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Role]{Item: &createdRole}, 201)
+}
+
+// @Summary		Update Role
+// @Description	API untuk mengupdate Role yang sudah ada
+// @Tags			Role
+// @Accept			json
+// @Produce		json
+// @Param			id		path		uint					true	"Role ID"
+// @Param			role	body		requests.RoleRequestPut	true	"Role Data"
+// @Success		200		{object}	helpers.ResponseParams[models.Role]{item=models.Role}
+// @Router			/roles/{id} [put]
+func (c *RoleController) Update(ctx *gin.Context) {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+
+	var role models.Role
+	if err := ctx.ShouldBindJSON(&role); err != nil {
+		var verr validator.ValidationErrors
+		if errors.As(err, &verr) {
+			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+				Errors:    helpers.ValidationError(verr),
+				Message:   "Invalid parameters",
+				Reference: "ERROR-4",
+			}, 400)
+			return
+		}
+
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Failed to update role",
+			Reference: "ERROR-3",
+		}, 400)
+		return
+	}
+
+	updatedRole, err := c.service.Update(id, role)
+	if err != nil {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Failed to update role",
 			Reference: "ERROR-3",
 		}, 400)
 		return

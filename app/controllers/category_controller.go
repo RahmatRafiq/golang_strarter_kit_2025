@@ -58,18 +58,18 @@ func (c *CategoryController) Get(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, category)
 }
 
-// @Summary		Create or update a category
-// @Description	Create a new category or update an existing one by ID
+// @Summary		Create a new category
+// @Description	Create a new category
 // @Tags			categories
 // @Security		Bearer
 // @Accept			json
 // @Produce		json
 // @Param			category	body		requests.CategoryRequest	true	"Category Data"
-// @Success		200			{object}	models.Category				"Created or updated category"
+// @Success		201			{object}	models.Category				"Created category"
 // @Failure		400			{object}	map[string]string			"Invalid input data"
 // @Failure		500			{object}	map[string]string			"Internal Server Error"
-// @Router			/categories [put]
-func (c *CategoryController) Put(ctx *gin.Context) {
+// @Router			/categories [post]
+func (c *CategoryController) Create(ctx *gin.Context) {
 	var req requests.CategoryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -78,12 +78,50 @@ func (c *CategoryController) Put(ctx *gin.Context) {
 
 	// Convert request to model
 	category := models.Category{
-		ID:        req.ID,
 		Category:  req.Category,
 		UpdatedAt: time.Now(),
 	}
 
-	updatedCategory, err := c.service.PutCategory(category)
+	createdCategory, err := c.service.CreateCategory(category)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, createdCategory)
+}
+
+// @Summary		Update an existing category
+// @Description	Update a category by its ID
+// @Tags			categories
+// @Security		Bearer
+// @Accept			json
+// @Produce		json
+// @Param			id			path		uint						true	"Category ID"
+// @Param			category	body		requests.CategoryRequest	true	"Category Data"
+// @Success		200			{object}	models.Category				"Updated category"
+// @Failure		400			{object}	map[string]string			"Invalid input data"
+// @Failure		500			{object}	map[string]string			"Internal Server Error"
+// @Router			/categories/{id} [put]
+func (c *CategoryController) Update(ctx *gin.Context) {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+
+	var req requests.CategoryRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Convert request to model
+	category := models.Category{
+		Category:  req.Category,
+		UpdatedAt: time.Now(),
+	}
+
+	updatedCategory, err := c.service.UpdateCategory(id, category)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -80,15 +80,15 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: product}, http.StatusOK)
 }
 
-// @Summary		Create/Update product
-// @Description	API untuk membuat atau mengupdate produk
+// @Summary		Create product
+// @Description	API untuk membuat produk baru
 // @Tags			Product
 // @Accept			json
 // @Produce		json
 // @Param			product	body		requests.ProductRequest	true	"Product request body"
-// @Success		200		{object}	helpers.ResponseParams[models.Product]{item=models.Product}
-// @Router			/products [put]
-func (c *ProductController) Put(ctx *gin.Context) {
+// @Success		201		{object}	helpers.ResponseParams[models.Product]{item=models.Product}
+// @Router			/products [post]
+func (c *ProductController) Create(ctx *gin.Context) {
 	var request requests.ProductRequest
 	if err := ctx.ShouldBind(&request); err != nil {
 		var verr validator.ValidationErrors
@@ -102,10 +102,51 @@ func (c *ProductController) Put(ctx *gin.Context) {
 		}
 	}
 
-	product, err := c.service.Put(ctx, request)
+	product, err := c.service.CreateProduct(ctx, request)
 	if err != nil {
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
-			Message:   "Failed to create or update product",
+			Message:   "Failed to create product",
+			Reference: "ERROR-3",
+			Errors:    map[string]string{"error": err.Error()},
+		}, http.StatusInternalServerError)
+		return
+	}
+
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: product}, http.StatusCreated)
+}
+
+// @Summary		Update product
+// @Description	API untuk mengupdate produk yang sudah ada
+// @Tags			Product
+// @Accept			json
+// @Produce		json
+// @Param			id		path		uint					true	"Product ID"
+// @Param			product	body		requests.ProductRequest	true	"Product request body"
+// @Success		200		{object}	helpers.ResponseParams[models.Product]{item=models.Product}
+// @Router			/products/{id} [put]
+func (c *ProductController) Update(ctx *gin.Context) {
+	id, ok := ParseIDParam(ctx)
+	if !ok {
+		return
+	}
+
+	var request requests.ProductRequest
+	if err := ctx.ShouldBind(&request); err != nil {
+		var verr validator.ValidationErrors
+		if errors.As(err, &verr) {
+			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+				Message:   "Periksa kembali form anda",
+				Errors:    helpers.ValidationError(verr),
+				Reference: "ERROR-4",
+			}, http.StatusBadRequest)
+			return
+		}
+	}
+
+	product, err := c.service.UpdateProduct(ctx, id, request)
+	if err != nil {
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message:   "Failed to update product",
 			Reference: "ERROR-3",
 			Errors:    map[string]string{"error": err.Error()},
 		}, http.StatusInternalServerError)
