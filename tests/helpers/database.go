@@ -11,6 +11,7 @@ import (
 	"golang_starter_kit_2025/facades"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -144,7 +145,10 @@ func setupMySQLTestDB(dbName string) (*gorm.DB, error) {
 	}
 
 	if _, dropErr := sqlDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName)); dropErr != nil {
-		fmt.Printf("Warning: failed to drop test database: %v\n", dropErr)
+		log.Warn().
+			Err(dropErr).
+			Str("database", dbName).
+			Msg("Failed to drop test database")
 	}
 
 	_, err = sqlDB.Exec(fmt.Sprintf("CREATE DATABASE %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", dbName))
@@ -189,7 +193,10 @@ func setupPostgresTestDB(dbName string) (*gorm.DB, error) {
 	}
 
 	if _, dropErr := sqlDB.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName)); dropErr != nil {
-		fmt.Printf("Warning: failed to drop test database: %v\n", dropErr)
+		log.Warn().
+			Err(dropErr).
+			Str("database", dbName).
+			Msg("Failed to drop test database")
 	}
 	_, err = sqlDB.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
 	if err != nil {
