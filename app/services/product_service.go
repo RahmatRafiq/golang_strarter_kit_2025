@@ -23,11 +23,6 @@ func NewProductService(productRepo interfaces.ProductRepositoryInterface, catego
 	}
 }
 
-func (s *ProductService) GetAll(filters requests.FilterRequest) ([]models.Product, error) {
-	products, _, err := s.productRepo.ListWithCategory(1, 1000)
-	return products, err
-}
-
 func (s *ProductService) List(page, limit int) ([]models.Product, int64, error) {
 	return s.productRepo.ListWithCategory(page, limit)
 }
@@ -36,7 +31,7 @@ func (s *ProductService) FindByID(id uint) (*models.Product, error) {
 	return s.productRepo.FindByIDWithCategory(id)
 }
 
-func (s *ProductService) CreateProduct(ctx *gin.Context, request requests.ProductRequest) (*models.Product, error) {
+func (s *ProductService) Create(ctx *gin.Context, request requests.ProductRequest) (*models.Product, error) {
 	var product models.Product
 	var filenames []string
 	if request.Images != nil {
@@ -79,7 +74,7 @@ func (s *ProductService) CreateProduct(ctx *gin.Context, request requests.Produc
 	return &product, nil
 }
 
-func (s *ProductService) UpdateProduct(ctx *gin.Context, id uint, request requests.ProductRequest) (*models.Product, error) {
+func (s *ProductService) Update(ctx *gin.Context, id uint, request requests.ProductRequest) (*models.Product, error) {
 	var product models.Product
 	var filenames []string
 	if request.Images != nil {
@@ -145,14 +140,6 @@ func (s *ProductService) UpdateProduct(ctx *gin.Context, id uint, request reques
 		Str("name", product.Name).
 		Msg("Product updated successfully")
 	return updated, nil
-}
-
-func (s *ProductService) Create(product *models.Product) error {
-	return s.productRepo.Create(product)
-}
-
-func (s *ProductService) Update(product *models.Product) error {
-	return s.productRepo.Update(product)
 }
 
 func (s *ProductService) DeleteByID(id uint) error {

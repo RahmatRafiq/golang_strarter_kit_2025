@@ -21,10 +21,6 @@ func NewRoleService(roleRepo interfaces.RoleRepositoryInterface, permissionRepo 
 	}
 }
 
-func (s *RoleService) GetAll() ([]models.Role, error) {
-	return s.roleRepo.GetAll()
-}
-
 func (s *RoleService) List(page, limit int) ([]models.Role, int64, error) {
 	return s.roleRepo.List(page, limit)
 }

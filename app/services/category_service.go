@@ -19,10 +19,6 @@ func NewCategoryService(categoryRepo interfaces.CategoryRepositoryInterface, pro
 	}
 }
 
-func (s *CategoryService) GetAllCategories() ([]models.Category, error) {
-	return s.categoryRepo.GetAll()
-}
-
 func (s *CategoryService) List(page, limit int) ([]models.Category, int64, error) {
 	return s.categoryRepo.List(page, limit)
 }
@@ -43,7 +39,7 @@ func (s *CategoryService) FindByIDWithProducts(id uint) (*models.Category, error
 	return s.categoryRepo.FindByIDWithProducts(id)
 }
 
-func (s *CategoryService) CreateCategory(category models.Category) (models.Category, error) {
+func (s *CategoryService) Create(category models.Category) (models.Category, error) {
 	category.ID = 0
 
 	err := s.categoryRepo.Create(&category)
@@ -62,7 +58,7 @@ func (s *CategoryService) CreateCategory(category models.Category) (models.Categ
 	return category, nil
 }
 
-func (s *CategoryService) UpdateCategory(id uint, category models.Category) (models.Category, error) {
+func (s *CategoryService) Update(id uint, category models.Category) (models.Category, error) {
 	category.ID = id
 
 	err := s.categoryRepo.Update(&category)
@@ -79,14 +75,6 @@ func (s *CategoryService) UpdateCategory(id uint, category models.Category) (mod
 		Str("category", category.Category).
 		Msg("Category updated successfully")
 	return category, nil
-}
-
-func (s *CategoryService) Create(category *models.Category) error {
-	return s.categoryRepo.Create(category)
-}
-
-func (s *CategoryService) Update(category *models.Category) error {
-	return s.categoryRepo.Update(category)
 }
 
 func (s *CategoryService) DeleteCategoryByID(id uint) error {
