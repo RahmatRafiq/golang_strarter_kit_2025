@@ -21,29 +21,31 @@ func (s *PermissionService) List(page, limit int) ([]models.Permission, int64, e
 	return s.repo.List(page, limit)
 }
 
-func (s *PermissionService) Put(updatedPermission models.Permission) (models.Permission, error) {
-	if updatedPermission.ID == 0 {
-		err := s.repo.Create(&updatedPermission)
-		return updatedPermission, err
+func (s *PermissionService) Create(permission models.Permission) (models.Permission, error) {
+	permission.ID = 0
+
+	err := s.repo.Create(&permission)
+	if err != nil {
+		return permission, err
 	}
 
-	err := s.repo.Update(&updatedPermission)
-	if err != nil {
-		return updatedPermission, err
-	}
-	permission, err := s.repo.FindByID(updatedPermission.ID)
-	if err != nil {
-		return updatedPermission, err
-	}
-	return *permission, nil
+	return permission, nil
 }
 
-func (s *PermissionService) Create(permission *models.Permission) error {
-	return s.repo.Create(permission)
-}
+func (s *PermissionService) Update(id uint, permission models.Permission) (models.Permission, error) {
+	permission.ID = id
 
-func (s *PermissionService) Update(permission *models.Permission) error {
-	return s.repo.Update(permission)
+	err := s.repo.Update(&permission)
+	if err != nil {
+		return permission, err
+	}
+
+	updatedPermission, err := s.repo.FindByID(permission.ID)
+	if err != nil {
+		return permission, err
+	}
+
+	return *updatedPermission, nil
 }
 
 func (s *PermissionService) DeleteByID(id uint) error {

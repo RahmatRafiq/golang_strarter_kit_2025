@@ -43,22 +43,27 @@ func (s *CategoryService) FindByIDWithProducts(id uint) (*models.Category, error
 	return s.categoryRepo.FindByIDWithProducts(id)
 }
 
-func (s *CategoryService) PutCategory(category models.Category) (models.Category, error) {
-	if category.ID == 0 {
-		err := s.categoryRepo.Create(&category)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Str("category", category.Category).
-				Msg("Failed to create category")
-			return category, err
-		}
-		log.Info().
-			Uint("category_id", category.ID).
+func (s *CategoryService) CreateCategory(category models.Category) (models.Category, error) {
+	category.ID = 0
+
+	err := s.categoryRepo.Create(&category)
+	if err != nil {
+		log.Error().
+			Err(err).
 			Str("category", category.Category).
-			Msg("Category created successfully")
-		return category, nil
+			Msg("Failed to create category")
+		return category, err
 	}
+
+	log.Info().
+		Uint("category_id", category.ID).
+		Str("category", category.Category).
+		Msg("Category created successfully")
+	return category, nil
+}
+
+func (s *CategoryService) UpdateCategory(id uint, category models.Category) (models.Category, error) {
+	category.ID = id
 
 	err := s.categoryRepo.Update(&category)
 	if err != nil {
@@ -68,6 +73,7 @@ func (s *CategoryService) PutCategory(category models.Category) (models.Category
 			Msg("Failed to update category")
 		return category, err
 	}
+
 	log.Info().
 		Uint("category_id", category.ID).
 		Str("category", category.Category).

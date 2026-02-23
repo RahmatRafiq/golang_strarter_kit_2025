@@ -36,9 +36,8 @@ func (s *ProductService) FindByID(id uint) (*models.Product, error) {
 	return s.productRepo.FindByIDWithCategory(id)
 }
 
-func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) (*models.Product, error) {
+func (s *ProductService) CreateProduct(ctx *gin.Context, request requests.ProductRequest) (*models.Product, error) {
 	var product models.Product
-
 	var filenames []string
 	if request.Images != nil {
 		for _, image := range request.Images {
@@ -51,9 +50,50 @@ func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) 
 		}
 	}
 
-	if request.ID != 0 {
-		product.ID = request.ID
+	product.ID = 0
+	product.CategoryID = request.CategoryID
+	product.Name = request.Name
+	product.Description = request.Description
+	product.Price = request.Price
+	product.Margin = request.Margin
+	product.Stock = request.Stock
+	product.Sold = request.Sold
+	product.ReceivedAt = request.ReceivedAt
+	if request.Images != nil {
+		product.Images = filenames
 	}
+
+	err := s.productRepo.Create(&product)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("name", product.Name).
+			Msg("Failed to create product")
+		return &product, err
+	}
+
+	log.Info().
+		Uint("product_id", product.ID).
+		Str("name", product.Name).
+		Msg("Product created successfully")
+	return &product, nil
+}
+
+func (s *ProductService) UpdateProduct(ctx *gin.Context, id uint, request requests.ProductRequest) (*models.Product, error) {
+	var product models.Product
+	var filenames []string
+	if request.Images != nil {
+		for _, image := range request.Images {
+			filename, err := s.fileService.StoreBase64File(image, "images", "products")
+			if err != nil {
+				return nil, err
+			}
+			filenames = append(filenames, *filename)
+			log.Debug().Str("filename", *filename).Msg("Stored product image")
+		}
+	}
+
+	product.ID = id
 	if request.CategoryID != 0 {
 		product.CategoryID = request.CategoryID
 	}
@@ -82,22 +122,6 @@ func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) 
 		product.Images = filenames
 	}
 
-	if request.ID == 0 {
-		err := s.productRepo.Create(&product)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Str("name", product.Name).
-				Msg("Failed to create product")
-			return &product, err
-		}
-		log.Info().
-			Uint("product_id", product.ID).
-			Str("name", product.Name).
-			Msg("Product created successfully")
-		return &product, nil
-	}
-
 	err := s.productRepo.Update(&product)
 	if err != nil {
 		log.Error().
@@ -106,14 +130,16 @@ func (s *ProductService) Put(ctx *gin.Context, request requests.ProductRequest) 
 			Msg("Failed to update product")
 		return &product, err
 	}
-	updated, err := s.productRepo.FindByID(request.ID)
+
+	updated, err := s.productRepo.FindByID(id)
 	if err != nil {
 		log.Error().
 			Err(err).
-			Uint("product_id", request.ID).
+			Uint("product_id", id).
 			Msg("Failed to fetch updated product")
 		return &product, err
 	}
+
 	log.Info().
 		Uint("product_id", product.ID).
 		Str("name", product.Name).

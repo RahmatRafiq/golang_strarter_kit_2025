@@ -29,64 +29,57 @@ func (s *RoleService) List(page, limit int) ([]models.Role, int64, error) {
 	return s.roleRepo.List(page, limit)
 }
 
-func (s *RoleService) Put(updatedRole models.Role) (models.Role, error) {
-	if updatedRole.ID == 0 {
-		err := s.roleRepo.Create(&updatedRole)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Str("name", updatedRole.Name).
-				Msg("Failed to create role")
-			return updatedRole, err
-		}
-		log.Info().
-			Uint("role_id", updatedRole.ID).
-			Str("name", updatedRole.Name).
-			Msg("Role created successfully")
-		return updatedRole, nil
+func (s *RoleService) Create(role models.Role) (models.Role, error) {
+	role.ID = 0
+
+	err := s.roleRepo.Create(&role)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("name", role.Name).
+			Msg("Failed to create role")
+		return role, err
 	}
 
-	err := s.roleRepo.Update(&updatedRole)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Uint("role_id", updatedRole.ID).
-			Msg("Failed to update role")
-		return updatedRole, err
-	}
-	role, err := s.roleRepo.FindByID(updatedRole.ID)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Uint("role_id", updatedRole.ID).
-			Msg("Failed to fetch updated role")
-		return updatedRole, err
-	}
 	log.Info().
-		Uint("role_id", updatedRole.ID).
-		Str("name", updatedRole.Name).
-		Msg("Role updated successfully")
-	return *role, nil
+		Uint("role_id", role.ID).
+		Str("name", role.Name).
+		Msg("Role created successfully")
+	return role, nil
 }
 
-func (s *RoleService) Create(role *models.Role) error {
-	return s.roleRepo.Create(role)
-}
+func (s *RoleService) Update(id uint, role models.Role) (models.Role, error) {
+	role.ID = id
 
-func (s *RoleService) Update(role *models.Role) error {
-	err := s.roleRepo.Update(role)
+	err := s.roleRepo.Update(&role)
 	if err != nil {
-		return err
+		log.Error().
+			Err(err).
+			Uint("role_id", role.ID).
+			Msg("Failed to update role")
+		return role, err
 	}
 
-	// Invalidate cache after update
+	updatedRole, err := s.roleRepo.FindByID(role.ID)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("role_id", role.ID).
+			Msg("Failed to fetch updated role")
+		return role, err
+	}
+
 	if s.cache.IsEnabled() {
 		if err := s.cache.InvalidateRoleCache(role.ID); err != nil {
 			log.Warn().Err(err).Uint("role_id", role.ID).Msg("Failed to invalidate role cache")
 		}
 	}
 
-	return nil
+	log.Info().
+		Uint("role_id", role.ID).
+		Str("name", role.Name).
+		Msg("Role updated successfully")
+	return *updatedRole, nil
 }
 
 func (s *RoleService) DeleteByID(id uint) error {
@@ -95,7 +88,6 @@ func (s *RoleService) DeleteByID(id uint) error {
 		return err
 	}
 
-	// Invalidate cache after delete
 	if s.cache.IsEnabled() {
 		if err := s.cache.InvalidateRoleCache(id); err != nil {
 			log.Warn().Err(err).Uint("role_id", id).Msg("Failed to invalidate role cache")
@@ -111,12 +103,10 @@ func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint) error
 		return err
 	}
 
-	// Invalidate role permissions cache
 	if s.cache.IsEnabled() {
 		if err := s.cache.Delete(RolePermissionsCacheKey(roleID)); err != nil {
 			log.Warn().Err(err).Uint("role_id", roleID).Msg("Failed to invalidate role permissions cache")
 		}
-		// Also invalidate all user caches since permissions changed
 		if err := s.cache.DeletePattern("user:*:roles"); err != nil {
 			log.Warn().Err(err).Msg("Failed to invalidate user roles cache pattern")
 		}
@@ -126,7 +116,6 @@ func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint) error
 }
 
 func (s *RoleService) GetPermissions(roleID uint) ([]models.Permission, error) {
-	// Try cache first
 	cacheKey := RolePermissionsCacheKey(roleID)
 	var permissions []models.Permission
 
@@ -137,13 +126,11 @@ func (s *RoleService) GetPermissions(roleID uint) ([]models.Permission, error) {
 		}
 	}
 
-	// Cache miss, get from database
 	permissions, err := s.roleRepo.GetPermissions(roleID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Store in cache
 	if s.cache.IsEnabled() {
 		if err := s.cache.Set(cacheKey, permissions, CacheTTLLong); err != nil {
 			log.Warn().Err(err).Uint("role_id", roleID).Msg("Failed to cache role permissions")
@@ -154,7 +141,6 @@ func (s *RoleService) GetPermissions(roleID uint) ([]models.Permission, error) {
 }
 
 func (s *RoleService) FindByID(id uint) (*models.Role, error) {
-	// Try cache first
 	cacheKey := RoleCacheKey(id)
 	var role models.Role
 
@@ -165,13 +151,11 @@ func (s *RoleService) FindByID(id uint) (*models.Role, error) {
 		}
 	}
 
-	// Cache miss, get from database
 	rolePtr, err := s.roleRepo.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Store in cache
 	if s.cache.IsEnabled() {
 		if err := s.cache.Set(cacheKey, rolePtr, CacheTTLLong); err != nil {
 			log.Warn().Err(err).Uint("role_id", id).Msg("Failed to cache role")
