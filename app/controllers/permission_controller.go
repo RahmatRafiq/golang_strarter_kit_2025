@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"net/http"
 
 	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/models"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog/log"
 )
 
 type PermissionController struct {
@@ -29,15 +31,21 @@ func NewPermissionController(service services.PermissionService) *PermissionCont
 func (c *PermissionController) List(ctx *gin.Context) {
 	permissions, _, err := c.service.List(1, 1000)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to get permissions list")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to get permissions list",
 			Reference: "ERROR-3",
-		}, 500)
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Data: &permissions}, 200)
+	log.Info().
+		Int("count", len(permissions)).
+		Msg("Permissions list retrieved successfully")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Data: &permissions}, http.StatusOK)
 }
 
 // @Summary		Create Permission
@@ -53,32 +61,48 @@ func (c *PermissionController) Create(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&permission); err != nil {
 		var verr validator.ValidationErrors
 		if errors.As(err, &verr) {
+			log.Warn().
+				Err(err).
+				Str("name", permission.Name).
+				Msg("Permission creation validation failed")
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 				Errors:    helpers.ValidationError(verr),
 				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
-			}, 400)
+			}, http.StatusBadRequest)
 			return
 		}
+		log.Warn().
+			Err(err).
+			Str("name", permission.Name).
+			Msg("Failed to bind permission creation request")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to create permission",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusBadRequest)
 		return
 	}
 
 	createdPermission, err := c.service.Create(permission)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("name", permission.Name).
+			Msg("Failed to create permission")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to create permission",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Item: &createdPermission}, 201)
+	log.Info().
+		Uint("permission_id", createdPermission.ID).
+		Str("name", createdPermission.Name).
+		Msg("Permission created successfully via controller")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Item: createdPermission}, http.StatusCreated)
 }
 
 // @Summary		Update Permission
@@ -100,32 +124,48 @@ func (c *PermissionController) Update(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&permission); err != nil {
 		var verr validator.ValidationErrors
 		if errors.As(err, &verr) {
+			log.Warn().
+				Err(err).
+				Uint("permission_id", id).
+				Msg("Permission update validation failed")
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 				Errors:    helpers.ValidationError(verr),
 				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
-			}, 400)
+			}, http.StatusBadRequest)
 			return
 		}
+		log.Warn().
+			Err(err).
+			Uint("permission_id", id).
+			Msg("Failed to bind permission update request")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to update permission",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusBadRequest)
 		return
 	}
 
 	updatedPermission, err := c.service.Update(id, permission)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("permission_id", id).
+			Msg("Failed to update permission")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to update permission",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Item: &updatedPermission}, 200)
+	log.Info().
+		Uint("permission_id", updatedPermission.ID).
+		Str("name", updatedPermission.Name).
+		Msg("Permission updated successfully via controller")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Item: updatedPermission}, http.StatusOK)
 }
 
 // @Summary		Delete Permission
@@ -142,13 +182,20 @@ func (c *PermissionController) Delete(ctx *gin.Context) {
 		return
 	}
 	if err := c.service.DeleteByID(id); err != nil {
+		log.Error().
+			Err(err).
+			Uint("permission_id", id).
+			Msg("Failed to delete permission")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to delete permission",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Message: "Permission deleted"}, 200)
+	log.Info().
+		Uint("permission_id", id).
+		Msg("Permission deleted successfully via controller")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Message: "Permission deleted successfully"}, http.StatusOK)
 }

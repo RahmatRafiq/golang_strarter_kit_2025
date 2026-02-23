@@ -143,7 +143,19 @@ func (s *ProductService) Update(ctx *gin.Context, id uint, request requests.Prod
 }
 
 func (s *ProductService) DeleteByID(id uint) error {
-	return s.productRepo.Delete(id)
+	err := s.productRepo.Delete(id)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", id).
+			Msg("Failed to delete product")
+		return err
+	}
+
+	log.Info().
+		Uint("product_id", id).
+		Msg("Product deleted successfully")
+	return nil
 }
 
 func (s *ProductService) ListByCategory(categoryID uint, page, limit int) ([]models.Product, int64, error) {

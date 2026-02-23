@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog/log"
 )
 
 type RoleController struct {
@@ -30,15 +31,21 @@ func NewRoleController(service services.RoleService) *RoleController {
 func (c *RoleController) List(ctx *gin.Context) {
 	roles, _, err := c.service.List(1, 1000)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to get roles list")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to get roles list",
 			Reference: "ERROR-3",
-		}, 500)
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Role]{Data: &roles}, 200)
+	log.Info().
+		Int("count", len(roles)).
+		Msg("Roles list retrieved successfully")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Role]{Data: &roles}, http.StatusOK)
 }
 
 // @Summary		Create Role
@@ -54,33 +61,49 @@ func (c *RoleController) Create(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&role); err != nil {
 		var verr validator.ValidationErrors
 		if errors.As(err, &verr) {
+			log.Warn().
+				Err(err).
+				Str("name", role.Name).
+				Msg("Role creation validation failed")
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 				Errors:    helpers.ValidationError(verr),
 				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
-			}, 400)
+			}, http.StatusBadRequest)
 			return
 		}
 
+		log.Warn().
+			Err(err).
+			Str("name", role.Name).
+			Msg("Failed to bind role creation request")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to create role",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusBadRequest)
 		return
 	}
 
 	createdRole, err := c.service.Create(role)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("name", role.Name).
+			Msg("Failed to create role")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to create role",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Role]{Item: &createdRole}, 201)
+	log.Info().
+		Uint("role_id", createdRole.ID).
+		Str("name", createdRole.Name).
+		Msg("Role created successfully via controller")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Role]{Item: createdRole}, http.StatusCreated)
 }
 
 // @Summary		Update Role
@@ -102,33 +125,49 @@ func (c *RoleController) Update(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&role); err != nil {
 		var verr validator.ValidationErrors
 		if errors.As(err, &verr) {
+			log.Warn().
+				Err(err).
+				Uint("role_id", id).
+				Msg("Role update validation failed")
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 				Errors:    helpers.ValidationError(verr),
 				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
-			}, 400)
+			}, http.StatusBadRequest)
 			return
 		}
 
+		log.Warn().
+			Err(err).
+			Uint("role_id", id).
+			Msg("Failed to bind role update request")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to update role",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusBadRequest)
 		return
 	}
 
 	updatedRole, err := c.service.Update(id, role)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("role_id", id).
+			Msg("Failed to update role")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to update role",
 			Reference: "ERROR-3",
-		}, 400)
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Role]{Item: &updatedRole}, 200)
+	log.Info().
+		Uint("role_id", updatedRole.ID).
+		Str("name", updatedRole.Name).
+		Msg("Role updated successfully via controller")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Role]{Item: updatedRole}, http.StatusOK)
 }
 
 // @Summary		Delete Role
@@ -145,15 +184,22 @@ func (c *RoleController) Delete(ctx *gin.Context) {
 		return
 	}
 	if err := c.service.DeleteByID(id); err != nil {
+		log.Error().
+			Err(err).
+			Uint("role_id", id).
+			Msg("Failed to delete role")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to delete role",
 			Reference: "ERROR-3",
-		}, 500)
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{}, 200)
+	log.Info().
+		Uint("role_id", id).
+		Msg("Role deleted successfully via controller")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{Message: "Role deleted successfully"}, http.StatusOK)
 }
 
 // Struct to wrap the permissions array
@@ -164,7 +210,14 @@ type AssignPermissionsRequest struct {
 func (c *RoleController) AssignPermissions(ctx *gin.Context) {
 	var req AssignPermissionsRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Warn().
+			Err(err).
+			Msg("Failed to bind assign permissions request")
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Invalid parameters",
+			Reference: "ERROR-4",
+		}, http.StatusBadRequest)
 		return
 	}
 
@@ -174,11 +227,24 @@ func (c *RoleController) AssignPermissions(ctx *gin.Context) {
 	}
 	err := c.service.AssignPermissions(roleID, req.Permissions)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Error().
+			Err(err).
+			Uint("role_id", roleID).
+			Uints("permission_ids", req.Permissions).
+			Msg("Failed to assign permissions to role")
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Failed to assign permissions to role",
+			Reference: "ERROR-3",
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Permissions assigned to role"})
+	log.Info().
+		Uint("role_id", roleID).
+		Uints("permission_ids", req.Permissions).
+		Msg("Permissions assigned to role successfully")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{Message: "Permissions assigned to role"}, http.StatusOK)
 }
 
 func (c *RoleController) GetPermissions(ctx *gin.Context) {
@@ -188,8 +254,21 @@ func (c *RoleController) GetPermissions(ctx *gin.Context) {
 	}
 	permissions, err := c.service.GetPermissions(roleID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Error().
+			Err(err).
+			Uint("role_id", roleID).
+			Msg("Failed to get role permissions")
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Failed to get role permissions",
+			Reference: "ERROR-3",
+		}, http.StatusInternalServerError)
 		return
 	}
-	ctx.JSON(http.StatusOK, permissions)
+
+	log.Info().
+		Uint("role_id", roleID).
+		Int("permission_count", len(permissions)).
+		Msg("Role permissions retrieved successfully")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Permission]{Data: &permissions}, http.StatusOK)
 }

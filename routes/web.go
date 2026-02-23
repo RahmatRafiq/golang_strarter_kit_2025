@@ -138,8 +138,8 @@ func RegisterRoutes(route *gin.Engine) {
 	productController := controllers.NewProductController(*productService)
 	productRoutes := route.Group("/products", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		productRoutes.GET("/", productController.GetAll)
-		productRoutes.GET("/:id", productController.GetByID)
+		productRoutes.GET("/", productController.List)
+		productRoutes.GET("/:id", productController.Get)
 		productRoutes.PUT("/", productController.Create)
 		productRoutes.DELETE("/:id", productController.Delete)
 	}

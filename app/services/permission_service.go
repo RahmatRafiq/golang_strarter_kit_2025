@@ -19,7 +19,7 @@ func (s *PermissionService) List(page, limit int) ([]models.Permission, int64, e
 	return s.repo.List(page, limit)
 }
 
-func (s *PermissionService) Create(permission models.Permission) (models.Permission, error) {
+func (s *PermissionService) Create(permission models.Permission) (*models.Permission, error) {
 	permission.ID = 0
 
 	err := s.repo.Create(&permission)
@@ -28,17 +28,17 @@ func (s *PermissionService) Create(permission models.Permission) (models.Permiss
 			Err(err).
 			Str("name", permission.Name).
 			Msg("Failed to create permission")
-		return permission, err
+		return nil, err
 	}
 
 	log.Info().
 		Uint("permission_id", permission.ID).
 		Str("name", permission.Name).
 		Msg("Permission created successfully")
-	return permission, nil
+	return &permission, nil
 }
 
-func (s *PermissionService) Update(id uint, permission models.Permission) (models.Permission, error) {
+func (s *PermissionService) Update(id uint, permission models.Permission) (*models.Permission, error) {
 	permission.ID = id
 
 	err := s.repo.Update(&permission)
@@ -47,7 +47,7 @@ func (s *PermissionService) Update(id uint, permission models.Permission) (model
 			Err(err).
 			Uint("permission_id", permission.ID).
 			Msg("Failed to update permission")
-		return permission, err
+		return nil, err
 	}
 
 	updatedPermission, err := s.repo.FindByID(permission.ID)
@@ -56,18 +56,30 @@ func (s *PermissionService) Update(id uint, permission models.Permission) (model
 			Err(err).
 			Uint("permission_id", permission.ID).
 			Msg("Failed to fetch updated permission")
-		return permission, err
+		return nil, err
 	}
 
 	log.Info().
 		Uint("permission_id", permission.ID).
 		Str("name", permission.Name).
 		Msg("Permission updated successfully")
-	return *updatedPermission, nil
+	return updatedPermission, nil
 }
 
 func (s *PermissionService) DeleteByID(id uint) error {
-	return s.repo.Delete(id)
+	err := s.repo.Delete(id)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("permission_id", id).
+			Msg("Failed to delete permission")
+		return err
+	}
+
+	log.Info().
+		Uint("permission_id", id).
+		Msg("Permission deleted successfully")
+	return nil
 }
 
 func (s *PermissionService) FindByID(id uint) (*models.Permission, error) {

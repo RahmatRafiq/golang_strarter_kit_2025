@@ -108,8 +108,8 @@ func RegisterV1Routes(
 	productRoutes := v1.Group("/products")
 	productRoutes.Use(middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		productRoutes.GET("", productController.GetAll)
-		productRoutes.GET("/:id", productController.GetByID)
+		productRoutes.GET("", productController.List)
+		productRoutes.GET("/:id", productController.Get)
 		productRoutes.POST("", productController.Create)
 		productRoutes.PUT("/:id", productController.Update)
 		productRoutes.DELETE("/:id", productController.Delete)

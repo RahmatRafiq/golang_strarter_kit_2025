@@ -23,14 +23,6 @@ func (s *CategoryService) List(page, limit int) ([]models.Category, int64, error
 	return s.categoryRepo.List(page, limit)
 }
 
-func (s *CategoryService) GetCategoryByIDUint(id uint) (models.Category, error) {
-	category, err := s.categoryRepo.FindByID(id)
-	if err != nil {
-		return models.Category{}, err
-	}
-	return *category, nil
-}
-
 func (s *CategoryService) FindByID(id uint) (*models.Category, error) {
 	return s.categoryRepo.FindByID(id)
 }
@@ -39,7 +31,7 @@ func (s *CategoryService) FindByIDWithProducts(id uint) (*models.Category, error
 	return s.categoryRepo.FindByIDWithProducts(id)
 }
 
-func (s *CategoryService) Create(category models.Category) (models.Category, error) {
+func (s *CategoryService) Create(category models.Category) (*models.Category, error) {
 	category.ID = 0
 
 	err := s.categoryRepo.Create(&category)
@@ -48,17 +40,17 @@ func (s *CategoryService) Create(category models.Category) (models.Category, err
 			Err(err).
 			Str("category", category.Category).
 			Msg("Failed to create category")
-		return category, err
+		return nil, err
 	}
 
 	log.Info().
 		Uint("category_id", category.ID).
 		Str("category", category.Category).
 		Msg("Category created successfully")
-	return category, nil
+	return &category, nil
 }
 
-func (s *CategoryService) Update(id uint, category models.Category) (models.Category, error) {
+func (s *CategoryService) Update(id uint, category models.Category) (*models.Category, error) {
 	category.ID = id
 
 	err := s.categoryRepo.Update(&category)
@@ -67,17 +59,17 @@ func (s *CategoryService) Update(id uint, category models.Category) (models.Cate
 			Err(err).
 			Uint("category_id", category.ID).
 			Msg("Failed to update category")
-		return category, err
+		return nil, err
 	}
 
 	log.Info().
 		Uint("category_id", category.ID).
 		Str("category", category.Category).
 		Msg("Category updated successfully")
-	return category, nil
+	return &category, nil
 }
 
-func (s *CategoryService) DeleteCategoryByID(id uint) error {
+func (s *CategoryService) DeleteByID(id uint) error {
 	err := s.categoryRepo.Delete(id)
 	if err != nil {
 		log.Error().
@@ -91,10 +83,6 @@ func (s *CategoryService) DeleteCategoryByID(id uint) error {
 		Uint("category_id", id).
 		Msg("Category deleted successfully")
 	return nil
-}
-
-func (s *CategoryService) DeleteByID(id uint) error {
-	return s.categoryRepo.Delete(id)
 }
 
 func (s *CategoryService) FindByName(name string) (*models.Category, error) {

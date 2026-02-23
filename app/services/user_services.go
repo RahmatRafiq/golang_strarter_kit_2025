@@ -66,7 +66,7 @@ func (s *UserService) FindByEmail(email string) (*models.User, error) {
 	return s.repo.FindByEmail(email)
 }
 
-func (s *UserService) Create(user models.User) (models.User, error) {
+func (s *UserService) Create(user models.User) (*models.User, error) {
 	user.ID = 0
 
 	err := s.repo.Create(&user)
@@ -75,17 +75,17 @@ func (s *UserService) Create(user models.User) (models.User, error) {
 			Err(err).
 			Str("email", user.Email).
 			Msg("Failed to create user")
-		return user, err
+		return nil, err
 	}
 
 	log.Info().
 		Uint("user_id", user.ID).
 		Str("email", user.Email).
 		Msg("User created successfully")
-	return user, nil
+	return &user, nil
 }
 
-func (s *UserService) Update(id uint, user models.User) (models.User, error) {
+func (s *UserService) Update(id uint, user models.User) (*models.User, error) {
 	user.ID = id
 
 	err := s.repo.Update(&user)
@@ -94,7 +94,7 @@ func (s *UserService) Update(id uint, user models.User) (models.User, error) {
 			Err(err).
 			Uint("user_id", user.ID).
 			Msg("Failed to update user")
-		return user, err
+		return nil, err
 	}
 
 	if s.cache.IsEnabled() {
@@ -107,12 +107,16 @@ func (s *UserService) Update(id uint, user models.User) (models.User, error) {
 		Uint("user_id", user.ID).
 		Str("email", user.Email).
 		Msg("User updated successfully")
-	return user, nil
+	return &user, nil
 }
 
 func (s *UserService) DeleteByID(id uint) error {
 	err := s.repo.Delete(id)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("user_id", id).
+			Msg("Failed to delete user")
 		return err
 	}
 
@@ -122,6 +126,9 @@ func (s *UserService) DeleteByID(id uint) error {
 		}
 	}
 
+	log.Info().
+		Uint("user_id", id).
+		Msg("User deleted successfully")
 	return nil
 }
 

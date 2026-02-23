@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 
+	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/requests"
 	"golang_starter_kit_2025/app/services"
 
@@ -23,45 +24,54 @@ func NewEmailVerificationController(verificationService *services.EmailVerificat
 func (c *EmailVerificationController) SendVerification(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		log.Warn().Msg("Unauthorized verification email request")
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message:   "Unauthorized",
+			Reference: "ERROR-1",
+		}, http.StatusUnauthorized)
 		return
 	}
 
 	if err := c.verificationService.SendVerificationEmail(userID.(uint)); err != nil { //nolint:errcheck // Error is checked on next line
-		log.Error().Err(err).Msg("Failed to send verification email")
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to send verification email",
-			"message": err.Error(),
-		})
+		log.Error().Err(err).Uint("user_id", userID.(uint)).Msg("Failed to send verification email")
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Failed to send verification email",
+			Reference: "ERROR-3",
+		}, http.StatusInternalServerError)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Verification email sent successfully",
-	})
+	log.Info().Uint("user_id", userID.(uint)).Msg("Verification email sent successfully")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "Verification email sent successfully",
+	}, http.StatusOK)
 }
 
 func (c *EmailVerificationController) VerifyEmail(ctx *gin.Context) {
 	var req requests.VerifyEmailRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Error().Err(err).Msg("Invalid verification request")
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request",
-			"message": err.Error(),
-		})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Invalid request",
+			Reference: "ERROR-4",
+		}, http.StatusBadRequest)
 		return
 	}
 
 	if err := c.verificationService.VerifyEmail(req.Token); err != nil {
-		log.Error().Err(err).Msg("Failed to verify email")
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Email verification failed",
-			"message": err.Error(),
-		})
+		log.Error().Err(err).Str("token", req.Token).Msg("Failed to verify email")
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Email verification failed",
+			Reference: "ERROR-3",
+		}, http.StatusBadRequest)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Email verified successfully",
-	})
+	log.Info().Str("token", req.Token).Msg("Email verified successfully")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "Email verified successfully",
+	}, http.StatusOK)
 }

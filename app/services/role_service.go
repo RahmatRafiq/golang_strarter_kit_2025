@@ -25,7 +25,7 @@ func (s *RoleService) List(page, limit int) ([]models.Role, int64, error) {
 	return s.roleRepo.List(page, limit)
 }
 
-func (s *RoleService) Create(role models.Role) (models.Role, error) {
+func (s *RoleService) Create(role models.Role) (*models.Role, error) {
 	role.ID = 0
 
 	err := s.roleRepo.Create(&role)
@@ -34,17 +34,17 @@ func (s *RoleService) Create(role models.Role) (models.Role, error) {
 			Err(err).
 			Str("name", role.Name).
 			Msg("Failed to create role")
-		return role, err
+		return nil, err
 	}
 
 	log.Info().
 		Uint("role_id", role.ID).
 		Str("name", role.Name).
 		Msg("Role created successfully")
-	return role, nil
+	return &role, nil
 }
 
-func (s *RoleService) Update(id uint, role models.Role) (models.Role, error) {
+func (s *RoleService) Update(id uint, role models.Role) (*models.Role, error) {
 	role.ID = id
 
 	err := s.roleRepo.Update(&role)
@@ -53,7 +53,7 @@ func (s *RoleService) Update(id uint, role models.Role) (models.Role, error) {
 			Err(err).
 			Uint("role_id", role.ID).
 			Msg("Failed to update role")
-		return role, err
+		return nil, err
 	}
 
 	updatedRole, err := s.roleRepo.FindByID(role.ID)
@@ -62,7 +62,7 @@ func (s *RoleService) Update(id uint, role models.Role) (models.Role, error) {
 			Err(err).
 			Uint("role_id", role.ID).
 			Msg("Failed to fetch updated role")
-		return role, err
+		return nil, err
 	}
 
 	if s.cache.IsEnabled() {
@@ -75,12 +75,16 @@ func (s *RoleService) Update(id uint, role models.Role) (models.Role, error) {
 		Uint("role_id", role.ID).
 		Str("name", role.Name).
 		Msg("Role updated successfully")
-	return *updatedRole, nil
+	return updatedRole, nil
 }
 
 func (s *RoleService) DeleteByID(id uint) error {
 	err := s.roleRepo.Delete(id)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("role_id", id).
+			Msg("Failed to delete role")
 		return err
 	}
 
@@ -90,6 +94,9 @@ func (s *RoleService) DeleteByID(id uint) error {
 		}
 	}
 
+	log.Info().
+		Uint("role_id", id).
+		Msg("Role deleted successfully")
 	return nil
 }
 

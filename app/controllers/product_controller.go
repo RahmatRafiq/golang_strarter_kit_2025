@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog/log"
 )
 
 type ProductController struct {
@@ -31,9 +32,12 @@ func NewProductController(service services.ProductService) *ProductController {
 // @Param			request	query		requests.FilterRequest	false	"Filter request"
 // @Success		200		{object}	helpers.ResponseParams[models.Product]{data=[]models.Product}
 // @Router			/products [get]
-func (c *ProductController) GetAll(ctx *gin.Context) {
+func (c *ProductController) List(ctx *gin.Context) {
 	var filters requests.FilterRequest
 	if err := ctx.ShouldBindQuery(&filters); err != nil {
+		log.Warn().
+			Err(err).
+			Msg("Invalid filter parameters for products list")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Invalid parameters",
 			Reference: "ERROR-4",
@@ -43,6 +47,9 @@ func (c *ProductController) GetAll(ctx *gin.Context) {
 
 	products, _, err := c.service.List(1, 1000)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to get products list")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Failed to get products list",
 			Reference: "ERROR-3",
@@ -51,6 +58,9 @@ func (c *ProductController) GetAll(ctx *gin.Context) {
 		return
 	}
 
+	log.Info().
+		Int("count", len(products)).
+		Msg("Products list retrieved successfully")
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Data: &products}, http.StatusOK)
 }
 
@@ -62,13 +72,17 @@ func (c *ProductController) GetAll(ctx *gin.Context) {
 // @Param			id	path		int	true	"Product ID"
 // @Success		200	{object}	helpers.ResponseParams[models.Product]{item=models.Product}
 // @Router			/products/{id} [get]
-func (c *ProductController) GetByID(ctx *gin.Context) {
+func (c *ProductController) Get(ctx *gin.Context) {
 	id, ok := ParseIDParam(ctx)
 	if !ok {
 		return
 	}
 	product, err := c.service.FindByID(id)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", id).
+			Msg("Product not found")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Failed to get product",
 			Reference: "ERROR-2",
@@ -77,6 +91,10 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 		return
 	}
 
+	log.Info().
+		Uint("product_id", id).
+		Str("product_name", product.Name).
+		Msg("Product retrieved successfully")
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: product}, http.StatusOK)
 }
 
@@ -93,9 +111,13 @@ func (c *ProductController) Create(ctx *gin.Context) {
 	if err := ctx.ShouldBind(&request); err != nil {
 		var verr validator.ValidationErrors
 		if errors.As(err, &verr) {
+			log.Warn().
+				Err(err).
+				Str("product_name", request.Name).
+				Msg("Product creation validation failed")
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
-				Message:   "Periksa kembali form anda",
 				Errors:    helpers.ValidationError(verr),
+				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
 			}, http.StatusBadRequest)
 			return
@@ -104,6 +126,10 @@ func (c *ProductController) Create(ctx *gin.Context) {
 
 	product, err := c.service.Create(ctx, request)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("product_name", request.Name).
+			Msg("Failed to create product")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Failed to create product",
 			Reference: "ERROR-3",
@@ -112,6 +138,10 @@ func (c *ProductController) Create(ctx *gin.Context) {
 		return
 	}
 
+	log.Info().
+		Uint("product_id", product.ID).
+		Str("product_name", product.Name).
+		Msg("Product created successfully via controller")
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: product}, http.StatusCreated)
 }
 
@@ -134,9 +164,13 @@ func (c *ProductController) Update(ctx *gin.Context) {
 	if err := ctx.ShouldBind(&request); err != nil {
 		var verr validator.ValidationErrors
 		if errors.As(err, &verr) {
+			log.Warn().
+				Err(err).
+				Uint("product_id", id).
+				Msg("Product update validation failed")
 			helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
-				Message:   "Periksa kembali form anda",
 				Errors:    helpers.ValidationError(verr),
+				Message:   "Invalid parameters",
 				Reference: "ERROR-4",
 			}, http.StatusBadRequest)
 			return
@@ -145,6 +179,10 @@ func (c *ProductController) Update(ctx *gin.Context) {
 
 	product, err := c.service.Update(ctx, id, request)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", id).
+			Msg("Failed to update product")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Failed to update product",
 			Reference: "ERROR-3",
@@ -153,6 +191,10 @@ func (c *ProductController) Update(ctx *gin.Context) {
 		return
 	}
 
+	log.Info().
+		Uint("product_id", product.ID).
+		Str("product_name", product.Name).
+		Msg("Product updated successfully via controller")
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[models.Product]{Item: product}, http.StatusOK)
 }
 
@@ -170,6 +212,10 @@ func (c *ProductController) Delete(ctx *gin.Context) {
 		return
 	}
 	if err := c.service.DeleteByID(id); err != nil {
+		log.Error().
+			Err(err).
+			Uint("product_id", id).
+			Msg("Failed to delete product")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Message:   "Failed to delete product",
 			Reference: "ERROR-3",
@@ -178,5 +224,8 @@ func (c *ProductController) Delete(ctx *gin.Context) {
 		return
 	}
 
-	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{}, http.StatusOK)
+	log.Info().
+		Uint("product_id", id).
+		Msg("Product deleted successfully via controller")
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{Message: "Product deleted successfully"}, http.StatusOK)
 }
