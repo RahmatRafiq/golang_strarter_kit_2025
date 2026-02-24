@@ -32,8 +32,18 @@ func (c *EmailVerificationController) SendVerification(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.verificationService.SendVerificationEmail(userID.(uint)); err != nil { //nolint:errcheck // Error is checked on next line
-		log.Error().Err(err).Uint("user_id", userID.(uint)).Msg("Failed to send verification email")
+	userIDUint, ok := userID.(uint)
+	if !ok {
+		log.Error().Msg("Invalid user_id type")
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Message:   "Invalid user ID",
+			Reference: "ERROR-2",
+		}, http.StatusInternalServerError)
+		return
+	}
+
+	if err := c.verificationService.SendVerificationEmail(userIDUint); err != nil {
+		log.Error().Err(err).Uint("user_id", userIDUint).Msg("Failed to send verification email")
 		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
 			Errors:    map[string]string{"error": err.Error()},
 			Message:   "Failed to send verification email",
@@ -42,7 +52,7 @@ func (c *EmailVerificationController) SendVerification(ctx *gin.Context) {
 		return
 	}
 
-	log.Info().Uint("user_id", userID.(uint)).Msg("Verification email sent successfully")
+	log.Info().Uint("user_id", userIDUint).Msg("Verification email sent successfully")
 	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
 		Message: "Verification email sent successfully",
 	}, http.StatusOK)
