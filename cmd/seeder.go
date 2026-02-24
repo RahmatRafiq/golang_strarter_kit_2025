@@ -72,7 +72,7 @@ func Seed%[1]s(db *gorm.DB) error {
 
 	data := models.%[2]s{
 		Reference: reference,
-		// Tambahkan field sesuai model
+		// Add fields according to your model
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

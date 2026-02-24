@@ -199,7 +199,7 @@ func (c *ProductController) Update(ctx *gin.Context) {
 }
 
 // @Summary		Delete product
-// @Description	API untuk menghapus produk
+// @Description	API to delete product by ID
 // @Tags			Product
 // @Accept			json
 // @Produce		json

@@ -1,4 +1,130 @@
 definitions:
+  casts.DailyStatus:
+    properties:
+      date:
+        description: '"2024-01-15"'
+        type: string
+      status:
+        description: '"up", "degraded", "down"'
+        type: string
+      uptime:
+        description: Percentage for the day (0-100)
+        type: number
+    type: object
+  casts.DetailedHealthResponse:
+    properties:
+      services:
+        additionalProperties:
+          $ref: '#/definitions/casts.Service'
+        type: object
+      status:
+        allOf:
+        - $ref: '#/definitions/casts.HealthStatus'
+        example: healthy
+      timestamp:
+        example: "2025-02-11T10:30:00Z"
+        type: string
+      uptime:
+        example: 5d 3h 12m
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  casts.HealthResponse:
+    properties:
+      status:
+        allOf:
+        - $ref: '#/definitions/casts.HealthStatus'
+        example: healthy
+      timestamp:
+        example: "2025-02-11T10:30:00Z"
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  casts.HealthStatus:
+    enum:
+    - healthy
+    - degraded
+    - unhealthy
+    type: string
+    x-enum-varnames:
+    - StatusHealthy
+    - StatusDegraded
+    - StatusUnhealthy
+  casts.QueueHealthResponse:
+    properties:
+      active_workers:
+        example: 10
+        type: integer
+      average_latency_ms:
+        example: 125.5
+        type: number
+      failure_rate:
+        example: 0.97
+        type: number
+      last_updated:
+        example: "2026-02-14T15:30:00Z"
+        type: string
+      message:
+        example: Queue is running (metrics disabled)
+        type: string
+      queue_depth:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      status:
+        example: healthy
+        type: string
+      tasks_failed:
+        example: 12
+        type: integer
+      tasks_processed:
+        example: 1234
+        type: integer
+      tasks_retried:
+        example: 45
+        type: integer
+    type: object
+  casts.Service:
+    properties:
+      details: {}
+      latency_ms:
+        example: 2.5
+        type: number
+      message:
+        example: ""
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/casts.ServiceStatus'
+        example: up
+    type: object
+  casts.ServiceHistoryResponse:
+    properties:
+      daily_history:
+        items:
+          $ref: '#/definitions/casts.DailyStatus'
+        type: array
+      overall_uptime:
+        description: Overall percentage (0-100)
+        type: number
+      service:
+        type: string
+    type: object
+  casts.ServiceStatus:
+    enum:
+    - up
+    - down
+    - degraded
+    type: string
+    x-enum-varnames:
+    - ServiceUp
+    - ServiceDown
+    - ServiceDegraded
   casts.Token:
     properties:
       expired_at:
@@ -22,6 +148,29 @@ definitions:
           type: string
         type: object
       item: {}
+      message:
+        type: string
+      reference:
+        type: string
+      status:
+        type: string
+      token:
+        $ref: '#/definitions/casts.Token'
+      total:
+        type: integer
+    type: object
+  helpers.ResponseParams-models_Category:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Category'
+        type: array
+      errors:
+        additionalProperties:
+          type: string
+        type: object
+      item:
+        $ref: '#/definitions/models.Category'
       message:
         type: string
       reference:
@@ -91,6 +240,29 @@ definitions:
         type: object
       item:
         $ref: '#/definitions/models.Role'
+      message:
+        type: string
+      reference:
+        type: string
+      status:
+        type: string
+      token:
+        $ref: '#/definitions/casts.Token'
+      total:
+        type: integer
+    type: object
+  helpers.ResponseParams-models_User:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
+      errors:
+        additionalProperties:
+          type: string
+        type: object
+      item:
+        $ref: '#/definitions/models.User'
       message:
         type: string
       reference:
@@ -678,26 +850,29 @@ paths:
       - application/json
       responses:
         "200":
-          description: List of categories with products
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.Category'
-            type: array
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_Category'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Category'
+                  type: array
+              type: object
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ResponseParams-any'
       security:
       - Bearer: []
       summary: List all categories
       tags:
       - categories
-    put:
+    post:
       consumes:
       - application/json
-      description: Create a new category or update an existing one by ID
+      description: Create a new category
       parameters:
       - description: Category Data
         in: body
@@ -708,25 +883,26 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Created or updated category
+        "201":
+          description: Created
           schema:
-            $ref: '#/definitions/models.Category'
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_Category'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.Category'
+              type: object
         "400":
-          description: Invalid input data
+          description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ResponseParams-any'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ResponseParams-any'
       security:
       - Bearer: []
-      summary: Create or update a category
+      summary: Create a new category
       tags:
       - categories
   /categories/{id}:
@@ -742,23 +918,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: Category deleted successfully
+          description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ResponseParams-any'
         "404":
-          description: Category not found
+          description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ResponseParams-any'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ResponseParams-any'
       security:
       - Bearer: []
       summary: Delete a category by ID
@@ -776,18 +946,62 @@ paths:
       - application/json
       responses:
         "200":
-          description: Category with products
+          description: OK
           schema:
-            $ref: '#/definitions/models.Category'
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_Category'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.Category'
+              type: object
         "404":
-          description: Category not found
+          description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/helpers.ResponseParams-any'
       security:
       - Bearer: []
       summary: Get a category by ID
+      tags:
+      - categories
+    put:
+      consumes:
+      - application/json
+      description: Update a category by its ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Category Data
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_Category'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.Category'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helpers.ResponseParams-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helpers.ResponseParams-any'
+      security:
+      - Bearer: []
+      summary: Update an existing category
       tags:
       - categories
   /file/{key}/{filename}:
@@ -852,6 +1066,77 @@ paths:
       summary: Serve file without authentication
       tags:
       - File
+  /health:
+    get:
+      description: Returns basic API health status for load balancer health checks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/casts.HealthResponse'
+      summary: Basic health check
+      tags:
+      - Health
+  /health/detailed:
+    get:
+      description: Returns comprehensive health status including all service dependencies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/casts.DetailedHealthResponse'
+        "503":
+          description: Service unavailable
+          schema:
+            $ref: '#/definitions/casts.DetailedHealthResponse'
+      summary: Detailed health check
+      tags:
+      - Health
+  /health/history:
+    get:
+      description: Returns aggregated daily health status for the last N days
+      parameters:
+      - description: Service name (database, redis, api)
+        in: query
+        name: service
+        type: string
+      - description: 'Number of days (default: 90)'
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/casts.ServiceHistoryResponse'
+            type: array
+      summary: Get service health history
+      tags:
+      - Health
+  /health/queue:
+    get:
+      description: Returns queue worker metrics and health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/casts.QueueHealthResponse'
+        "503":
+          description: Queue not enabled
+          schema:
+            $ref: '#/definitions/casts.QueueHealthResponse'
+      summary: Queue health check
+      tags:
+      - Health
   /permissions:
     get:
       consumes:
@@ -874,11 +1159,63 @@ paths:
       summary: Get All Permissions
       tags:
       - Permission
+    post:
+      consumes:
+      - application/json
+      description: API untuk membuat Permission baru
+      parameters:
+      - description: Permission Data
+        in: body
+        name: permission
+        required: true
+        schema:
+          $ref: '#/definitions/requests.PermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_Permission'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.Permission'
+              type: object
+      summary: Create Permission
+      tags:
+      - Permission
+  /permissions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: API to delete Permission by ID
+      parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/helpers.ResponseParams-models_Permission'
+      summary: Delete Permission
+      tags:
+      - Permission
     put:
       consumes:
       - application/json
-      description: API untuk mengupdate atau membuat Permission
+      description: API untuk mengupdate Permission yang sudah ada
       parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: integer
       - description: Permission Data
         in: body
         name: permission
@@ -897,28 +1234,7 @@ paths:
                 item:
                   $ref: '#/definitions/models.Permission'
               type: object
-      summary: Create/Update Permission
-      tags:
-      - Permission
-  /permissions/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: API untuk menghapus Permission berdasarkan ID
-      parameters:
-      - description: Permission ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/helpers.ResponseParams-models_Permission'
-      summary: Delete Permission
+      summary: Update Permission
       tags:
       - Permission
   /products:
@@ -965,10 +1281,10 @@ paths:
       summary: Get all products
       tags:
       - Product
-    put:
+    post:
       consumes:
       - application/json
-      description: API untuk membuat atau mengupdate produk
+      description: API untuk membuat produk baru
       parameters:
       - description: Product request body
         in: body
@@ -979,8 +1295,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
             allOf:
             - $ref: '#/definitions/helpers.ResponseParams-models_Product'
@@ -988,14 +1304,14 @@ paths:
                 item:
                   $ref: '#/definitions/models.Product'
               type: object
-      summary: Create/Update product
+      summary: Create product
       tags:
       - Product
   /products/{id}:
     delete:
       consumes:
       - application/json
-      description: API untuk menghapus produk
+      description: API to delete product by ID
       parameters:
       - description: Product ID
         in: path
@@ -1037,6 +1353,37 @@ paths:
       summary: Get product by ID
       tags:
       - Product
+    put:
+      consumes:
+      - application/json
+      description: API untuk mengupdate produk yang sudah ada
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Product request body
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_Product'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.Product'
+              type: object
+      summary: Update product
+      tags:
+      - Product
   /roles:
     get:
       consumes:
@@ -1059,11 +1406,63 @@ paths:
       summary: Get All Roles
       tags:
       - Role
+    post:
+      consumes:
+      - application/json
+      description: API untuk membuat Role baru
+      parameters:
+      - description: Role Data
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/requests.RoleRequestPut'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_Role'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.Role'
+              type: object
+      summary: Create Role
+      tags:
+      - Role
+  /roles/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: API to delete Role by ID
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/helpers.ResponseParams-any'
+      summary: Delete Role
+      tags:
+      - Role
     put:
       consumes:
       - application/json
-      description: API untuk mengupdate atau membuat Role
+      description: API untuk mengupdate Role yang sudah ada
       parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
       - description: Role Data
         in: body
         name: role
@@ -1082,30 +1481,23 @@ paths:
                 item:
                   $ref: '#/definitions/models.Role'
               type: object
-      summary: Create/Update Role
+      summary: Update Role
       tags:
       - Role
-  /roles/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: API untuk menghapus Role
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: string
+  /status:
+    get:
+      description: Displays a real-time HTML status dashboard for monitoring system
+        health
       produces:
-      - application/json
+      - text/html
       responses:
         "200":
-          description: OK
+          description: HTML status dashboard
           schema:
-            $ref: '#/definitions/helpers.ResponseParams-any'
-      summary: Delete Role
+            type: string
+      summary: Status Dashboard
       tags:
-      - Role
+      - Health
   /tests:
     get:
       description: Get all test records from PostgreSQL
@@ -1235,13 +1627,18 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.User'
-            type: array
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_User'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.User'
+                  type: array
+              type: object
       summary: Show all users
       tags:
       - users
-    put:
+    post:
       consumes:
       - application/json
       parameters:
@@ -1254,11 +1651,16 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            $ref: '#/definitions/models.User'
-      summary: Upsert a user
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_User'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.User'
+              type: object
+      summary: Create a new user
       tags:
       - users
   /users/{id}:
@@ -1274,10 +1676,10 @@ paths:
       produces:
       - application/json
       responses:
-        "204":
-          description: User deleted
+        "200":
+          description: OK
           schema:
-            type: string
+            $ref: '#/definitions/helpers.ResponseParams-any'
       summary: Delete a user
       tags:
       - users
@@ -1296,8 +1698,43 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_User'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.User'
+              type: object
       summary: Show a user
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User object
+        in: body
+        name: JSON
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helpers.ResponseParams-models_User'
+            - properties:
+                item:
+                  $ref: '#/definitions/models.User'
+              type: object
+      summary: Update an existing user
       tags:
       - users
 security:
