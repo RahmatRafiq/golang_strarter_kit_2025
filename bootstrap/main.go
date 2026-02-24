@@ -298,7 +298,7 @@ func Router() *gin.Engine {
 
 	routes.RegisterRoutes(route)
 
-	appName := helpers.GetEnv("APP_NAME", "My App")
+	appName := helpers.GetEnv("APP_NAME", "Golang Starter Kit 2025")
 	appVersion := helpers.GetEnv("APP_VERSION", "1.0.0")
 	appHost := helpers.GetEnv("APP_HOST", "localhost")
 	appPort := helpers.GetEnv("APP_PORT", "8080")
