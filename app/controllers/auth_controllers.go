@@ -20,7 +20,7 @@ func NewAuthController(service services.AuthService) *AuthController {
 }
 
 // @Summary		Login
-// @Description	API untuk login dengan email dan password
+// @Description	API for user login with email and password
 // @Tags			Auth
 // @Accept			json
 // @Produce		json
@@ -64,7 +64,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 }
 
 // @Summary		Logout
-// @Description	API untuk logout, membutuhkan token yang valid
+// @Description	API for user logout, requires valid token
 // @Tags			Auth
 // @Accept			json
 // @Produce		json
@@ -100,7 +100,7 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 }
 
 // @Summary		Refresh Token
-// @Description	API untuk refresh token menggunakan refresh token
+// @Description	API to refresh access token using refresh token
 // @Tags			Auth
 // @Accept			json
 // @Produce		json

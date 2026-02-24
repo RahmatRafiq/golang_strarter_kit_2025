@@ -25,7 +25,7 @@ func NewProductController(service services.ProductService) *ProductController {
 }
 
 // @Summary		Get all products
-// @Description	API untuk mendapatkan semua produk
+// @Description	API to get all products
 // @Tags			Product
 // @Accept			json
 // @Produce		json
@@ -65,7 +65,7 @@ func (c *ProductController) List(ctx *gin.Context) {
 }
 
 // @Summary		Get product by ID
-// @Description	API untuk mendapatkan produk berdasarkan ID
+// @Description	API to get product by ID
 // @Tags			Product
 // @Accept			json
 // @Produce		json
@@ -99,7 +99,7 @@ func (c *ProductController) Get(ctx *gin.Context) {
 }
 
 // @Summary		Create product
-// @Description	API untuk membuat produk baru
+// @Description	API to create a new product
 // @Tags			Product
 // @Accept			json
 // @Produce		json
@@ -146,7 +146,7 @@ func (c *ProductController) Create(ctx *gin.Context) {
 }
 
 // @Summary		Update product
-// @Description	API untuk mengupdate produk yang sudah ada
+// @Description	API to update an existing product
 // @Tags			Product
 // @Accept			json
 // @Produce		json

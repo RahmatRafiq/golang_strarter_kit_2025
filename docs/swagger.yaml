@@ -788,7 +788,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: API untuk login dengan email dan password
+      description: API for user login with email and password
       parameters:
       - description: Login data
         in: body
@@ -810,7 +810,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: API untuk logout, membutuhkan token yang valid
+      description: API for user logout, requires valid token
       produces:
       - application/json
       responses:
@@ -825,7 +825,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: API untuk refresh token menggunakan refresh token
+      description: API to refresh access token using refresh token
       parameters:
       - description: Refresh token
         in: body
@@ -1141,7 +1141,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: API untuk mendapatkan semua Permission
+      description: API to get all permissions
       produces:
       - application/json
       responses:
@@ -1162,7 +1162,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: API untuk membuat Permission baru
+      description: API to create a new permission
       parameters:
       - description: Permission Data
         in: body
@@ -1209,7 +1209,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: API untuk mengupdate Permission yang sudah ada
+      description: API to update an existing permission
       parameters:
       - description: Permission ID
         in: path
@@ -1241,7 +1241,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: API untuk mendapatkan semua produk
+      description: API to get all products
       parameters:
       - in: query
         name: limit
@@ -1284,7 +1284,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: API untuk membuat produk baru
+      description: API to create a new product
       parameters:
       - description: Product request body
         in: body
@@ -1331,7 +1331,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: API untuk mendapatkan produk berdasarkan ID
+      description: API to get product by ID
       parameters:
       - description: Product ID
         in: path
@@ -1356,7 +1356,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: API untuk mengupdate produk yang sudah ada
+      description: API to update an existing product
       parameters:
       - description: Product ID
         in: path
@@ -1388,7 +1388,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: API untuk mendapatkan semua Role
+      description: API to get all roles
       produces:
       - application/json
       responses:
@@ -1409,7 +1409,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: API untuk membuat Role baru
+      description: API to create a new role
       parameters:
       - description: Role Data
         in: body
@@ -1456,7 +1456,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: API untuk mengupdate Role yang sudah ada
+      description: API to update an existing role
       parameters:
       - description: Role ID
         in: path

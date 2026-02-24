@@ -420,7 +420,7 @@ const docTemplate = `{
         },
         "/auth/login": {
             "put": {
-                "description": "API untuk login dengan email dan password",
+                "description": "API for user login with email and password",
                 "consumes": [
                     "application/json"
                 ],
@@ -454,7 +454,7 @@ const docTemplate = `{
         },
         "/auth/logout": {
             "get": {
-                "description": "API untuk logout, membutuhkan token yang valid",
+                "description": "API for user logout, requires valid token",
                 "consumes": [
                     "application/json"
                 ],
@@ -477,7 +477,7 @@ const docTemplate = `{
         },
         "/auth/refresh": {
             "post": {
-                "description": "API untuk refresh token menggunakan refresh token",
+                "description": "API to refresh access token using refresh token",
                 "consumes": [
                     "application/json"
                 ],
@@ -984,7 +984,7 @@ const docTemplate = `{
         },
         "/permissions": {
             "get": {
-                "description": "API untuk mendapatkan semua Permission",
+                "description": "API to get all permissions",
                 "consumes": [
                     "application/json"
                 ],
@@ -1020,7 +1020,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "API untuk membuat Permission baru",
+                "description": "API to create a new permission",
                 "consumes": [
                     "application/json"
                 ],
@@ -1066,7 +1066,7 @@ const docTemplate = `{
         },
         "/permissions/{id}": {
             "put": {
-                "description": "API untuk mengupdate Permission yang sudah ada",
+                "description": "API to update an existing permission",
                 "consumes": [
                     "application/json"
                 ],
@@ -1149,7 +1149,7 @@ const docTemplate = `{
         },
         "/products": {
             "get": {
-                "description": "API untuk mendapatkan semua produk",
+                "description": "API to get all products",
                 "consumes": [
                     "application/json"
                 ],
@@ -1221,7 +1221,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "API untuk membuat produk baru",
+                "description": "API to create a new product",
                 "consumes": [
                     "application/json"
                 ],
@@ -1267,7 +1267,7 @@ const docTemplate = `{
         },
         "/products/{id}": {
             "get": {
-                "description": "API untuk mendapatkan produk berdasarkan ID",
+                "description": "API to get product by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -1309,7 +1309,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "API untuk mengupdate produk yang sudah ada",
+                "description": "API to update an existing product",
                 "consumes": [
                     "application/json"
                 ],
@@ -1392,7 +1392,7 @@ const docTemplate = `{
         },
         "/roles": {
             "get": {
-                "description": "API untuk mendapatkan semua Role",
+                "description": "API to get all roles",
                 "consumes": [
                     "application/json"
                 ],
@@ -1428,7 +1428,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "API untuk membuat Role baru",
+                "description": "API to create a new role",
                 "consumes": [
                     "application/json"
                 ],
@@ -1474,7 +1474,7 @@ const docTemplate = `{
         },
         "/roles/{id}": {
             "put": {
-                "description": "API untuk mengupdate Role yang sudah ada",
+                "description": "API to update an existing role",
                 "consumes": [
                     "application/json"
                 ],

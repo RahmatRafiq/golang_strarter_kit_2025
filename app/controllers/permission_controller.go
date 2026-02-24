@@ -22,7 +22,7 @@ func NewPermissionController(service services.PermissionService) *PermissionCont
 }
 
 // @Summary		Get All Permissions
-// @Description	API untuk mendapatkan semua Permission
+// @Description	API to get all permissions
 // @Tags			Permission
 // @Accept			json
 // @Produce		json
@@ -49,7 +49,7 @@ func (c *PermissionController) List(ctx *gin.Context) {
 }
 
 // @Summary		Create Permission
-// @Description	API untuk membuat Permission baru
+// @Description	API to create a new permission
 // @Tags			Permission
 // @Accept			json
 // @Produce		json
@@ -106,7 +106,7 @@ func (c *PermissionController) Create(ctx *gin.Context) {
 }
 
 // @Summary		Update Permission
-// @Description	API untuk mengupdate Permission yang sudah ada
+// @Description	API to update an existing permission
 // @Tags			Permission
 // @Accept			json
 // @Produce		json

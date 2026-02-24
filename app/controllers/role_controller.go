@@ -22,7 +22,7 @@ func NewRoleController(service services.RoleService) *RoleController {
 }
 
 // @Summary		Get All Roles
-// @Description	API untuk mendapatkan semua Role
+// @Description	API to get all roles
 // @Tags			Role
 // @Accept			json
 // @Produce		json
@@ -49,7 +49,7 @@ func (c *RoleController) List(ctx *gin.Context) {
 }
 
 // @Summary		Create Role
-// @Description	API untuk membuat Role baru
+// @Description	API to create a new role
 // @Tags			Role
 // @Accept			json
 // @Produce		json
@@ -107,7 +107,7 @@ func (c *RoleController) Create(ctx *gin.Context) {
 }
 
 // @Summary		Update Role
-// @Description	API untuk mengupdate Role yang sudah ada
+// @Description	API to update an existing role
 // @Tags			Role
 // @Accept			json
 // @Produce		json
