@@ -203,7 +203,7 @@ func RegisterRoutes(route *gin.Engine) {
 
 		c.JSON(200, gin.H{
 			"message": "facades is connected",
-			"facades": "supply_chain_retail",
+			"facades": helpers.GetEnv("APP_NAME", "Golang Starter Kit 2025"),
 		})
 	})
 
