@@ -303,7 +303,7 @@ func Router() *gin.Engine {
 	appHost := helpers.GetEnv("APP_HOST", "localhost")
 	appPort := helpers.GetEnv("APP_PORT", "8080")
 	appScheme := helpers.GetEnv("APP_SCHEME", "http")
-	appDescription := helpers.GetEnv("APP_DESCRIPTION", "API untuk Supply Chain Retail")
+	appDescription := helpers.GetEnv("APP_DESCRIPTION", "Multi-Database Golang Starter Kit dengan dukungan MySQL/MariaDB dan PostgreSQL")
 
 	docs.SwaggerInfo.Title = appName + " API"
 	docs.SwaggerInfo.Description = appDescription
