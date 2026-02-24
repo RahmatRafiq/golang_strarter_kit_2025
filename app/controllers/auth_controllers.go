@@ -28,6 +28,15 @@ func NewAuthController(service services.AuthService) *AuthController {
 // @Success		200		{object}	helpers.ResponseParams[any]
 // @Router			/auth/login [put]
 func (c *AuthController) Login(ctx *gin.Context) {
+	// Check if using legacy endpoint
+	if ctx.Request.Method == "PUT" && ctx.FullPath() == "/auth/login" {
+		log.Warn().
+			Str("endpoint", "PUT /auth/login").
+			Str("replacement", "POST /api/v1/auth/login").
+			Str("sunset_date", "v2.0.0 (Q3 2026)").
+			Msg("DEPRECATED: Using legacy auth endpoint")
+	}
+
 	var loginData requests.LoginRequest
 	if err := ctx.ShouldBindJSON(&loginData); err != nil {
 		log.Warn().
@@ -99,6 +108,15 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 // @Success		200		{object}	helpers.ResponseParams[any]
 // @Router			/auth/refresh [post]
 func (c *AuthController) Refresh(ctx *gin.Context) {
+	// Check if using legacy endpoint
+	if ctx.FullPath() == "/auth/refresh" {
+		log.Warn().
+			Str("endpoint", "POST /auth/refresh").
+			Str("replacement", "POST /api/v1/auth/refresh").
+			Str("sunset_date", "v2.0.0 (Q3 2026)").
+			Msg("DEPRECATED: Using legacy auth endpoint")
+	}
+
 	var refreshRequest requests.RefreshTokenRequest
 	if err := ctx.ShouldBindJSON(&refreshRequest); err != nil {
 		log.Warn().
