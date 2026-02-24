@@ -129,27 +129,27 @@ func RegisterRoutes(route *gin.Engine) {
 	categoryController := controllers.NewCategoryController(*categoryService)
 	categoryRoutes := route.Group("/categories", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		categoryRoutes.GET("/", categoryController.List) // DEPRECATED: Use /api/v1/categories
+		categoryRoutes.GET("/", categoryController.List)
 		categoryRoutes.GET("/:id", categoryController.Get)
-		categoryRoutes.PUT("/", categoryController.Put)
+		categoryRoutes.PUT("/", categoryController.Create)
 		categoryRoutes.DELETE("/:id", categoryController.Delete)
 	}
 
 	productController := controllers.NewProductController(*productService)
 	productRoutes := route.Group("/products", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		productRoutes.GET("/", productController.GetAll) // DEPRECATED: Use /api/v1/products
-		productRoutes.GET("/:id", productController.GetByID)
-		productRoutes.PUT("/", productController.Put)
+		productRoutes.GET("/", productController.List)
+		productRoutes.GET("/:id", productController.Get)
+		productRoutes.PUT("/", productController.Create)
 		productRoutes.DELETE("/:id", productController.Delete)
 	}
 
 	userController := controllers.NewUserController(*userService)
 	userRoutes := route.Group("/users", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		userRoutes.GET("", userController.List) // DEPRECATED: Use /api/v1/users
+		userRoutes.GET("", userController.List)
 		userRoutes.GET("/:id", userController.Get)
-		userRoutes.PUT("", userController.Put)
+		userRoutes.PUT("", userController.Create)
 		userRoutes.DELETE("/:id", userController.Delete)
 		userRoutes.POST("/:id/roles", userController.AssignRoles)
 		userRoutes.GET("/:id/roles", userController.GetRoles)
@@ -158,8 +158,8 @@ func RegisterRoutes(route *gin.Engine) {
 	roleController := controllers.NewRoleController(*roleService)
 	roleRoutes := route.Group("/roles", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		roleRoutes.GET("", roleController.List) // DEPRECATED: Use /api/v1/roles
-		roleRoutes.PUT("", roleController.Put)
+		roleRoutes.GET("", roleController.List)
+		roleRoutes.PUT("", roleController.Create)
 		roleRoutes.DELETE("/:id", roleController.Delete)
 		roleRoutes.POST("/:id/permissions", roleController.AssignPermissions)
 		roleRoutes.GET("/:id/permissions", roleController.GetPermissions)
@@ -168,8 +168,8 @@ func RegisterRoutes(route *gin.Engine) {
 	permissionController := controllers.NewPermissionController(*permissionService)
 	permissionRoutes := route.Group("/permissions", middleware.AuthMiddleware(), middleware.UserRateLimiter())
 	{
-		permissionRoutes.GET("", permissionController.List) // DEPRECATED: Use /api/v1/permissions
-		permissionRoutes.PUT("", permissionController.Put)
+		permissionRoutes.GET("", permissionController.List)
+		permissionRoutes.PUT("", permissionController.Create)
 		permissionRoutes.DELETE("/:id", permissionController.Delete)
 	}
 

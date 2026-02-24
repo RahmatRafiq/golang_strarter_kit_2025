@@ -38,7 +38,6 @@ func (s *UserService) List(page, limit int) ([]models.User, int64, error) {
 }
 
 func (s *UserService) FindByID(id uint) (*models.User, error) {
-	// Try cache first
 	cacheKey := UserCacheKey(id)
 	var user models.User
 
@@ -49,13 +48,11 @@ func (s *UserService) FindByID(id uint) (*models.User, error) {
 		}
 	}
 
-	// Cache miss, get from database
 	userPtr, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Store in cache (log errors but don't fail)
 	if s.cache.IsEnabled() {
 		if err := s.cache.Set(cacheKey, userPtr, CacheTTLMedium); err != nil {
 			log.Warn().Err(err).Uint("user_id", id).Msg("Failed to cache user")
@@ -69,22 +66,27 @@ func (s *UserService) FindByEmail(email string) (*models.User, error) {
 	return s.repo.FindByEmail(email)
 }
 
-func (s *UserService) Put(user models.User) (models.User, error) {
-	if user.ID == 0 {
-		err := s.repo.Create(&user)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Str("email", user.Email).
-				Msg("Failed to create user")
-			return user, err
-		}
-		log.Info().
-			Uint("user_id", user.ID).
+func (s *UserService) Create(user models.User) (*models.User, error) {
+	user.ID = 0
+
+	err := s.repo.Create(&user)
+	if err != nil {
+		log.Error().
+			Err(err).
 			Str("email", user.Email).
-			Msg("User created successfully")
-		return user, nil
+			Msg("Failed to create user")
+		return nil, err
 	}
+
+	log.Info().
+		Uint("user_id", user.ID).
+		Str("email", user.Email).
+		Msg("User created successfully")
+	return &user, nil
+}
+
+func (s *UserService) Update(id uint, user models.User) (*models.User, error) {
+	user.ID = id
 
 	err := s.repo.Update(&user)
 	if err != nil {
@@ -92,10 +94,9 @@ func (s *UserService) Put(user models.User) (models.User, error) {
 			Err(err).
 			Uint("user_id", user.ID).
 			Msg("Failed to update user")
-		return user, err
+		return nil, err
 	}
 
-	// Invalidate cache after update
 	if s.cache.IsEnabled() {
 		if err := s.cache.InvalidateUserCache(user.ID); err != nil {
 			log.Warn().Err(err).Uint("user_id", user.ID).Msg("Failed to invalidate user cache")
@@ -106,42 +107,28 @@ func (s *UserService) Put(user models.User) (models.User, error) {
 		Uint("user_id", user.ID).
 		Str("email", user.Email).
 		Msg("User updated successfully")
-	return user, nil
-}
-
-func (s *UserService) Create(user *models.User) error {
-	return s.repo.Create(user)
-}
-
-func (s *UserService) Update(user *models.User) error {
-	err := s.repo.Update(user)
-	if err != nil {
-		return err
-	}
-
-	// Invalidate cache after update
-	if s.cache.IsEnabled() {
-		if err := s.cache.InvalidateUserCache(user.ID); err != nil {
-			log.Warn().Err(err).Uint("user_id", user.ID).Msg("Failed to invalidate user cache")
-		}
-	}
-
-	return nil
+	return &user, nil
 }
 
 func (s *UserService) DeleteByID(id uint) error {
 	err := s.repo.Delete(id)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("user_id", id).
+			Msg("Failed to delete user")
 		return err
 	}
 
-	// Invalidate cache after delete
 	if s.cache.IsEnabled() {
 		if err := s.cache.InvalidateUserCache(id); err != nil {
 			log.Warn().Err(err).Uint("user_id", id).Msg("Failed to invalidate user cache")
 		}
 	}
 
+	log.Info().
+		Uint("user_id", id).
+		Msg("User deleted successfully")
 	return nil
 }
 
@@ -151,7 +138,6 @@ func (s *UserService) AssignRoles(userID uint, roleIDs []uint) error {
 		return err
 	}
 
-	// Invalidate user roles cache
 	if s.cache.IsEnabled() {
 		if err := s.cache.Delete(UserRolesCacheKey(userID)); err != nil {
 			log.Warn().Err(err).Uint("user_id", userID).Msg("Failed to invalidate user roles cache")
@@ -162,7 +148,6 @@ func (s *UserService) AssignRoles(userID uint, roleIDs []uint) error {
 }
 
 func (s *UserService) GetRoles(userID uint) ([]models.Role, error) {
-	// Try cache first
 	cacheKey := UserRolesCacheKey(userID)
 	var roles []models.Role
 
@@ -173,13 +158,11 @@ func (s *UserService) GetRoles(userID uint) ([]models.Role, error) {
 		}
 	}
 
-	// Cache miss, get from database
 	roles, err := s.repo.GetRoles(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Store in cache
 	if s.cache.IsEnabled() {
 		if err := s.cache.Set(cacheKey, roles, CacheTTLMedium); err != nil {
 			log.Warn().Err(err).Uint("user_id", userID).Msg("Failed to cache user roles")

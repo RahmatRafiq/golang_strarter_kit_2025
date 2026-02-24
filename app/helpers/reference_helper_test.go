@@ -13,7 +13,8 @@ var _ = Describe("GenerateReference", func() {
 	Context("when reference is generated", func() {
 		It("should return reference with code", func() {
 			code := "INV"
-			ref := helpers.GenerateReference(code)
+			ref, err := helpers.GenerateReference(code)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(ref).To(HavePrefix(code + "-"))
 		})
 	})
@@ -23,7 +24,8 @@ var _ = Describe("GenerateReference", func() {
 			code := "INV"
 			refs := make(map[string]bool)
 			for i := 0; i < 100000; i++ {
-				ref := helpers.GenerateReference(code)
+				ref, err := helpers.GenerateReference(code)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(refs[ref]).To(BeFalse())
 				refs[ref] = true
 			}
@@ -39,7 +41,8 @@ var _ = Describe("GenerateReference", func() {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					ref := helpers.GenerateReference(code)
+					ref, err := helpers.GenerateReference(code)
+					Expect(err).ToNot(HaveOccurred())
 					if _, loaded := refs.LoadOrStore(ref, true); loaded {
 						Fail("duplicate reference found: " + ref)
 					}
@@ -52,7 +55,8 @@ var _ = Describe("GenerateReference", func() {
 	Context("when code contains special characters", func() {
 		It("should return reference with special characters in code", func() {
 			code := "INV-123_ABC"
-			ref := helpers.GenerateReference(code)
+			ref, err := helpers.GenerateReference(code)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(ref).To(HavePrefix(code + "-"))
 		})
 	})
@@ -60,8 +64,10 @@ var _ = Describe("GenerateReference", func() {
 	Context("when multiple references are generated sequentially", func() {
 		It("should return unique references", func() {
 			code := "SEQ"
-			ref1 := helpers.GenerateReference(code)
-			ref2 := helpers.GenerateReference(code)
+			ref1, err := helpers.GenerateReference(code)
+			Expect(err).ToNot(HaveOccurred())
+			ref2, err := helpers.GenerateReference(code)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(ref1).NotTo(Equal(ref2))
 		})
 	})

@@ -3,6 +3,8 @@ package services
 import (
 	"golang_starter_kit_2025/app/models"
 	"golang_starter_kit_2025/app/repositories/interfaces"
+
+	"github.com/rs/zerolog/log"
 )
 
 type PermissionService struct {
@@ -13,41 +15,71 @@ func NewPermissionService(repo interfaces.PermissionRepositoryInterface) *Permis
 	return &PermissionService{repo: repo}
 }
 
-func (s *PermissionService) GetAll() ([]models.Permission, error) {
-	return s.repo.GetAll()
-}
-
 func (s *PermissionService) List(page, limit int) ([]models.Permission, int64, error) {
 	return s.repo.List(page, limit)
 }
 
-func (s *PermissionService) Put(updatedPermission models.Permission) (models.Permission, error) {
-	if updatedPermission.ID == 0 {
-		err := s.repo.Create(&updatedPermission)
-		return updatedPermission, err
+func (s *PermissionService) Create(permission models.Permission) (*models.Permission, error) {
+	permission.ID = 0
+
+	err := s.repo.Create(&permission)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("name", permission.Name).
+			Msg("Failed to create permission")
+		return nil, err
 	}
 
-	err := s.repo.Update(&updatedPermission)
-	if err != nil {
-		return updatedPermission, err
-	}
-	permission, err := s.repo.FindByID(updatedPermission.ID)
-	if err != nil {
-		return updatedPermission, err
-	}
-	return *permission, nil
+	log.Info().
+		Uint("permission_id", permission.ID).
+		Str("name", permission.Name).
+		Msg("Permission created successfully")
+	return &permission, nil
 }
 
-func (s *PermissionService) Create(permission *models.Permission) error {
-	return s.repo.Create(permission)
-}
+func (s *PermissionService) Update(id uint, permission models.Permission) (*models.Permission, error) {
+	permission.ID = id
 
-func (s *PermissionService) Update(permission *models.Permission) error {
-	return s.repo.Update(permission)
+	err := s.repo.Update(&permission)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("permission_id", permission.ID).
+			Msg("Failed to update permission")
+		return nil, err
+	}
+
+	updatedPermission, err := s.repo.FindByID(permission.ID)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("permission_id", permission.ID).
+			Msg("Failed to fetch updated permission")
+		return nil, err
+	}
+
+	log.Info().
+		Uint("permission_id", permission.ID).
+		Str("name", permission.Name).
+		Msg("Permission updated successfully")
+	return updatedPermission, nil
 }
 
 func (s *PermissionService) DeleteByID(id uint) error {
-	return s.repo.Delete(id)
+	err := s.repo.Delete(id)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Uint("permission_id", id).
+			Msg("Failed to delete permission")
+		return err
+	}
+
+	log.Info().
+		Uint("permission_id", id).
+		Msg("Permission deleted successfully")
+	return nil
 }
 
 func (s *PermissionService) FindByID(id uint) (*models.Permission, error) {

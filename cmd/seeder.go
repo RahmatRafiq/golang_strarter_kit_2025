@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"golang_starter_kit_2025/app/database"
 
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
 
@@ -56,17 +56,22 @@ var MakeSeederCommand = &cli.Command{
 import (
 	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/models"
-	"log"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
 func Seed%[1]s(db *gorm.DB) error {
-	log.Println("🌱 Seeding %[1]s...")
+	log.Info().Msg("Seeding %[1]s")
+
+	reference, err := helpers.GenerateReference("USR")
+	if err != nil {
+		return err
+	}
 
 	data := models.%[2]s{
-		Reference: helpers.GenerateReference("USR"),
+		Reference: reference,
 		// Tambahkan field sesuai model
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -78,7 +83,7 @@ func Seed%[1]s(db *gorm.DB) error {
 }
 
 func Rollback%[1]s(db *gorm.DB) error {
-	log.Println("🗑️ Rolling back %[1]s…")
+	log.Info().Msg("Rolling back %[1]s")
 	return db.Unscoped().
 		Where("reference LIKE ?", "USR%%").
 		// Delete(&models.%[2]s{}).
@@ -87,10 +92,12 @@ func Rollback%[1]s(db *gorm.DB) error {
 `, structName, modelName)
 
 		if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
-			log.Fatal("❌ Gagal membuat file seeder:", err)
+			return fmt.Errorf("failed to create seeder file: %w", err)
 		}
 
-		fmt.Println("✅ File seeder berhasil dibuat:", filePath)
+		log.Info().
+			Str("file", filePath).
+			Msg("File seeder created successfully")
 		return nil
 	},
 }
@@ -107,15 +114,23 @@ var DBSeedCommand = &cli.Command{
 		class := c.String("class")
 
 		if class != "" {
-			fmt.Printf("🌱 Running specific seeder: %s on connection %s\n", class, connection)
+			log.Info().
+				Str("seeder", class).
+				Str("connection", connection).
+				Msg("Running specific seeder")
 			return database.RunSpecificSeederOnConnection(class, connection)
 		}
 
-		fmt.Printf("🌱 Running all seeders on connection %s\n", connection)
+		log.Info().
+			Str("connection", connection).
+			Msg("Running all seeders")
 		if err := database.RunAllSeedersOnConnection(connection); err != nil {
-			log.Fatal("❌ Failed to run seeders:", err)
+			log.Fatal().
+				Err(err).
+				Msg("Failed to run seeders")
 		}
-		fmt.Println("✅ All seeders completed successfully!")
+		log.Info().
+			Msg("All seeders completed successfully")
 		return nil
 	},
 }
@@ -135,10 +150,15 @@ var RollbackSeederCommand = &cli.Command{
 		connection := c.String("connection")
 
 		if b == 0 {
-			log.Printf("🔄 Rolling back last seed batch on connection %s\n", connection)
+			log.Info().
+				Str("connection", connection).
+				Msg("Rolling back last seed batch")
 			return database.RollbackLastSeedBatchOnConnection(connection)
 		}
-		log.Printf("🔄 Rolling back seed batch %d on connection %s\n", b, connection)
+		log.Info().
+			Int64("batch", b).
+			Str("connection", connection).
+			Msg("Rolling back seed batch")
 		return database.RollbackSeedBatchOnConnection(b, connection)
 	},
 }

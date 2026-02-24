@@ -1,11 +1,13 @@
 package factories
 
 import (
+	"fmt"
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/models"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -23,8 +25,15 @@ func NewUserFactory(db *gorm.DB) *UserFactory {
 
 // Make creates a User instance without saving to database
 func (f *UserFactory) Make(overrides ...map[string]interface{}) *models.User {
+	reference, err := helpers.GenerateReference("USR")
+	if err != nil {
+		// Factory fallback: use timestamp-based reference if UUID fails
+		reference = fmt.Sprintf("USR-FALLBACK-%d", time.Now().UnixNano())
+		log.Warn().Err(err).Msg("Failed to generate reference in factory, using fallback")
+	}
+
 	user := &models.User{
-		Reference: helpers.GenerateReference("USR"),
+		Reference: reference,
 		Username:  RandomUsername(),
 		Email:     RandomEmail(),
 		Password:  "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // "password"

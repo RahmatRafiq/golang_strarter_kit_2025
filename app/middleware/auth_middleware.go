@@ -21,14 +21,9 @@ var jwtService services.JwtService
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		skipAuth := os.Getenv("SKIP_AUTH")
-		appEnv := os.Getenv("APP_ENV")
-
-		// SECURITY: Prevent SKIP_AUTH in production
-		if skipAuth == "true" && appEnv == "production" {
-			log.Fatal().Msg("SECURITY ERROR: SKIP_AUTH cannot be 'true' in production environment")
-		}
 
 		// Development bypass (with security warning)
+		// Note: Production check moved to startup validation in bootstrap/main.go
 		if skipAuth == "true" {
 			log.Warn().
 				Str("ip", c.ClientIP()).

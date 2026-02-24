@@ -5,6 +5,7 @@ import (
 
 	"golang_starter_kit_2025/app/helpers"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -29,8 +30,13 @@ type Product struct {
 
 // BeforeCreate hook
 func (p *Product) BeforeCreate(tx *gorm.DB) (err error) {
-	p.Reference = helpers.GenerateReference("PRD")
-	return
+	reference, err := helpers.GenerateReference("PRD")
+	if err != nil {
+		log.Error().Err(err).Str("product_name", p.Name).Msg("Failed to generate product reference")
+		return err
+	}
+	p.Reference = reference
+	return nil
 }
 
 // AfterFind hook

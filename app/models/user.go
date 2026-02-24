@@ -5,6 +5,7 @@ import (
 
 	"golang_starter_kit_2025/app/helpers"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -25,20 +26,28 @@ type User struct {
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
-	reference := helpers.GenerateReference("USR")
+	reference, err := helpers.GenerateReference("USR")
+	if err != nil {
+		log.Error().Err(err).Str("username", u.Username).Msg("Failed to generate user reference")
+		return err
+	}
+
 	password, err := helpers.HashPasswordArgon2(u.Password, helpers.DefaultParams)
 	if err != nil {
-		println(err.Error())
-		return
+		log.Error().Err(err).Str("username", u.Username).Msg("Failed to hash password in BeforeCreate")
+		return err
 	}
+
 	// pin, err := helpers.HashPasswordBcrypt(u.Pin)
 	pin, err := helpers.HashPasswordArgon2(u.Pin, helpers.DefaultParams)
 	if err != nil {
-		println(err.Error())
+		log.Error().Err(err).Str("username", u.Username).Msg("Failed to hash PIN in BeforeCreate")
+		return err
 	}
+
 	tx.Statement.SetColumn("reference", reference)
 	tx.Statement.SetColumn("password", password)
 	tx.Statement.SetColumn("pin", pin)
 
-	return
+	return nil
 }

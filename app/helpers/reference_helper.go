@@ -1,14 +1,15 @@
 package helpers
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 )
 
-func GenerateReference(code string) string {
+func GenerateReference(code string) (string, error) {
 	ref, err := uuid.NewV7()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to generate reference UUID")
+		return "", fmt.Errorf("failed to generate reference UUID: %w", err)
 	}
-	return code + "-" + ref.String()
+	return code + "-" + ref.String(), nil
 }

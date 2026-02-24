@@ -9,6 +9,7 @@ import (
 	"golang_starter_kit_2025/app/database"
 	"golang_starter_kit_2025/facades"
 
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
 
@@ -22,7 +23,10 @@ var MigrationCommand = &cli.Command{
 	Action: func(c *cli.Context) error {
 		name := c.String("file")
 		connection := c.String("connection")
-		fmt.Printf("🚀 Migrate: %s on connection %s\n", name, connection)
+		log.Info().
+			Str("migration", name).
+			Str("connection", connection).
+			Msg("Running migration")
 		return database.RunMigrationOnConnection(name, connection)
 	},
 }
@@ -37,7 +41,10 @@ var RollbackCommand = &cli.Command{
 	Action: func(c *cli.Context) error {
 		name := c.String("file")
 		connection := c.String("connection")
-		fmt.Printf("🔄 Rollback: %s on connection %s\n", name, connection)
+		log.Info().
+			Str("migration", name).
+			Str("connection", connection).
+			Msg("Rolling back migration")
 		return database.RollbackMigrationOnConnection(name, connection)
 	},
 }
@@ -61,7 +68,9 @@ var MigrateAllCommand = &cli.Command{
 	},
 	Action: func(c *cli.Context) error {
 		connection := c.String("connection")
-		fmt.Printf("🚀 Migrate all on connection %s\n", connection)
+		log.Info().
+			Str("connection", connection).
+			Msg("Running all migrations")
 		return database.RunAllMigrationsOnConnection(connection)
 	},
 }
@@ -74,7 +83,9 @@ var RollbackAllCommand = &cli.Command{
 	},
 	Action: func(c *cli.Context) error {
 		connection := c.String("connection")
-		fmt.Printf("🔄 Rollback all on connection %s\n", connection)
+		log.Info().
+			Str("connection", connection).
+			Msg("Rolling back all migrations")
 		return database.RunAllRollbacksOnConnection(connection)
 	},
 }
@@ -87,7 +98,9 @@ var MigrateResetCommand = &cli.Command{
 	},
 	Action: func(c *cli.Context) error {
 		connection := c.String("connection")
-		fmt.Printf("🔄 Resetting all migrations on connection %s\n", connection)
+		log.Info().
+			Str("connection", connection).
+			Msg("Resetting all migrations")
 		return database.RunAllRollbacksOnConnection(connection)
 	},
 }
@@ -107,7 +120,10 @@ var RollbackBatchCommand = &cli.Command{
 
 		// If step is provided, rollback N batches
 		if step > 0 {
-			fmt.Printf("🔄 Rolling back last %d batch(es) on connection %s\n", step, connection)
+			log.Info().
+				Int("steps", step).
+				Str("connection", connection).
+				Msg("Rolling back last batches")
 			return database.RollbackStepsOnConnection(step, connection)
 		}
 
@@ -132,7 +148,9 @@ var MigrateFreshCommand = &cli.Command{
 		connection := c.String("connection")
 		seed := c.Bool("seed")
 
-		fmt.Printf("🔄 Fresh: rollback all then migrate all on connection %s\n", connection)
+		log.Info().
+			Str("connection", connection).
+			Msg("Fresh migration: rollback all then migrate all")
 		if err := database.RunAllRollbacksOnConnection(connection); err != nil {
 			return err
 		}
@@ -142,11 +160,14 @@ var MigrateFreshCommand = &cli.Command{
 		}
 
 		if seed {
-			fmt.Printf("🌱 Running seeders on connection %s...\n", connection)
+			log.Info().
+				Str("connection", connection).
+				Msg("Running seeders")
 			if err := database.RunAllSeedersOnConnection(connection); err != nil {
 				return fmt.Errorf("failed to run seeders: %v", err)
 			}
-			fmt.Println("✅ Seeders completed successfully!")
+			log.Info().
+				Msg("Seeders completed successfully")
 		}
 
 		return nil
@@ -165,23 +186,30 @@ var DBWipeCommand = &cli.Command{
 		force := c.Bool("force")
 
 		if !force {
-			fmt.Println("⚠️  WARNING: This will DROP ALL TABLES in the database!")
-			fmt.Printf("Connection: %s\n\n", connection)
-			fmt.Print("Are you sure you want to continue? (type 'yes' to confirm): ")
+			log.Warn().
+				Str("connection", connection).
+				Msg("WARNING: This will DROP ALL TABLES in the database")
+			log.Warn().
+				Msg("Are you sure you want to continue? (type 'yes' to confirm)")
 
 			var confirmation string
 			if _, err := fmt.Scanln(&confirmation); err != nil {
-				fmt.Printf("❌ Error reading input: %v\n", err)
+				log.Error().
+					Err(err).
+					Msg("Error reading input")
 				return err
 			}
 
 			if confirmation != "yes" {
-				fmt.Println("❌ Operation canceled.")
+				log.Info().
+					Msg("Operation canceled")
 				return nil
 			}
 		}
 
-		fmt.Printf("🗑️  Dropping all tables on connection %s\n", connection)
+		log.Info().
+			Str("connection", connection).
+			Msg("Dropping all tables")
 		return database.WipeDatabase(connection)
 	},
 }
@@ -190,11 +218,10 @@ var DBConnectionsCommand = &cli.Command{
 	Name:  "db:connections",
 	Usage: "List all available database connections",
 	Action: func(c *cli.Context) error {
-		fmt.Println("📊 Available Database Connections:")
 		connections := []string{"mysql", "postgres", "mysql_secondary"}
-		for _, conn := range connections {
-			fmt.Printf("  - %s\n", conn)
-		}
+		log.Info().
+			Strs("connections", connections).
+			Msg("Available database connections")
 		return nil
 	},
 }
@@ -213,10 +240,14 @@ var MigrateLockStatusCommand = &cli.Command{
 		}
 
 		if locked {
-			fmt.Printf("🔒 Migration LOCKED for connection '%s'\n", connection)
-			fmt.Printf("   %s\n", info)
+			log.Warn().
+				Str("connection", connection).
+				Str("info", info).
+				Msg("Migration is LOCKED")
 		} else {
-			fmt.Printf("🔓 Migration NOT locked for connection '%s'\n", connection)
+			log.Info().
+				Str("connection", connection).
+				Msg("Migration is NOT locked")
 		}
 		return nil
 	},
@@ -234,18 +265,23 @@ var MigrateLockReleaseCommand = &cli.Command{
 		force := c.Bool("force")
 
 		if !force {
-			fmt.Println("⚠️  WARNING: Force releasing a lock can cause issues if migrations are actually running!")
-			fmt.Printf("Connection: %s\n\n", connection)
-			fmt.Print("Are you sure? (type 'yes' to confirm): ")
+			log.Warn().
+				Str("connection", connection).
+				Msg("WARNING: Force releasing a lock can cause issues if migrations are actually running")
+			log.Warn().
+				Msg("Are you sure? (type 'yes' to confirm)")
 
 			var confirmation string
 			if _, err := fmt.Scanln(&confirmation); err != nil {
-				fmt.Printf("❌ Error reading input: %v\n", err)
+				log.Error().
+					Err(err).
+					Msg("Error reading input")
 				return err
 			}
 
 			if confirmation != "yes" {
-				fmt.Println("❌ Operation canceled.")
+				log.Info().
+					Msg("Operation canceled")
 				return nil
 			}
 		}
@@ -274,13 +310,19 @@ var MigrateLogsCommand = &cli.Command{
 
 		if showFailed {
 			logs, err = database.GetFailedMigrations(connection, limit)
-			fmt.Printf("📊 Failed Migrations (connection: %s)\n\n", connection)
+			log.Info().
+				Str("connection", connection).
+				Msg("Failed Migrations")
 		} else if showSlow {
 			logs, err = database.GetSlowMigrations(connection, 1000, limit) // >1s
-			fmt.Printf("🐌 Slow Migrations (>1s) (connection: %s)\n\n", connection)
+			log.Info().
+				Str("connection", connection).
+				Msg("Slow Migrations (>1s)")
 		} else {
 			logs, err = database.GetMigrationLogs(connection, limit)
-			fmt.Printf("📊 Recent Migration Logs (connection: %s)\n\n", connection)
+			log.Info().
+				Str("connection", connection).
+				Msg("Recent Migration Logs")
 		}
 
 		if err != nil {
@@ -288,45 +330,24 @@ var MigrateLogsCommand = &cli.Command{
 		}
 
 		if len(logs) == 0 {
-			fmt.Println("No logs found.")
+			log.Info().
+				Msg("No logs found")
 			return nil
 		}
 
-		fmt.Println(strings.Repeat("=", 100))
-		fmt.Printf("%-40s %-8s %-12s %-12s %-20s\n", "Migration", "Batch", "Status", "Time", "Executed At")
-		fmt.Println(strings.Repeat("-", 100))
-
-		for _, log := range logs {
-			status := log.Status
-			if status == "success" {
-				status = "✅ Success"
-			} else {
-				status = "❌ Failed"
-			}
-
-			fmt.Printf("%-40s %-8d %-12s %-12s %-20s\n",
-				truncate(log.Filename, 40),
-				log.Batch,
-				status,
-				database.FormatDuration(log.ExecutionTimeMs),
-				log.ExecutedAt.Format("2006-01-02 15:04:05"),
-			)
-
-			if log.ErrorMessage != "" && showFailed {
-				fmt.Printf("   Error: %s\n", truncate(log.ErrorMessage, 90))
-			}
+		for _, logEntry := range logs {
+			log.Info().
+				Str("migration", logEntry.Filename).
+				Int("batch", logEntry.Batch).
+				Str("status", logEntry.Status).
+				Str("execution_time", database.FormatDuration(logEntry.ExecutionTimeMs)).
+				Time("executed_at", logEntry.ExecutedAt).
+				Str("error", logEntry.ErrorMessage).
+				Msg("Migration log entry")
 		}
 
-		fmt.Println(strings.Repeat("=", 100))
 		return nil
 	},
-}
-
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }
 
 var MigrateStatusCommand = &cli.Command{
@@ -349,7 +370,9 @@ var DBStatusCommand = &cli.Command{
 	},
 	Action: func(c *cli.Context) error {
 		connection := c.String("connection")
-		fmt.Printf("🔍 Checking connection status for: %s\n", connection)
+		log.Info().
+			Str("connection", connection).
+			Msg("Checking connection status")
 
 		// Initialize database manager
 		manager := facades.GetManager()
@@ -357,7 +380,10 @@ var DBStatusCommand = &cli.Command{
 		// Try to connect
 		conn, err := manager.GetConnection(connection)
 		if err != nil {
-			fmt.Printf("❌ Connection '%s' failed: %v\n", connection, err)
+			log.Error().
+				Err(err).
+				Str("connection", connection).
+				Msg("Connection failed")
 			return err
 		}
 
@@ -365,16 +391,23 @@ var DBStatusCommand = &cli.Command{
 		if manager.IsConnected(connection) {
 			stats, err := manager.GetConnectionStats(connection)
 			if err != nil {
-				fmt.Printf("⚠️  Connection '%s' is connected but stats unavailable: %v\n", connection, err)
+				log.Warn().
+					Err(err).
+					Str("connection", connection).
+					Msg("Connection is connected but stats unavailable")
 				return err
 			}
-			fmt.Printf("✅ Connection '%s' is healthy\n", connection)
-			fmt.Printf("   Database Type: %s\n", conn.GetType())
-			fmt.Printf("   Open Connections: %d\n", stats.OpenConnections)
-			fmt.Printf("   In Use: %d\n", stats.InUse)
-			fmt.Printf("   Idle: %d\n", stats.Idle)
+			log.Info().
+				Str("connection", connection).
+				Str("database_type", string(conn.GetType())).
+				Int("open_connections", stats.OpenConnections).
+				Int("in_use", stats.InUse).
+				Int("idle", stats.Idle).
+				Msg("Connection is healthy")
 		} else {
-			fmt.Printf("❌ Connection '%s' is not healthy\n", connection)
+			log.Error().
+				Str("connection", connection).
+				Msg("Connection is not healthy")
 		}
 
 		return nil

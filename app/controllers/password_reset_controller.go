@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 
+	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/requests"
 	"golang_starter_kit_2025/app/services"
 
@@ -37,10 +38,11 @@ func (c *PasswordResetController) ForgotPassword(ctx *gin.Context) {
 	var req requests.ForgotPasswordRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Error().Err(err).Msg("Invalid forgot password request")
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request",
-			"message": err.Error(),
-		})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Invalid request",
+			Reference: "ERROR-4",
+		}, http.StatusBadRequest)
 		return
 	}
 
@@ -48,15 +50,15 @@ func (c *PasswordResetController) ForgotPassword(ctx *gin.Context) {
 	if err := c.passwordResetService.RequestPasswordReset(req.Email); err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("Failed to request password reset")
 		// Don't reveal internal errors to prevent user enumeration
-		ctx.JSON(http.StatusOK, gin.H{
-			"message": "If the email exists, a password reset link has been sent",
-		})
+		helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+			Message: "If the email exists, a password reset link has been sent",
+		}, http.StatusOK)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "If the email exists, a password reset link has been sent",
-	})
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "If the email exists, a password reset link has been sent",
+	}, http.StatusOK)
 }
 
 // ResetPassword handles password reset with token
@@ -74,24 +76,26 @@ func (c *PasswordResetController) ResetPassword(ctx *gin.Context) {
 	var req requests.ResetPasswordRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Error().Err(err).Msg("Invalid reset password request")
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Invalid request",
-			"message": err.Error(),
-		})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Invalid request",
+			Reference: "ERROR-4",
+		}, http.StatusBadRequest)
 		return
 	}
 
 	// Reset password
 	if err := c.passwordResetService.ResetPassword(req.Token, req.NewPassword); err != nil {
 		log.Error().Err(err).Msg("Failed to reset password")
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Password reset failed",
-			"message": err.Error(),
-		})
+		helpers.ResponseError(ctx, &helpers.ResponseParams[any]{
+			Errors:    map[string]string{"error": err.Error()},
+			Message:   "Password reset failed",
+			Reference: "ERROR-3",
+		}, http.StatusBadRequest)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Password has been reset successfully. You can now login with your new password.",
-	})
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[any]{
+		Message: "Password has been reset successfully. You can now login with your new password.",
+	}, http.StatusOK)
 }

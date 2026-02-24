@@ -1,11 +1,10 @@
 package facades
 
 import (
-	"log"
-
 	"golang_starter_kit_2025/database"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -20,9 +19,9 @@ func ConnectDB(envFiles ...string) *gorm.DB {
 	if len(envFiles) > 0 {
 		err := godotenv.Load(envFiles...)
 		if err != nil {
-			log.Printf("Warning: No .env file found. Using environment variables instead. Error: %v", err)
+			log.Warn().Err(err).Msg("No .env file found, using environment variables")
 		} else {
-			log.Println(".env file loaded successfully")
+			log.Info().Msg(".env file loaded successfully")
 		}
 	}
 
@@ -32,13 +31,13 @@ func ConnectDB(envFiles ...string) *gorm.DB {
 	// Connect to default database
 	conn, err := manager.GetDefaultConnection()
 	if err != nil {
-		log.Fatalf("Error: failed to connect to default database: %v", err)
+		log.Fatal().Err(err).Msg("Failed to connect to default database")
 	}
 
 	// Set global DB for backward compatibility
 	DB = conn.DB
 
-	log.Println("Database manager initialized successfully")
+	log.Info().Msg("Database manager initialized successfully")
 	return DB
 }
 
@@ -78,7 +77,7 @@ func GetManager() *database.Manager {
 func CloseDB() {
 	if manager != nil {
 		manager.CloseAllConnections()
-		log.Println("All database connections closed successfully")
+		log.Info().Msg("All database connections closed successfully")
 	}
 }
 

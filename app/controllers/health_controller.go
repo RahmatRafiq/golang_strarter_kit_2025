@@ -37,7 +37,7 @@ func (c *HealthController) GetHealth(ctx *gin.Context) {
 		Str("status", string(health.Status)).
 		Msg("Basic health check requested")
 
-	ctx.JSON(http.StatusOK, health)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[casts.HealthResponse]{Item: health}, http.StatusOK)
 }
 
 // GetDetailedHealth returns comprehensive health status
@@ -63,7 +63,7 @@ func (c *HealthController) GetDetailedHealth(ctx *gin.Context) {
 		statusCode = http.StatusServiceUnavailable
 	}
 
-	ctx.JSON(statusCode, health)
+	helpers.ResponseSuccess(ctx, &helpers.ResponseParams[casts.DetailedHealthResponse]{Item: health}, statusCode)
 }
 
 // GetHistory returns historical health data for services
@@ -90,7 +90,7 @@ func (c *HealthController) GetHistory(ctx *gin.Context) {
 	if service != "" {
 		// Single service
 		history := historyService.GetDailyAggregated(service, days)
-		ctx.JSON(http.StatusOK, history)
+		helpers.ResponseSuccess(ctx, &helpers.ResponseParams[casts.ServiceHistoryResponse]{Item: &history}, http.StatusOK)
 	} else {
 		// All services
 		serviceList := []string{"database", "redis", "api"}
@@ -98,7 +98,7 @@ func (c *HealthController) GetHistory(ctx *gin.Context) {
 		for _, svc := range serviceList {
 			result = append(result, historyService.GetDailyAggregated(svc, days))
 		}
-		ctx.JSON(http.StatusOK, result)
+		helpers.ResponseSuccess(ctx, &helpers.ResponseParams[casts.ServiceHistoryResponse]{Data: &result}, http.StatusOK)
 	}
 }
 

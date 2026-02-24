@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
 
@@ -51,11 +52,13 @@ var MakeFactoryCommand = &cli.Command{
 		content := fmt.Sprintf(`package factories
 
 import (
+	"fmt"
 	"time"
 
 	"golang_starter_kit_2025/app/helpers"
 	"golang_starter_kit_2025/app/models"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -73,8 +76,15 @@ func New%[1]sFactory(db *gorm.DB) *%[1]sFactory {
 
 // Make creates a %[1]s instance without saving to database
 func (f *%[1]sFactory) Make(overrides ...map[string]interface{}) *models.%[1]s {
+	reference, err := helpers.GenerateReference("%[2]s")
+	if err != nil {
+		// Factory fallback: use timestamp-based reference if UUID fails
+		reference = fmt.Sprintf("%[2]s-FALLBACK-%%d", time.Now().UnixNano())
+		log.Warn().Err(err).Msg("Failed to generate reference in factory, using fallback")
+	}
+
 	item := &models.%[1]s{
-		Reference: helpers.GenerateReference("%[2]s"),
+		Reference: reference,
 		// TODO: Add your model fields here
 		// Name:      RandomName(),
 		// Email:     RandomEmail(),
@@ -135,11 +145,16 @@ func (f *%[1]sFactory) CreateInBatches(count, batchSize int, overrides ...map[st
 			return fmt.Errorf("failed to create factory file: %w", err)
 		}
 
-		fmt.Printf("✅ Factory created successfully: %s\n", filePath)
-		fmt.Println("\n📝 Next steps:")
-		fmt.Println("   1. Update the Make() method with your model fields")
-		fmt.Println("   2. Add override handling for your fields")
-		fmt.Println("   3. Use in seeders: factory := factories.New" + structName + "Factory(db)")
+		log.Info().
+			Str("file", filePath).
+			Msg("Factory created successfully")
+		log.Info().
+			Msg("Next steps: 1) Update the Make() method with your model fields")
+		log.Info().
+			Msg("Next steps: 2) Add override handling for your fields")
+		log.Info().
+			Str("usage", "factory := factories.New"+structName+"Factory(db)").
+			Msg("Next steps: 3) Use in seeders")
 
 		return nil
 	},
