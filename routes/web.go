@@ -187,8 +187,13 @@ func RegisterRoutes(route *gin.Engine) {
 		fileRoutes.GET("/:key/:filename", fileController.ServeFile)
 	}
 
-	// Legacy health endpoint (kept for backward compatibility)
-	// DEPRECATED: Use /health/detailed instead
+	// ========================================
+	// Legacy Health Endpoint (DEPRECATED)
+	// ========================================
+	// This endpoint is maintained for backward compatibility only.
+	// Please migrate to /health/detailed for comprehensive health information.
+	// This endpoint will be removed in v2.0.0 (estimated: Q3 2026)
+	// ========================================
 	route.GET("/health/legacy", func(c *gin.Context) {
 		sqlDB, err := facades.DB.DB()
 		if err != nil {

@@ -171,7 +171,7 @@ func (c *RoleController) Update(ctx *gin.Context) {
 }
 
 // @Summary		Delete Role
-// @Description	API untuk menghapus Role
+// @Description	API to delete Role by ID
 // @Tags			Role
 // @Accept			json
 // @Produce		json

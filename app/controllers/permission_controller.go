@@ -169,7 +169,7 @@ func (c *PermissionController) Update(ctx *gin.Context) {
 }
 
 // @Summary		Delete Permission
-// @Description	API untuk menghapus Permission berdasarkan ID
+// @Description	API to delete Permission by ID
 // @Tags			Permission
 // @Accept			json
 // @Produce		json

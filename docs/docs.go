@@ -526,32 +526,41 @@ const docTemplate = `{
                 "summary": "List all categories",
                 "responses": {
                     "200": {
-                        "description": "List of categories with products",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Category"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_Category"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.Category"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
                         }
                     }
                 }
             },
-            "put": {
+            "post": {
                 "security": [
                     {
                         "Bearer": []
                     }
                 ],
-                "description": "Create a new category or update an existing one by ID",
+                "description": "Create a new category",
                 "consumes": [
                     "application/json"
                 ],
@@ -561,7 +570,7 @@ const docTemplate = `{
                 "tags": [
                     "categories"
                 ],
-                "summary": "Create or update a category",
+                "summary": "Create a new category",
                 "parameters": [
                     {
                         "description": "Category Data",
@@ -574,28 +583,34 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Created or updated category",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.Category"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_Category"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.Category"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
-                        "description": "Invalid input data",
+                        "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
                         }
                     }
                 }
@@ -627,18 +642,95 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Category with products",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Category"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_Category"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.Category"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "404": {
-                        "description": "Category not found",
+                        "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update a category by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Update an existing category",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Category Data",
+                        "name": "category",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_Category"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.Category"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
                         }
                     }
                 }
@@ -668,30 +760,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Category deleted successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
                         }
                     },
                     "404": {
-                        "description": "Category not found",
+                        "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
                         }
                     }
                 }
@@ -790,6 +873,115 @@ const docTemplate = `{
                 }
             }
         },
+        "/health": {
+            "get": {
+                "description": "Returns basic API health status for load balancer health checks",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Basic health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/casts.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/detailed": {
+            "get": {
+                "description": "Returns comprehensive health status including all service dependencies",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Detailed health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/casts.DetailedHealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/casts.DetailedHealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/history": {
+            "get": {
+                "description": "Returns aggregated daily health status for the last N days",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Get service health history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service name (database, redis, api)",
+                        "name": "service",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of days (default: 90)",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/casts.ServiceHistoryResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health/queue": {
+            "get": {
+                "description": "Returns queue worker metrics and health status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Queue health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/casts.QueueHealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Queue not enabled",
+                        "schema": {
+                            "$ref": "#/definitions/casts.QueueHealthResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/permissions": {
             "get": {
                 "description": "API untuk mendapatkan semua Permission",
@@ -827,8 +1019,8 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
-                "description": "API untuk mengupdate atau membuat Permission",
+            "post": {
+                "description": "API untuk membuat Permission baru",
                 "consumes": [
                     "application/json"
                 ],
@@ -838,8 +1030,61 @@ const docTemplate = `{
                 "tags": [
                     "Permission"
                 ],
-                "summary": "Create/Update Permission",
+                "summary": "Create Permission",
                 "parameters": [
+                    {
+                        "description": "Permission Data",
+                        "name": "permission",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.PermissionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_Permission"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.Permission"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/permissions/{id}": {
+            "put": {
+                "description": "API untuk mengupdate Permission yang sudah ada",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Permission"
+                ],
+                "summary": "Update Permission",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Permission ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "description": "Permission Data",
                         "name": "permission",
@@ -870,11 +1115,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/permissions/{id}": {
+            },
             "delete": {
-                "description": "API untuk menghapus Permission berdasarkan ID",
+                "description": "API to delete Permission by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -977,8 +1220,8 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
-                "description": "API untuk membuat atau mengupdate produk",
+            "post": {
+                "description": "API untuk membuat produk baru",
                 "consumes": [
                     "application/json"
                 ],
@@ -988,7 +1231,7 @@ const docTemplate = `{
                 "tags": [
                     "Product"
                 ],
-                "summary": "Create/Update product",
+                "summary": "Create product",
                 "parameters": [
                     {
                         "description": "Product request body",
@@ -1001,8 +1244,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
                             "allOf": [
                                 {
@@ -1065,8 +1308,59 @@ const docTemplate = `{
                     }
                 }
             },
+            "put": {
+                "description": "API untuk mengupdate produk yang sudah ada",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Product"
+                ],
+                "summary": "Update product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Product request body",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ProductRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_Product"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.Product"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
             "delete": {
-                "description": "API untuk menghapus produk",
+                "description": "API to delete product by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -1133,8 +1427,8 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
-                "description": "API untuk mengupdate atau membuat Role",
+            "post": {
+                "description": "API untuk membuat Role baru",
                 "consumes": [
                     "application/json"
                 ],
@@ -1144,8 +1438,61 @@ const docTemplate = `{
                 "tags": [
                     "Role"
                 ],
-                "summary": "Create/Update Role",
+                "summary": "Create Role",
                 "parameters": [
+                    {
+                        "description": "Role Data",
+                        "name": "role",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.RoleRequestPut"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_Role"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.Role"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/roles/{id}": {
+            "put": {
+                "description": "API untuk mengupdate Role yang sudah ada",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Role"
+                ],
+                "summary": "Update Role",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Role ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "description": "Role Data",
                         "name": "role",
@@ -1176,11 +1523,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/roles/{id}": {
+            },
             "delete": {
-                "description": "API untuk menghapus Role",
+                "description": "API to delete Role by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -1205,6 +1550,26 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/helpers.ResponseParams-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/status": {
+            "get": {
+                "description": "Displays a real-time HTML status dashboard for monitoring system health",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Status Dashboard",
+                "responses": {
+                    "200": {
+                        "description": "HTML status dashboard",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -1406,15 +1771,27 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.User"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_User"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.User"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
             },
-            "put": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -1424,7 +1801,7 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Upsert a user",
+                "summary": "Create a new user",
                 "parameters": [
                     {
                         "description": "User object",
@@ -1437,10 +1814,22 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_User"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -1471,7 +1860,69 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_User"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update an existing user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User object",
+                        "name": "JSON",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
                             "$ref": "#/definitions/models.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/helpers.ResponseParams-models_User"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "item": {
+                                            "$ref": "#/definitions/models.User"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -1497,10 +1948,10 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "User deleted",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/helpers.ResponseParams-any"
                         }
                     }
                 }
@@ -1508,6 +1959,189 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "casts.DailyStatus": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "description": "\"2024-01-15\"",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"up\", \"degraded\", \"down\"",
+                    "type": "string"
+                },
+                "uptime": {
+                    "description": "Percentage for the day (0-100)",
+                    "type": "number"
+                }
+            }
+        },
+        "casts.DetailedHealthResponse": {
+            "type": "object",
+            "properties": {
+                "services": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/casts.Service"
+                    }
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/casts.HealthStatus"
+                        }
+                    ],
+                    "example": "healthy"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2025-02-11T10:30:00Z"
+                },
+                "uptime": {
+                    "type": "string",
+                    "example": "5d 3h 12m"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
+                }
+            }
+        },
+        "casts.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/casts.HealthStatus"
+                        }
+                    ],
+                    "example": "healthy"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2025-02-11T10:30:00Z"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
+                }
+            }
+        },
+        "casts.HealthStatus": {
+            "type": "string",
+            "enum": [
+                "healthy",
+                "degraded",
+                "unhealthy"
+            ],
+            "x-enum-varnames": [
+                "StatusHealthy",
+                "StatusDegraded",
+                "StatusUnhealthy"
+            ]
+        },
+        "casts.QueueHealthResponse": {
+            "type": "object",
+            "properties": {
+                "active_workers": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "average_latency_ms": {
+                    "type": "number",
+                    "example": 125.5
+                },
+                "failure_rate": {
+                    "type": "number",
+                    "example": 0.97
+                },
+                "last_updated": {
+                    "type": "string",
+                    "example": "2026-02-14T15:30:00Z"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Queue is running (metrics disabled)"
+                },
+                "queue_depth": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "healthy"
+                },
+                "tasks_failed": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "tasks_processed": {
+                    "type": "integer",
+                    "example": 1234
+                },
+                "tasks_retried": {
+                    "type": "integer",
+                    "example": 45
+                }
+            }
+        },
+        "casts.Service": {
+            "type": "object",
+            "properties": {
+                "details": {},
+                "latency_ms": {
+                    "type": "number",
+                    "example": 2.5
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/casts.ServiceStatus"
+                        }
+                    ],
+                    "example": "up"
+                }
+            }
+        },
+        "casts.ServiceHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "daily_history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/casts.DailyStatus"
+                    }
+                },
+                "overall_uptime": {
+                    "description": "Overall percentage (0-100)",
+                    "type": "number"
+                },
+                "service": {
+                    "type": "string"
+                }
+            }
+        },
+        "casts.ServiceStatus": {
+            "type": "string",
+            "enum": [
+                "up",
+                "down",
+                "degraded"
+            ],
+            "x-enum-varnames": [
+                "ServiceUp",
+                "ServiceDown",
+                "ServiceDegraded"
+            ]
+        },
         "casts.Token": {
             "type": "object",
             "properties": {
@@ -1542,6 +2176,41 @@ const docTemplate = `{
                     }
                 },
                 "item": {},
+                "message": {
+                    "type": "string"
+                },
+                "reference": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "token": {
+                    "$ref": "#/definitions/casts.Token"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.ResponseParams-models_Category": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Category"
+                    }
+                },
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "item": {
+                    "$ref": "#/definitions/models.Category"
+                },
                 "message": {
                     "type": "string"
                 },
@@ -1646,6 +2315,41 @@ const docTemplate = `{
                 },
                 "item": {
                     "$ref": "#/definitions/models.Role"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reference": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "token": {
+                    "$ref": "#/definitions/casts.Token"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "helpers.ResponseParams-models_User": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.User"
+                    }
+                },
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "item": {
+                    "$ref": "#/definitions/models.User"
                 },
                 "message": {
                     "type": "string"
