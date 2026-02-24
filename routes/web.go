@@ -68,9 +68,11 @@ func RegisterRoutes(route *gin.Engine) {
 	// ========================================
 	// Demo/Testing Routes (PostgreSQL Example)
 	// ========================================
-	// These routes demonstrate multi-database support with PostgreSQL
-	// Useful for testing PostgreSQL connection and as reference implementation
-	// TODO: Consider moving to /api/v1/demo or removing in production
+	// Demo Routes: PostgreSQL Multi-Database Example
+	// ========================================
+	// These routes demonstrate multi-database support with PostgreSQL.
+	// Useful for testing PostgreSQL connection and as reference implementation.
+	// Keep these routes as educational examples for users learning the starter kit.
 	testService := services.TestService{}
 	testController := controllers.NewTestController(testService)
 	testRoutes := route.Group("/tests")
@@ -105,8 +107,13 @@ func RegisterRoutes(route *gin.Engine) {
 	RegisterV1Routes(route, userService, roleService, permissionService, productService, categoryService, authService, passwordResetService, emailVerificationService, oauthService, storageService)
 
 	// ========================================
-	// Legacy Routes (Deprecated - For Backward Compatibility)
-	// TODO: Remove these in v2.0.0
+	// Legacy Routes (DEPRECATED)
+	// ========================================
+	// These routes are maintained for backward compatibility only.
+	// Please migrate to /api/v1 endpoints:
+	//   - PUT /auth/login    → POST /api/v1/auth/login
+	//   - POST /auth/refresh → POST /api/v1/auth/refresh
+	// These legacy routes will be removed in v2.0.0 (estimated: Q3 2026)
 	// ========================================
 	authController := controllers.NewAuthController(*authService)
 
